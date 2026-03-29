@@ -472,12 +472,21 @@ def check_voice_alignment(score: music21.stream.Score, plan: dict) -> list[Valid
     return issues
 
 
-def _parse_note_range(range_str: str) -> tuple[int, int]:
-    """Parse a note range string like 'D4-D6' into (midi_lo, midi_hi).
+def _parse_note_range(range_str) -> tuple[int, int]:
+    """Parse a note range like 'D4-D6' or [60, 72] into (midi_lo, midi_hi).
 
-    Returns (0, 127) for empty strings (e.g. drums).
+    Accepts both string format ('D4-D6') and list format ([60, 72]).
+    Returns (0, 127) for empty/missing values (e.g. drums).
     """
-    if not range_str or not range_str.strip():
+    if not range_str:
+        return (0, 127)
+    # Handle list format: [midi_lo, midi_hi]
+    if isinstance(range_str, list):
+        if len(range_str) == 2 and all(isinstance(v, (int, float)) for v in range_str):
+            return (int(range_str[0]), int(range_str[1]))
+        return (0, 127)
+    # Handle string format: 'D4-D6'
+    if not range_str.strip():
         return (0, 127)
     try:
         parts = range_str.strip().split('-')
@@ -611,19 +620,8 @@ def check_voice_overlap(score: music21.stream.Score, plan: dict, abc_path: str =
 
 
 # ---------------------------------------------------------------------------
-# Main validate function
+# check_sweet_spot (must be defined before CHECK_FUNCTIONS references it)
 # ---------------------------------------------------------------------------
-
-CHECK_FUNCTIONS = [
-    ("key_consistency", check_key_consistency),
-    ("pitch_range", check_pitch_range),
-    ("voice_overlap", check_voice_overlap),
-    ("large_interval", check_large_intervals),
-    ("measure_duration", check_measure_duration),
-    ("voice_alignment", check_voice_alignment),
-    ("sweet_spot", check_sweet_spot),
-]
-
 
 def check_sweet_spot(score: music21.stream.Score, plan: dict, abc_path: str = "") -> list[ValidationIssue] | None:
     """Check that most notes fall within the SF2 sweet_spot (WARN if < 60% coverage).
@@ -684,6 +682,21 @@ def check_sweet_spot(score: music21.stream.Score, plan: dict, abc_path: str = ""
             ))
 
     return issues if issues else None
+
+
+# ---------------------------------------------------------------------------
+# Main validate function
+# ---------------------------------------------------------------------------
+
+CHECK_FUNCTIONS = [
+    ("key_consistency", check_key_consistency),
+    ("pitch_range", check_pitch_range),
+    ("voice_overlap", check_voice_overlap),
+    ("large_interval", check_large_intervals),
+    ("measure_duration", check_measure_duration),
+    ("voice_alignment", check_voice_alignment),
+    ("sweet_spot", check_sweet_spot),
+]
 
 
 def validate(abc_path: str, plan_path: str) -> ValidationReport:

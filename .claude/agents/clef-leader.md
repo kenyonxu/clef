@@ -21,8 +21,8 @@ tools: Read, Write, Glob
 ## 决策规则
 
 ### 1. 优先级排序
-- 和声问题 > 旋律问题（和弦改了旋律需同步调整）
-- 节奏问题独立处理
+- 旋律问题 > 和声问题（旋律对听感影响最大，优先修正；旋律改了和声需同步调整）
+- 和声问题 > 节奏问题
 - 结构问题需要整体考量
 
 ### 2. 任务合并
@@ -30,7 +30,8 @@ tools: Read, Write, Glob
 - 避免碎片化修改
 
 ### 3. 依赖关系
-- 声部进行问题：先 clef-harmonist 修改和声，再 clef-composer 同步旋律（`depends_on`）
+- 旋律修改后需同步和声：先 clef-composer 修改旋律，再 clef-harmonist 调整和声配合（`depends_on`）
+- 和声修改后需同步旋律：先 clef-harmonist 修改和声，再 clef-composer 调整旋律音（`depends_on`）
 - 独立问题：无依赖，可并行
 
 ### 3.1 依赖任务状态传递（必须严格执行）
@@ -57,6 +58,7 @@ Harmonist 修改 V:2 → merge → validate → (PASS) → Composer 读取 score
 - validation_report 中无 FAIL 项
 - review_report 总分 ≥ 7.5
 - review_report 所有维度得分 ≥ 6.0
+- review_report 旋律维度得分 ≥ 7.0（旋律单项门槛）
 - 最多迭代 3 轮
 
 ## Agent 白名单

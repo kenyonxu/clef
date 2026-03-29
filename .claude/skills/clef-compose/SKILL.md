@@ -243,8 +243,12 @@ python scripts/snapshot.py --step 0 --note "需求确认：boss battle, D大调,
    - 若 `["melody", "harmony"]`：先 Composer 生成旋律方向小样 V:1，再 Harmonist 生成简化版 V:2 和弦片段
    - 若 `demo_mode == "chords_only"`：仅派发 Harmonist 生成 V:2（可缩短至 2-4 小节）
    - 若 `demo_mode == "melody_only"`：仅派发 Composer 生成 V:1
-3. 使用 `merge_abc.py` 合并声部
-4. Agent: Reviewer (clef-reviewer) — 审核合并后的完整方向小样
+3. **旋律专项审核（门控）**：Composer 完成后、合并前，派 Agent: Reviewer (clef-reviewer) 对旋律进行专项审核（仅执行 M1/M3/M4/M5 四项），输出 `.clef-work/melody_review_report.json`
+   - 若 `verdict == "revise"`：将报告中的建议反馈给 Composer 修改旋律，修改后重新审核（最多 3 轮，超过后跳过门控继续流程并记录警告）
+   - 若 `verdict == "pass"`：继续下一步
+   - 若 `demo_mode == "chords_only"`：跳过此步骤
+4. 使用 `merge_abc.py` 合并声部
+5. Agent: Reviewer (clef-reviewer) — 审核合并后的完整方向小样（6 维通用评审）
 
 使用 `merge_abc.py` 合并声部，`abc_to_midi.py` 转换为 MIDI，输出到 `addons/clef/output/<name>_sample.mid` 供用户试听。
 
@@ -255,10 +259,11 @@ python scripts/snapshot.py --step 0 --note "需求确认：boss battle, D大调,
 **方向小样反馈回路：** 如果用户要求修改方向：
 1. 根据用户反馈定向修改对应声部（Composer/Harmonist）
 2. 若用户要求调整长度（如"太长了，缩短到4小节"），直接修改 plan.json 的 `demo_length_bars`，无需重新规划
-3. 使用 `merge_abc.py` 重新合并，`abc_to_midi.py` 重新生成 MIDI
-4. **Agent: Reviewer (clef-reviewer)** — 再次审核修改后的方向小样
-5. 重新展示审核报告摘要 + 试听文件，回到用户确认点 2
-6. 最多 10 轮反馈回路，超过后建议用户回到 Step 1a 调整 plan.json
+3. 若修改了旋律（Composer），重新执行步骤 3 旋律专项审核门控
+4. 使用 `merge_abc.py` 重新合并，`abc_to_midi.py` 重新生成 MIDI
+5. **Agent: Reviewer (clef-reviewer)** — 再次审核修改后的方向小样
+6. 重新展示审核报告摘要 + 试听文件，回到用户确认点 2
+7. 最多 10 轮反馈回路，超过后建议用户回到 Step 1a 调整 plan.json
 
 ---
 

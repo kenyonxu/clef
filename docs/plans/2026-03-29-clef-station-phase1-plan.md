@@ -1,16 +1,17 @@
 # Clef Station Phase 1 — 基础框架 Implementation Plan
 
-> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
+> **Status:** COMPLETED (2026-03-29)
+> **Commit:** `5a444c3` feat: add Clef Station editor main screen (Phase 1)
 
 **Goal:** 为 Clef 插件创建 Godot 编辑器主屏幕「Clef Station」，建立三栏布局骨架，并扩展 MidiStreamPlayer 信号供后续面板使用。
 
-**Architecture:** 新增 `ClefStationPlugin` (EditorPlugin) 通过 `make_main_screen()` 注册主屏幕。主界面 `ClefStation` 使用 HSplitContainer 三栏布局，左/右栏可折叠。MidiStreamPlayer 新增 4 个信号（note_off/cc/pitch_bend/program_change），在 `_process_event` 中发射。
+**Architecture:** 通过 `EditorInterface.get_editor_main_screen().add_child()` 注册主屏幕，`_make_visible()` 控制显隐。主界面 `ClefStation` 使用 HSplitContainer 三栏布局，左/右栏可折叠。MidiStreamPlayer 新增 4 个信号（note_off/cc/pitch_bend/program_change），在 `_process_event` 和 `_preprocess_events_up_to` 中发射。
 
-**Tech Stack:** GDScript, Godot 4.6 EditorPlugin API, AudioServer bus API
+**Tech Stack:** GDScript, Godot 4.6 EditorPlugin API (`_has_main_screen` / `_make_visible`), AudioServer bus API
 
 ---
 
-### Task 1: 扩展 MidiStreamPlayer 信号
+### Task 1: 扩展 MidiStreamPlayer 信号 — DONE
 
 **Files:**
 - Modify: `addons/clef/player/midi_stream_player.gd:18-20` (signal 声明区)
@@ -93,7 +94,7 @@ feat: add note_off/cc/pitch_bend/program_change signals to MidiStreamPlayer
 
 ---
 
-### Task 2: 创建 ClefStationPlugin（EditorPlugin 主入口）
+### Task 2: 创建 ClefStationPlugin（EditorPlugin 主入口） — DONE
 
 **Files:**
 - Create: `addons/clef/editor/clef_station_plugin.gd`
@@ -178,7 +179,7 @@ feat: add Clef Station editor main screen with Audio tab
 
 ---
 
-### Task 3: 创建 ClefStation 主界面（三栏布局）
+### Task 3: 创建 ClefStation 主界面（三栏布局） — DONE
 
 **Files:**
 - Create: `addons/clef/editor/clef_station.gd`
@@ -314,7 +315,7 @@ feat: implement Clef Station three-panel layout (Soundfont Browser / Mixer / MID
 
 ---
 
-### Task 4: 添加工具栏（左/右面板切换按钮）
+### Task 4: 添加工具栏（左/右面板切换按钮） — DONE
 
 **Files:**
 - Modify: `addons/clef/editor/clef_station.gd`
@@ -421,7 +422,7 @@ feat: add Clef Station toolbar with panel toggle buttons
 
 ---
 
-### Task 5: 暴露 MidiStreamPlayer 引用给编辑器
+### Task 5: 暴露 MidiStreamPlayer 引用给编辑器 — DONE
 
 **Files:**
 - Create: `addons/clef/editor/clef_station_editor_bridge.gd`
@@ -541,12 +542,21 @@ feat: add editor bridge for MidiStreamPlayer signal forwarding
 
 Phase 1 完成后应满足：
 
-1. Godot 编辑器顶部标签栏出现 "Audio" 标签（带 AudioStreamPlayer 图标）
-2. 点击 "Audio" 显示三栏布局（左：SF2 Browser 占位、中：Mixer 占位、右：MIDI Monitor 占位）
-3. 工具栏两个切换按钮可隐藏/显示左右面板
-4. 拖拽分割线可调整面板宽度
-5. MidiStreamPlayer 新增 4 个信号，在 demo 场景播放时无报错
-6. EditorBridge 单例可转发 MidiStreamPlayer 信号
+1. Godot 编辑器顶部标签栏出现 "Clef" 标签（带 AudioStreamPlayer 图标） ✅
+2. 点击 "Clef" 显示三栏布局（左：SF2 Browser 占位、中：Mixer 占位、右：MIDI Monitor 占位） ✅
+3. 工具栏两个切换按钮可隐藏/显示左右面板 ✅
+4. 拖拽分割线可调整面板宽度 ✅
+5. MidiStreamPlayer 新增 4 个信号，在 demo 场景播放时无报错 ✅
+6. EditorBridge 单例可转发 MidiStreamPlayer 信号 ✅
+
+## 实现笔记
+
+### 与计划的偏差
+
+1. **API 修正**：计划中使用 `_make_main_screen()`，实际 Godot 4.6 正确 API 是 `_make_visible()` + `EditorInterface.get_editor_main_screen().add_child()`
+2. **架构简化**：取消了独立的 `ClefStationPlugin`（EditorPlugin），直接在 `plugin.gd` 中实现 `_has_main_screen()` / `_make_visible()`，避免 Godot 不支持嵌套 EditorPlugin 的问题
+3. **布局构建时机**：从 `_init()` 改为 `_ready()`，确保控件在场景树中时才构建子节点，`anchors` 才能正确设置
+4. **`_setup_audio_buses` bug 修复**：原代码 `AudioServer.get_bus_index("ClefMaster")` 返回值未保存到 `_clef_master_bus_idx`，导致重复创建总线
 
 ## 文件清单
 
@@ -554,6 +564,5 @@ Phase 1 完成后应满足：
 |------|------|
 | 修改 | `addons/clef/player/midi_stream_player.gd` |
 | 修改 | `addons/clef/plugin.gd` |
-| 新建 | `addons/clef/editor/clef_station_plugin.gd` |
 | 新建 | `addons/clef/editor/clef_station.gd` |
 | 新建 | `addons/clef/editor/clef_station_editor_bridge.gd` |

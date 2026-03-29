@@ -20,6 +20,9 @@ Desktop.ini
 *.swo
 
 # Clef work files (intermediate)
-.clef-work/*.mid
-.clef-work/*.abc
-.clef-work/*.json
+.clef-work/
+
+# Claude Code (exclude everything except clef-compose content)
+.claude/
+!.claude/agents/clef-*
+!.claude/skills/clef-compose/
