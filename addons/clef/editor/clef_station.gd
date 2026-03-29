@@ -4,12 +4,15 @@
 class_name ClefStation
 extends Control
 
+const SoundfontBrowser = preload("res://addons/clef/editor/soundfont_browser/soundfont_browser.gd")
+
 var _left_panel: PanelContainer
 var _center_panel: PanelContainer
 var _right_panel: PanelContainer
 var _split_main: HSplitContainer
 var _btn_left: Button
 var _btn_right: Button
+var _soundfont_browser: SoundfontBrowser
 
 
 func _init() -> void:
@@ -22,6 +25,7 @@ func _ready() -> void:
 	size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_build_layout()
+	_load_soundfont_profile()
 
 
 func _build_layout() -> void:
@@ -73,10 +77,9 @@ func _build_layout() -> void:
 	_left_panel.custom_minimum_size = Vector2i(180, 0)
 	_left_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_style_panel(_left_panel, Color(0.12, 0.12, 0.16))
-	var left_label := Label.new()
-	left_label.text = "Soundfont Browser"
-	left_label.add_theme_color_override("font_color", Color(0.7, 0.8, 1.0))
-	_left_panel.add_child(left_label)
+	_soundfont_browser = SoundfontBrowser.new()
+	_soundfont_browser.patch_selected.connect(_on_patch_selected)
+	_left_panel.add_child(_soundfont_browser)
 	_split_main.add_child(_left_panel)
 
 	# 中右分割
@@ -130,3 +133,30 @@ func set_left_panel_visible(visible: bool) -> void:
 
 func set_right_panel_visible(visible: bool) -> void:
 	_right_panel.visible = visible
+
+
+func _on_patch_selected(preset_index: int, patch: PatchData) -> void:
+	# Phase 3 将联动混音台，当前仅打印日志
+	print("[ClefStation] Patch selected: %03d %s" % [preset_index, patch.name])
+
+
+func _load_soundfont_profile() -> void:
+	var sf2_path: String = ProjectSettings.get_setting("clef/default_soundfont", "")
+	if sf2_path == "":
+		return
+	if not FileAccess.file_exists(sf2_path):
+		return
+	# 确定同目录下的 profile JSON 路径
+	var sf2_dir: String = sf2_path.get_base_dir()
+	var sf2_name: String = sf2_path.get_file().get_basename()
+	var profile_path: String = sf2_dir.path_join(sf2_name + "_profile.json")
+	# 自动生成 profile（如果不存在）
+	if not FileAccess.file_exists(profile_path):
+		var profiler := ProjectSettings.globalize_path("res://.claude/skills/clef-compose/scripts/sf2_profiler.py")
+		var global_sf2 := ProjectSettings.globalize_path(sf2_path)
+		var global_profile := ProjectSettings.globalize_path(profile_path)
+		var output := []
+		OS.execute("python", [profiler, global_sf2, "-o", global_profile], output)
+	if FileAccess.file_exists(profile_path):
+		_soundfont_browser.load_profile(profile_path)
+		_soundfont_browser.setup_audition(sf2_path)
