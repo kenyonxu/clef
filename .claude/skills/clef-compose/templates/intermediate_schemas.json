@@ -1,0 +1,546 @@
+{
+  "_comment": "Clef 多 Agent 流水线中间产品格式规范 — Phase 3 使用",
+  "_version": "1.0",
+  "format_version": "2.0",
+  "time_unit": "beats",
+  "min_precision": 0.25,
+
+  "note_object": {
+    "_description": "所有音轨共享的音符对象定义",
+    "fields": {
+      "pitch": {
+        "type": "int",
+        "range": [0, 127],
+        "description": "MIDI 音高，60=C4, 69=A4"
+      },
+      "start": {
+        "type": "float",
+        "min": 0,
+        "description": "音符起始时间（拍），建议 0.25 拍的倍数"
+      },
+      "duration": {
+        "type": "float",
+        "min": 0,
+        "exclusive_min": true,
+        "description": "音符持续时间（拍），必须严格大于 0。建议 0.25 拍的倍数（十六分音符精度），三连音可用 0.333"
+      },
+      "velocity": {
+        "type": "int",
+        "range": [1, 127],
+        "description": "力度，0 等同于 note_off，禁止使用"
+      }
+    },
+    "example": {
+      "pitch": 60,
+      "start": 0.0,
+      "duration": 1.0,
+      "velocity": 100
+    }
+  },
+
+  "chords": {
+    "_description": "和弦/和声轨道 — Harmonist Agent 输出",
+    "_file": "chords.json",
+    "_producer": "Harmonist Agent (Step 3/4)",
+    "_consumer": "Composer Agent (Step 3/4), Orchestrator Agent (Step 5)",
+
+    "required_fields": ["track_name", "channel", "instrument", "notes"],
+
+    "schema": {
+      "track_name": {
+        "type": "string",
+        "description": "音轨名称，如 'Strings', 'Pad', 'Choir'"
+      },
+      "channel": {
+        "type": "int",
+        "range": [0, 15],
+        "description": "MIDI 通道 0-15"
+      },
+      "instrument": {
+        "type": "int",
+        "range": [0, 127],
+        "description": "GM 标准音色号，推荐 48(Strings), 52(Choir), 89(Warm Pad), 91(Pad)"
+      },
+      "notes": {
+        "type": "array",
+        "item_type": "note_object",
+        "description": "和弦音符数组，每个和弦由多个同时发声的音符表示"
+      }
+    },
+
+    "constraints": [
+      "音符应在 0.25 拍网格上",
+      "典型音域: C3(48) - B4(71)",
+      "velocity 建议范围: 60-90，避免淹没主旋律",
+      "同时发声音符数不超过 4（四部和声）",
+      "音符按 start 时间排序",
+      "和声节奏合理：不要每个拍都换和弦"
+    ],
+
+    "example": {
+      "track_name": "Strings",
+      "channel": 2,
+      "instrument": 48,
+      "notes": [
+        { "pitch": 48, "start": 0.0, "duration": 2.0, "velocity": 75 },
+        { "pitch": 60, "start": 0.0, "duration": 2.0, "velocity": 75 },
+        { "pitch": 64, "start": 0.0, "duration": 2.0, "velocity": 75 },
+        { "pitch": 67, "start": 0.0, "duration": 2.0, "velocity": 75 },
+        { "pitch": 53, "start": 2.0, "duration": 2.0, "velocity": 75 },
+        { "pitch": 65, "start": 2.0, "duration": 2.0, "velocity": 75 },
+        { "pitch": 69, "start": 2.0, "duration": 2.0, "velocity": 75 },
+        { "pitch": 65, "start": 2.0, "duration": 2.0, "velocity": 75 },
+        { "pitch": 55, "start": 4.0, "duration": 2.0, "velocity": 80 },
+        { "pitch": 60, "start": 4.0, "duration": 2.0, "velocity": 80 },
+        { "pitch": 67, "start": 4.0, "duration": 2.0, "velocity": 80 },
+        { "pitch": 71, "start": 4.0, "duration": 2.0, "velocity": 80 }
+      ]
+    }
+  },
+
+  "melody": {
+    "_description": "旋律轨道 — Composer Agent 输出",
+    "_file": "melody.json",
+    "_producer": "Composer Agent (Step 3/4)",
+    "_consumer": "Orchestrator Agent (Step 5)",
+
+    "required_fields": ["track_name", "channel", "instrument", "notes"],
+
+    "schema": {
+      "track_name": {
+        "type": "string",
+        "description": "音轨名称，如 'Melody', 'Lead', 'Solo'"
+      },
+      "channel": {
+        "type": "int",
+        "range": [0, 15],
+        "description": "MIDI 通道 0-15"
+      },
+      "instrument": {
+        "type": "int",
+        "range": [0, 127],
+        "description": "GM 标准音色号，推荐 0(Piano), 80(Square Lead), 81(Saw Lead), 73(Flute), 68(Oboe)"
+      },
+      "notes": {
+        "type": "array",
+        "item_type": "note_object",
+        "description": "旋律音符数组"
+      }
+    },
+
+    "constraints": [
+      "音符应在 0.25 拍网格上",
+      "velocity 变化范围 >= 20（避免力度单调）",
+      "velocity 建议范围: 70-110",
+      "音域应在乐器合理范围内",
+      "音符按 start 时间排序",
+      "动机应有明确的发展（重复、变奏、模进）",
+      "避免每个乐句结尾都使用终止式"
+    ],
+
+    "example": {
+      "track_name": "Melody",
+      "channel": 0,
+      "instrument": 80,
+      "notes": [
+        { "pitch": 72, "start": 0.0, "duration": 1.0, "velocity": 90 },
+        { "pitch": 76, "start": 1.0, "duration": 0.5, "velocity": 85 },
+        { "pitch": 79, "start": 1.5, "duration": 1.5, "velocity": 100 },
+        { "pitch": 76, "start": 3.0, "duration": 0.5, "velocity": 80 },
+        { "pitch": 74, "start": 3.5, "duration": 0.5, "velocity": 75 },
+        { "pitch": 72, "start": 4.0, "duration": 2.0, "velocity": 95 },
+        { "pitch": 69, "start": 6.0, "duration": 1.0, "velocity": 85 },
+        { "pitch": 72, "start": 7.0, "duration": 1.0, "velocity": 100 }
+      ]
+    }
+  },
+
+  "bass": {
+    "_description": "低音轨道 — Rhythmist Agent 输出",
+    "_file": "bass.json",
+    "_producer": "Rhythmist Agent (Step 5)",
+    "_consumer": "Orchestrator Agent (Step 5)",
+
+    "required_fields": ["track_name", "channel", "instrument", "notes"],
+
+    "schema": {
+      "track_name": {
+        "type": "string",
+        "description": "音轨名称，如 'Bass', 'Synth Bass', 'Acoustic Bass'"
+      },
+      "channel": {
+        "type": "int",
+        "range": [0, 15],
+        "description": "MIDI 通道 0-15"
+      },
+      "instrument": {
+        "type": "int",
+        "range": [0, 127],
+        "description": "GM 标准音色号，推荐 38(Synth Bass), 32(Acoustic Bass), 33(Electric Bass), 34(Contrabass)"
+      },
+      "notes": {
+        "type": "array",
+        "item_type": "note_object",
+        "description": "低音音符数组"
+      }
+    },
+
+    "constraints": [
+      "音符应在 0.25 拍网格上",
+      "典型音域: E2(40) - B2(59)",
+      "velocity <= 100（避免淹没其他轨道）",
+      "velocity 建议范围: 70-100",
+      "音符按 start 时间排序",
+      "低音进行应与和弦根音对齐"
+    ],
+
+    "example": {
+      "track_name": "Bass",
+      "channel": 1,
+      "instrument": 38,
+      "notes": [
+        { "pitch": 40, "start": 0.0, "duration": 2.0, "velocity": 90 },
+        { "pitch": 40, "start": 2.0, "duration": 1.0, "velocity": 85 },
+        { "pitch": 45, "start": 3.0, "duration": 1.0, "velocity": 85 },
+        { "pitch": 47, "start": 4.0, "duration": 2.0, "velocity": 90 },
+        { "pitch": 40, "start": 6.0, "duration": 2.0, "velocity": 85 }
+      ]
+    }
+  },
+
+  "drums": {
+    "_description": "鼓组/打击乐轨道 — Rhythmist Agent 输出",
+    "_file": "drums.json",
+    "_producer": "Rhythmist Agent (Step 5)",
+    "_consumer": "Orchestrator Agent (Step 5)",
+
+    "required_fields": ["track_name", "channel", "instrument", "notes"],
+
+    "schema": {
+      "track_name": {
+        "type": "string",
+        "description": "音轨名称，如 'Drums', 'Percussion'"
+      },
+      "channel": {
+        "type": "int",
+        "value": 9,
+        "description": "打击乐固定使用 MIDI 通道 9，不可更改"
+      },
+      "instrument": {
+        "type": "int",
+        "value": 0,
+        "description": "打击乐固定设为 0，不可更改"
+      },
+      "notes": {
+        "type": "array",
+        "item_type": "note_object",
+        "description": "鼓组音符数组，pitch 使用 GM 打击乐映射"
+      }
+    },
+
+    "drum_pitch_reference": {
+      "36": "Bass Drum (底鼓)",
+      "38": "Snare (军鼓)",
+      "40": "Electric Snare (电子军鼓)",
+      "42": "Closed Hi-Hat (闭合踩镲)",
+      "44": "Pedal Hi-Hat (踏板踩镲)",
+      "46": "Open Hi-Hat (开放踩镲)",
+      "49": "Crash Cymbal (碎音镲)",
+      "51": "Ride Cymbal (叮叮镲)",
+      "56": "Cowbell (牛铃)",
+      "57": "Crash Cymbal 2 (碎音镲 2)"
+    },
+
+    "constraints": [
+      "channel 必须为 9，instrument 必须为 0",
+      "音符应在 0.25 拍网格上",
+      "常用鼓 pitch: 36(底鼓), 38(军鼓), 42(闭合踩镲), 46(开放踩镲), 49(碎音镲), 51(叮叮镲)",
+      "velocity 建议范围: 80-120",
+      "音符按 start 时间排序",
+      "段落过渡处应有 fill（填充）",
+      "不同段落间应有节奏变化"
+    ],
+
+    "example": {
+      "track_name": "Drums",
+      "channel": 9,
+      "instrument": 0,
+      "notes": [
+        { "pitch": 36, "start": 0.0, "duration": 0.5, "velocity": 100 },
+        { "pitch": 42, "start": 0.5, "duration": 0.25, "velocity": 80 },
+        { "pitch": 42, "start": 0.75, "duration": 0.25, "velocity": 80 },
+        { "pitch": 38, "start": 1.0, "duration": 0.5, "velocity": 95 },
+        { "pitch": 42, "start": 1.5, "duration": 0.25, "velocity": 80 },
+        { "pitch": 42, "start": 1.75, "duration": 0.25, "velocity": 80 },
+        { "pitch": 36, "start": 2.0, "duration": 0.5, "velocity": 100 },
+        { "pitch": 42, "start": 2.5, "duration": 0.25, "velocity": 80 },
+        { "pitch": 42, "start": 2.75, "duration": 0.25, "velocity": 80 },
+        { "pitch": 38, "start": 3.0, "duration": 0.5, "velocity": 95 },
+        { "pitch": 38, "start": 3.5, "duration": 0.5, "velocity": 100 },
+        { "pitch": 49, "start": 4.0, "duration": 1.0, "velocity": 110 }
+      ]
+    }
+  },
+
+  "expression_plan": {
+    "_description": "参数化表现力计划 — Orchestrator Agent 生成，为各轨道定义动态表现力参数。此文件是高层抽象，由 generate_expression.py 脚本转换为最终 Clef JSON v2.0 格式",
+    "_file": "expression_plan.json",
+    "_producer": "Orchestrator Agent",
+    "_consumer": "generate_expression.py 脚本 → expression.json → Producer 合并到 final.json",
+    "_conversion_note": {
+      "cc7": "直接转为 final.json 中对应 track 的 cc_events: [{time: 0, controller: 7, value: cc7}]",
+      "cc11": "由脚本按 curve 类型插值，每 0.5 拍生成一个 cc_events: [{time, controller: 11, value}]",
+      "pitch_bend": "由脚本生成成对的 pitch_bend_events: [{time: beat, value: target}, {time: return_at, value: 8192}]",
+      "velocity_offset": "由脚本应用到对应段落音符的 velocity 上（clamp 到 1-127）"
+    },
+
+    "required_fields": ["expression_plan"],
+
+    "schema": {
+      "expression_plan": {
+        "type": "array",
+        "description": "逐轨道表现力条目数组，每个条目对应一个音轨",
+        "items": {
+          "track": {
+            "type": "string",
+            "description": "音轨名称，必须与 chords/melody/bass/drums 中的 track_name 一致"
+          },
+          "cc7": {
+            "type": "int",
+            "range": [20, 127],
+            "description": "静态音量 (CC7 Volume)，每轨仅在 beat 0 发送一次，不要动态变化"
+          },
+          "cc11": {
+            "type": "array",
+            "description": "CC11 Expression 动态曲线数组，用于段落级渐强渐弱",
+            "items": {
+              "section": {
+                "type": "string",
+                "optional": true,
+                "description": "段落 ID，引用 plan.json 中的 section id（如 'A', 'B', 'C'）"
+              },
+              "start_beat": {
+                "type": "float",
+                "min": 0,
+                "optional": true,
+                "description": "起始拍（与 section 二选一，section 优先）"
+              },
+              "end_beat": {
+                "type": "float",
+                "min": 0,
+                "optional": true,
+                "description": "结束拍（与 section 二选一，section 优先）"
+              },
+              "start_val": {
+                "type": "int",
+                "range": [50, 127],
+                "description": "起始 CC11 值"
+              },
+              "end_val": {
+                "type": "int",
+                "range": [50, 127],
+                "description": "结束 CC11 值"
+              },
+              "curve": {
+                "type": "string",
+                "enum": ["linear", "ease_in", "ease_out", "ease_in_out"],
+                "description": "插值曲线类型"
+              }
+            }
+          },
+          "pitch_bend": {
+            "type": "array",
+            "description": "弯音事件数组，用于装饰音、滑音等表现力效果",
+            "items": {
+              "beat": {
+                "type": "float",
+                "min": 0,
+                "description": "弯音目标到达的拍位"
+              },
+              "target": {
+                "type": "int",
+                "range": [0, 16383],
+                "description": "弯音目标值，GM 标准: 8192=居中, 12288=+1 半音, 16383=+2 半音, 4096=-1 半音, 0=-2 半音"
+              },
+              "return_at": {
+                "type": "float",
+                "min": 0,
+                "description": "回中拍位，弯音在此拍返回 8192（居中）"
+              },
+              "description": {
+                "type": "string",
+                "description": "弯音效果描述，如 '上行装饰音', '吉他推弦 +2 半音', '滑音到上方音'"
+              }
+            }
+          },
+          "velocity_offset": {
+            "type": "array",
+            "description": "逐段落或指定拍范围的力度偏移数组，叠加到音符原始 velocity 上",
+            "items": {
+              "section": {
+                "type": "string",
+                "description": "段落 ID，引用 plan.json 中的 section id。与 start_beat/end_beat 二选一，section 优先"
+              },
+              "start_beat": {
+                "type": "float",
+                "min": 0,
+                "description": "起始拍（仅当 section 未指定时使用）"
+              },
+              "end_beat": {
+                "type": "float",
+                "min": 0,
+                "description": "结束拍（仅当 section 未指定时使用）"
+              },
+              "offset": {
+                "type": "int",
+                "range": [-40, 40],
+                "description": "力度偏移量，正值增强、负值减弱"
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "pitch_bend_reference": {
+      "center": 8192,
+      "min": 0,
+      "max": 16383,
+      "+1_semitone": 12288,
+      "+2_semitones": 16383,
+      "-1_semitone": 4096,
+      "-2_semitones": 0
+    },
+
+    "cc11_curve_explanation": {
+      "linear": "线性插值，匀速变化",
+      "ease_in": "缓入，开始慢、结束快（适合渐强）",
+      "ease_out": "缓出，开始快、结束慢（适合渐弱收尾）",
+      "ease_in_out": "缓入缓出，两端慢中间快（适合平滑段落过渡）"
+    },
+
+    "constraints": [
+      "track 必须与已有的 track_name 匹配",
+      "cc7 范围 20-127（0 会导致音符静音）",
+      "cc7 为静态值，不要动态变化",
+      "cc11 渐变由脚本自动采样（固定每 0.5 拍一个事件）",
+      "pitch_bend 必须成对：弯上去 -> 回居中(8192)",
+      "pitch_bend 的 return_at 必须 > beat",
+      "velocity_offset 偏移后的最终 velocity 不应超过 127 或低于 1",
+      "expression_plan 中应覆盖所有活跃轨道"
+    ],
+
+    "example": {
+      "expression_plan": [
+        {
+          "track": "Melody",
+          "cc7": 100,
+          "cc11": [
+            {
+              "section": "A",
+              "start_val": 80,
+              "end_val": 110,
+              "curve": "linear"
+            },
+            {
+              "section": "B",
+              "start_val": 110,
+              "end_val": 80,
+              "curve": "ease_out"
+            }
+          ],
+          "pitch_bend": [
+            {
+              "beat": 3.75,
+              "target": 12288,
+              "return_at": 4.0,
+              "description": "上行装饰音 +1 半音"
+            }
+          ],
+          "velocity_offset": [
+            { "section": "A", "offset": 0 },
+            { "section": "B", "offset": 10 }
+          ]
+        },
+        {
+          "track": "Strings",
+          "cc7": 75,
+          "cc11": [
+            {
+              "start_beat": 0.0,
+              "end_beat": 8.0,
+              "start_val": 60,
+              "end_val": 90,
+              "curve": "ease_in_out"
+            }
+          ],
+          "pitch_bend": [],
+          "velocity_offset": [
+            { "section": "A", "offset": -5 },
+            { "section": "B", "offset": 5 }
+          ]
+        },
+        {
+          "track": "Bass",
+          "cc7": 85,
+          "cc11": [
+            {
+              "start_beat": 0.0,
+              "end_beat": 16.0,
+              "start_val": 90,
+              "end_val": 100,
+              "curve": "linear"
+            }
+          ],
+          "pitch_bend": [],
+          "velocity_offset": []
+        },
+        {
+          "track": "Drums",
+          "cc7": 100,
+          "cc11": [],
+          "pitch_bend": [],
+          "velocity_offset": [
+            { "section": "A", "offset": 0 },
+            { "section": "B", "offset": 5 }
+          ]
+        }
+      ]
+    }
+  },
+
+  "jianpu": {
+    "_description": "简谱文本格式 — Composer Agent 输出，Reviewer Agent 审核，jianpu_to_json.py 转换",
+    "_file": "melody.jianpu",
+    "_producer": "Composer Agent (Step 3/4)",
+    "_consumer": "Reviewer Agent → jianpu_to_json.py → melody.json",
+
+    "header_format": "1={调号}  {拍号}  BPM={速度}",
+    "section_format": "[{段落ID}] {段落名称}",
+    "dynamics_format": "({力度标记})",
+
+    "note_elements": {
+      "degree": {"valid": ["0","1","2","3","4","5","6","7"], "description": "音阶度数，0=休止"},
+      "accidental": {"valid": ["","#","b"], "prefix": true, "description": "升降号前缀"},
+      "octave_high": {"char": "̇", "unicode": "U+0307", "description": "高八度"},
+      "octave_low": {"char": "̣", "unicode": "U+0323", "description": "低八度"},
+      "duration_8th": {"char": "̲", "unicode": "U+0332", "value": 0.5, "description": "八分音符"},
+      "duration_16th": {"char": "̲̲", "value": 0.25, "description": "十六分音符（双下划线）"},
+      "dot": {"char": ".", "multiplier": 1.5, "description": "附点"},
+      "tie": {"char": "-", "description": "延音线"},
+      "barline": {"char": "|", "description": "小节线"},
+      "double_barline": {"char": "||", "description": "段落边界"}
+    },
+
+    "constraints": [
+      "头部必须包含调号、拍号、BPM",
+      "每个段落用 [A] [B] 标记",
+      "力度标记单独一行",
+      "音符按拍位对齐",
+      "小节线 | 在每小节末尾",
+      "度数 1-7，升降号 # 和 b 前缀",
+      "八度标记使用 U+0307（高）/ U+0323（低）",
+      "时值下划线使用 U+0332"
+    ]
+  }
+}

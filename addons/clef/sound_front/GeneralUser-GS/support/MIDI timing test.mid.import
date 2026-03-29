@@ -1,0 +1,14 @@
+[remap]
+
+importer="clef"
+type="MidiResource"
+uid="uid://dme2olu23b176"
+path="res://.godot/imported/MIDI timing test.mid-d7b75434fe60ddb65b422f43c164bb86.tres"
+
+[deps]
+
+source_file="res://addons/clef/sound_front/GeneralUser-GS/support/MIDI timing test.mid"
+dest_files=["res://.godot/imported/MIDI timing test.mid-d7b75434fe60ddb65b422f43c164bb86.tres"]
+
+[params]
+

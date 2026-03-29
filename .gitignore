@@ -1,0 +1,25 @@
+# Godot 4+
+.godot/
+/android/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+*.egg-info/
+
+# OS
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# IDE
+.vs/
+*.swp
+*.swo
+
+# Clef work files (intermediate)
+.clef-work/*.mid
+.clef-work/*.abc
+.clef-work/*.json

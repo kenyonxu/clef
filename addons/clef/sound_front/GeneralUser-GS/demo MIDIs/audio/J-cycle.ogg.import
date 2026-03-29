@@ -1,0 +1,19 @@
+[remap]
+
+importer="oggvorbisstr"
+type="AudioStreamOggVorbis"
+uid="uid://86nii8n1ogns"
+path="res://.godot/imported/J-cycle.ogg-2e8636652fa72a017f4f4ffa79119d73.oggvorbisstr"
+
+[deps]
+
+source_file="res://addons/clef/sound_front/GeneralUser-GS/demo MIDIs/audio/J-cycle.ogg"
+dest_files=["res://.godot/imported/J-cycle.ogg-2e8636652fa72a017f4f4ffa79119d73.oggvorbisstr"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4

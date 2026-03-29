@@ -1,0 +1,22 @@
+{
+	"format_version": "2.0",
+	"tempo": 120.0,
+	"tempo_changes": [],
+	"tracks": [
+		{
+			"name": "Track Name",
+			"channel": 0.0,
+			"instrument": 0.0,
+			"notes": [
+				{
+					"pitch": 60.0,
+					"start": 0.0,
+					"duration": 2.0,
+					"velocity": 100.0
+				}
+			],
+			"cc_events": [],
+			"pitch_bend_events": []
+		}
+	]
+}

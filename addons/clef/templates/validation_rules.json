@@ -1,0 +1,187 @@
+{
+  "_comment": "Clef JSON v1.1 技术验证规则 — clef-compose Skill 使用",
+  "version": "1.0",
+
+  "format_rules": [
+    {
+      "id": "format_version",
+      "check": "root.format_version == '1.1'",
+      "severity": "warning",
+      "description": "format_version 建议为 '1.1'（新建作品必须 1.1，验证已有文件时 1.0 也接受）"
+    },
+    {
+      "id": "tempo_type",
+      "check": "typeof root.tempo == 'number' && root.tempo >= 1 && root.tempo <= 300",
+      "severity": "error",
+      "description": "tempo 必须为 1-300 之间的数值"
+    },
+    {
+      "id": "tracks_not_empty",
+      "check": "root.tracks is array && root.tracks.length >= 1",
+      "severity": "error",
+      "description": "至少需要一个音轨"
+    }
+  ],
+
+  "track_rules": [
+    {
+      "id": "track_notes_not_empty",
+      "check": "track.notes is array && track.notes.length >= 1",
+      "severity": "error",
+      "description": "每个音轨必须包含至少一个音符"
+    },
+    {
+      "id": "track_channel_range",
+      "check": "track.channel == null || (typeof track.channel == 'number' && track.channel >= 0 && track.channel <= 15)",
+      "severity": "error",
+      "description": "channel 必须为 0-15 之间的整数"
+    },
+    {
+      "id": "track_instrument_range",
+      "check": "track.instrument == null || (typeof track.instrument == 'number' && track.instrument >= 0 && track.instrument <= 127)",
+      "severity": "error",
+      "description": "instrument 必须为 0-127 之间的整数"
+    }
+  ],
+
+  "note_rules": [
+    {
+      "id": "duration_positive",
+      "check": "note.duration > 0",
+      "severity": "error",
+      "description": "duration 必须严格大于 0"
+    },
+    {
+      "id": "pitch_range",
+      "check": "typeof note.pitch == 'number' && note.pitch >= 0 && note.pitch <= 127",
+      "severity": "error",
+      "description": "pitch 必须为 0-127 之间的整数"
+    },
+    {
+      "id": "velocity_range",
+      "check": "note.velocity == null || (typeof note.velocity == 'number' && note.velocity >= 1 && note.velocity <= 127)",
+      "severity": "error",
+      "description": "velocity 必须为 1-127 之间的整数（0 等同于 note_off）"
+    },
+    {
+      "id": "start_non_negative",
+      "check": "typeof note.start == 'number' && note.start >= 0",
+      "severity": "error",
+      "description": "start 必须为非负数"
+    },
+    {
+      "id": "quantization",
+      "check": "note.start % 0.125 < 0.001 && note.duration % 0.125 < 0.001",
+      "severity": "warning",
+      "description": "start 和 duration 建议使用 0.125 秒的倍数"
+    }
+  ],
+
+  "percussion_rules": [
+    {
+      "id": "drums_channel_9",
+      "check": "if track.name contains drum/percussion: track.channel == 9",
+      "severity": "error",
+      "description": "打击乐音轨必须使用 channel 9"
+    },
+    {
+      "id": "drums_instrument_zero",
+      "check": "if track.channel == 9: track.instrument == 0",
+      "severity": "warning",
+      "description": "打击乐音轨的 instrument 建议设为 0"
+    }
+  ],
+
+  "polyphony_rules": [
+    {
+      "id": "total_polyphony",
+      "check": "sum of simultaneous notes across all tracks <= 32",
+      "severity": "warning",
+      "description": "总同时发声数建议不超过 32（语音池上限 128）"
+    },
+    {
+      "id": "per_channel_polyphony",
+      "check": "simultaneous notes per channel <= 16",
+      "severity": "warning",
+      "description": "每通道同时发声数不超过 16"
+    },
+    {
+      "id": "recommended_polyphony",
+      "check": "sum of simultaneous notes across all tracks <= 10",
+      "severity": "info",
+      "description": "建议总同时发声数控制在 10 以内以保证播放质量"
+    }
+  ],
+
+  "conflict_rules": [
+    {
+      "id": "no_duplicate_pitch_same_time",
+      "check": "no two notes in the same track have the same pitch and start time",
+      "severity": "error",
+      "description": "同一音轨不能在同一时间有相同音高的音符"
+    }
+  ],
+
+  "expression_rules": [
+    {
+      "id": "cc_controller_range",
+      "check": "cc.controller >= 0 && cc.controller <= 127 && cc.value >= 0 && cc.value <= 127",
+      "severity": "error",
+      "description": "CC 事件的 controller 和 value 必须在 0-127 范围内"
+    },
+    {
+      "id": "pitch_bend_range",
+      "check": "pb.value >= 0 && pb.value <= 16383",
+      "severity": "error",
+      "description": "弯音值必须在 0-16383 范围内"
+    },
+    {
+      "id": "pitch_bend_paired",
+      "check": "pitch bend events should be paired (bend up → return to 8192)",
+      "severity": "warning",
+      "description": "弯音事件应成对使用（弯上去→回中）"
+    }
+  ],
+
+  "tempo_change_rules": [
+    {
+      "id": "tempo_change_bpm_range",
+      "check": "tc.bpm >= 1 && tc.bpm <= 300",
+      "severity": "error",
+      "description": "tempo_changes 中的 bpm 必须为 1-300"
+    },
+    {
+      "id": "tempo_change_time_non_negative",
+      "check": "typeof tc.time == 'number' && tc.time >= 0",
+      "severity": "error",
+      "description": "tempo_changes 中的 time 必须为非负数"
+    },
+    {
+      "id": "tempo_change_smooth",
+      "check": "相邻 tempo_change 事件的 bpm 差值不超过 30",
+      "severity": "warning",
+      "description": "速度变化建议平缓过渡，相邻事件不超过 30 BPM"
+    }
+  ],
+
+  "music_quality_rules": [
+    {
+      "id": "velocity_variation",
+      "check": "melody tracks should have velocity range >= 20",
+      "severity": "warning",
+      "description": "旋律轨道的力度变化范围建议至少 20"
+    },
+    {
+      "id": "notes_sorted",
+      "check": "notes in each track should be sorted by start time",
+      "severity": "info",
+      "description": "音符建议按 start 时间排序"
+    },
+    {
+      "id": "tempo_changes_smooth",
+      "check": "tempo changes should not jump more than 30 BPM between adjacent events",
+      "severity": "warning",
+      "description": "速度变化建议平缓过渡，相邻事件不超过 30 BPM"
+    }
+  ]
+}

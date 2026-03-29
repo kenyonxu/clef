@@ -1,0 +1,14 @@
+[remap]
+
+importer="clef"
+type="MidiResource"
+uid="uid://cduuilhthtoow"
+path="res://.godot/imported/BattleTheme.mid-7a404549c146a059601f4109bbb14fbf.tres"
+
+[deps]
+
+source_file="res://addons/clef/midi_samples/BattleTheme.mid"
+dest_files=["res://.godot/imported/BattleTheme.mid-7a404549c146a059601f4109bbb14fbf.tres"]
+
+[params]
+

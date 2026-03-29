@@ -1,0 +1,14 @@
+[remap]
+
+importer="clef"
+type="MidiResource"
+uid="uid://bpgs368viten5"
+path="res://.godot/imported/The HYBRID Collage (v2.0) - by S. Christian Collins.mid-ea383f2ba11b1ddd57cc9f9da7942ec3.tres"
+
+[deps]
+
+source_file="res://addons/clef/sound_front/GeneralUser-GS/demo MIDIs/The HYBRID Collage (v2.0) - by S. Christian Collins.mid"
+dest_files=["res://.godot/imported/The HYBRID Collage (v2.0) - by S. Christian Collins.mid-ea383f2ba11b1ddd57cc9f9da7942ec3.tres"]
+
+[params]
+

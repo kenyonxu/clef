@@ -1,0 +1,71 @@
+{
+  "format_version": "2.0",
+  "tempo": 80,
+  "tracks": [
+    {
+      "name": "Flute",
+      "channel": 0,
+      "instrument": 73,
+      "notes": [
+        {"pitch": 69, "start": 1.0, "duration": 0.5, "velocity": 70},
+        {"pitch": 65, "start": 1.5, "duration": 0.5, "velocity": 70},
+        {"pitch": 67, "start": 2.0, "duration": 2.0, "velocity": 71},
+        {"pitch": 67, "start": 4.0, "duration": 1.0, "velocity": 72},
+        {"pitch": 70, "start": 5.0, "duration": 1.0, "velocity": 73},
+        {"pitch": 69, "start": 6.0, "duration": 2.0, "velocity": 73},
+        {"pitch": 64, "start": 9.0, "duration": 1.0, "velocity": 75},
+        {"pitch": 67, "start": 10.0, "duration": 2.0, "velocity": 76},
+        {"pitch": 69, "start": 12.0, "duration": 1.0, "velocity": 77},
+        {"pitch": 72, "start": 13.0, "duration": 1.0, "velocity": 78},
+        {"pitch": 69, "start": 14.0, "duration": 1.5, "velocity": 78},
+        {"pitch": 65, "start": 15.5, "duration": 0.5, "velocity": 79},
+        {"pitch": 65, "start": 16.0, "duration": 0.5, "velocity": 85},
+        {"pitch": 65, "start": 16.5, "duration": 0.5, "velocity": 85},
+        {"pitch": 69, "start": 17.0, "duration": 1.0, "velocity": 85},
+        {"pitch": 67, "start": 18.0, "duration": 1.0, "velocity": 85},
+        {"pitch": 72, "start": 19.0, "duration": 1.0, "velocity": 86},
+        {"pitch": 72, "start": 20.0, "duration": 1.0, "velocity": 86},
+        {"pitch": 64, "start": 21.0, "duration": 0.5, "velocity": 87},
+        {"pitch": 67, "start": 21.5, "duration": 0.5, "velocity": 87},
+        {"pitch": 74, "start": 22.0, "duration": 1.0, "velocity": 87},
+        {"pitch": 67, "start": 23.0, "duration": 1.0, "velocity": 87}
+      ],
+      "cc_events": [
+        {"time": 0.0, "controller": 7, "value": 100},
+        {"time": 0.0, "controller": 11, "value": 70},
+        {"time": 16.0, "controller": 11, "value": 90}
+      ]
+    },
+    {
+      "name": "Strings",
+      "channel": 1,
+      "instrument": 48,
+      "notes": [
+        {"pitch": 62, "start": 0.0, "duration": 3.75, "velocity": 55},
+        {"pitch": 65, "start": 0.0, "duration": 3.75, "velocity": 55},
+        {"pitch": 69, "start": 0.0, "duration": 3.75, "velocity": 55},
+        {"pitch": 67, "start": 4.0, "duration": 3.75, "velocity": 55},
+        {"pitch": 70, "start": 4.0, "duration": 3.75, "velocity": 55},
+        {"pitch": 62, "start": 4.0, "duration": 3.75, "velocity": 55},
+        {"pitch": 64, "start": 8.0, "duration": 3.75, "velocity": 58},
+        {"pitch": 67, "start": 8.0, "duration": 3.75, "velocity": 58},
+        {"pitch": 70, "start": 8.0, "duration": 3.75, "velocity": 58},
+        {"pitch": 60, "start": 12.0, "duration": 3.75, "velocity": 58},
+        {"pitch": 64, "start": 12.0, "duration": 3.75, "velocity": 58},
+        {"pitch": 69, "start": 12.0, "duration": 3.75, "velocity": 58},
+        {"pitch": 60, "start": 16.0, "duration": 3.75, "velocity": 62},
+        {"pitch": 65, "start": 16.0, "duration": 3.75, "velocity": 62},
+        {"pitch": 69, "start": 16.0, "duration": 3.75, "velocity": 62},
+        {"pitch": 60, "start": 20.0, "duration": 3.75, "velocity": 62},
+        {"pitch": 64, "start": 20.0, "duration": 3.75, "velocity": 62},
+        {"pitch": 67, "start": 20.0, "duration": 3.75, "velocity": 62}
+      ],
+      "cc_events": [
+        {"time": 0.0, "controller": 7, "value": 75},
+        {"time": 0.0, "controller": 11, "value": 60},
+        {"time": 8.0, "controller": 11, "value": 65},
+        {"time": 16.0, "controller": 11, "value": 75}
+      ]
+    }
+  ]
+}

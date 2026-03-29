@@ -1,0 +1,306 @@
+{
+	"format_version": "2.0",
+	"tempo": 140.0,
+	"tempo_changes": [
+		{
+			"time": 8.0,
+			"bpm": 120.0
+		}
+	],
+	"tracks": [
+		{
+			"name": "Melody (Square Wave)",
+			"channel": 0.0,
+			"instrument": 80.0,
+			"notes": [
+				{
+					"pitch": 60.0,
+					"start": 0.0,
+					"duration": 1.0,
+					"velocity": 100.0
+				},
+				{
+					"pitch": 64.0,
+					"start": 1.0,
+					"duration": 1.0,
+					"velocity": 100.0
+				},
+				{
+					"pitch": 67.0,
+					"start": 2.0,
+					"duration": 1.0,
+					"velocity": 100.0
+				},
+				{
+					"pitch": 69.0,
+					"start": 3.0,
+					"duration": 1.0,
+					"velocity": 100.0
+				},
+				{
+					"pitch": 67.0,
+					"start": 4.0,
+					"duration": 1.0,
+					"velocity": 100.0
+				},
+				{
+					"pitch": 64.0,
+					"start": 5.0,
+					"duration": 1.0,
+					"velocity": 100.0
+				},
+				{
+					"pitch": 60.0,
+					"start": 6.0,
+					"duration": 1.0,
+					"velocity": 100.0
+				},
+				{
+					"pitch": 60.0,
+					"start": 7.0,
+					"duration": 1.0,
+					"velocity": 100.0
+				}
+			],
+			"cc_events": [
+				{
+					"time": 0.0,
+					"controller": 7.0,
+					"value": 100.0
+				}
+			],
+			"pitch_bend_events": [
+				{
+					"time": 3.5,
+					"value": 12288.0
+				},
+				{
+					"time": 4.0,
+					"value": 8192.0
+				}
+			]
+		},
+		{
+			"name": "Bass (Synth Bass 2)",
+			"channel": 1.0,
+			"instrument": 39.0,
+			"notes": [
+				{
+					"pitch": 48.0,
+					"start": 0.0,
+					"duration": 2.0,
+					"velocity": 90.0
+				},
+				{
+					"pitch": 48.0,
+					"start": 2.0,
+					"duration": 2.0,
+					"velocity": 90.0
+				},
+				{
+					"pitch": 50.0,
+					"start": 4.0,
+					"duration": 2.0,
+					"velocity": 90.0
+				},
+				{
+					"pitch": 48.0,
+					"start": 6.0,
+					"duration": 2.0,
+					"velocity": 90.0
+				}
+			],
+			"cc_events": []
+		},
+		{
+			"name": "Pad (Voice Pad)",
+			"channel": 2.0,
+			"instrument": 91.0,
+			"notes": [
+				{
+					"pitch": 60.0,
+					"start": 0.0,
+					"duration": 2.0,
+					"velocity": 70.0
+				},
+				{
+					"pitch": 64.0,
+					"start": 0.0,
+					"duration": 2.0,
+					"velocity": 70.0
+				},
+				{
+					"pitch": 67.0,
+					"start": 0.0,
+					"duration": 2.0,
+					"velocity": 70.0
+				},
+				{
+					"pitch": 60.0,
+					"start": 2.0,
+					"duration": 2.0,
+					"velocity": 70.0
+				},
+				{
+					"pitch": 64.0,
+					"start": 2.0,
+					"duration": 2.0,
+					"velocity": 70.0
+				},
+				{
+					"pitch": 67.0,
+					"start": 2.0,
+					"duration": 2.0,
+					"velocity": 70.0
+				},
+				{
+					"pitch": 62.0,
+					"start": 4.0,
+					"duration": 2.0,
+					"velocity": 70.0
+				},
+				{
+					"pitch": 66.0,
+					"start": 4.0,
+					"duration": 2.0,
+					"velocity": 70.0
+				},
+				{
+					"pitch": 69.0,
+					"start": 4.0,
+					"duration": 2.0,
+					"velocity": 70.0
+				},
+				{
+					"pitch": 60.0,
+					"start": 6.0,
+					"duration": 2.0,
+					"velocity": 70.0
+				},
+				{
+					"pitch": 64.0,
+					"start": 6.0,
+					"duration": 2.0,
+					"velocity": 70.0
+				},
+				{
+					"pitch": 67.0,
+					"start": 6.0,
+					"duration": 2.0,
+					"velocity": 70.0
+				}
+			],
+			"cc_events": [
+				{
+					"time": 0.0,
+					"controller": 10.0,
+					"value": 64.0
+				}
+			]
+		},
+		{
+			"name": "Drums (GM Kit)",
+			"channel": 9.0,
+			"instrument": 0.0,
+			"notes": [
+				{
+					"pitch": 36.0,
+					"start": 0.0,
+					"duration": 0.5,
+					"velocity": 100.0
+				},
+				{
+					"pitch": 42.0,
+					"start": 0.5,
+					"duration": 0.5,
+					"velocity": 100.0
+				},
+				{
+					"pitch": 38.0,
+					"start": 1.0,
+					"duration": 0.5,
+					"velocity": 100.0
+				},
+				{
+					"pitch": 42.0,
+					"start": 1.5,
+					"duration": 0.5,
+					"velocity": 100.0
+				},
+				{
+					"pitch": 36.0,
+					"start": 2.0,
+					"duration": 0.5,
+					"velocity": 100.0
+				},
+				{
+					"pitch": 42.0,
+					"start": 2.5,
+					"duration": 0.5,
+					"velocity": 100.0
+				},
+				{
+					"pitch": 38.0,
+					"start": 3.0,
+					"duration": 0.5,
+					"velocity": 100.0
+				},
+				{
+					"pitch": 42.0,
+					"start": 3.5,
+					"duration": 0.5,
+					"velocity": 100.0
+				},
+				{
+					"pitch": 36.0,
+					"start": 4.0,
+					"duration": 0.5,
+					"velocity": 100.0
+				},
+				{
+					"pitch": 42.0,
+					"start": 4.5,
+					"duration": 0.5,
+					"velocity": 100.0
+				},
+				{
+					"pitch": 38.0,
+					"start": 5.0,
+					"duration": 0.5,
+					"velocity": 100.0
+				},
+				{
+					"pitch": 42.0,
+					"start": 5.5,
+					"duration": 0.5,
+					"velocity": 100.0
+				},
+				{
+					"pitch": 36.0,
+					"start": 6.0,
+					"duration": 0.5,
+					"velocity": 100.0
+				},
+				{
+					"pitch": 42.0,
+					"start": 6.5,
+					"duration": 0.5,
+					"velocity": 100.0
+				},
+				{
+					"pitch": 38.0,
+					"start": 7.0,
+					"duration": 0.5,
+					"velocity": 100.0
+				},
+				{
+					"pitch": 42.0,
+					"start": 7.5,
+					"duration": 0.5,
+					"velocity": 100.0
+				}
+			],
+			"cc_events": []
+		}
+	]
+}

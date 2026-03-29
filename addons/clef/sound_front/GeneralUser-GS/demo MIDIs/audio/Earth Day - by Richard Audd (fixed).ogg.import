@@ -1,0 +1,19 @@
+[remap]
+
+importer="oggvorbisstr"
+type="AudioStreamOggVorbis"
+uid="uid://coddr08rskquw"
+path="res://.godot/imported/Earth Day - by Richard Audd (fixed).ogg-2b5575927c2e7cfa976b21792f86195f.oggvorbisstr"
+
+[deps]
+
+source_file="res://addons/clef/sound_front/GeneralUser-GS/demo MIDIs/audio/Earth Day - by Richard Audd (fixed).ogg"
+dest_files=["res://.godot/imported/Earth Day - by Richard Audd (fixed).ogg-2b5575927c2e7cfa976b21792f86195f.oggvorbisstr"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4

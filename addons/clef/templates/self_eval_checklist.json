@@ -1,0 +1,316 @@
+{
+  "_comment": "Clef 作曲自评检查清单 — clef-compose Skill 使用",
+  "version": "1.0",
+
+  "scoring": {
+    "scale": [0, 10],
+    "min_pass": 7.5,
+    "max_iterations": 3,
+    "formula": "最终总分 = sum(维度得分[i] × 权重[i])，其中维度得分 = 该维度所有检查项得分之和（每项 0/1/2 分，5 项满分 10 分）",
+    "dimension_weights": {
+      "melody": 0.25,
+      "harmony": 0.25,
+      "rhythm": 0.20,
+      "expression": 0.15,
+      "structure": 0.15
+    }
+  },
+
+  "dimensions": [
+    {
+      "id": "melody",
+      "name": "旋律质量",
+      "weight": 0.25,
+      "checks": [
+        {
+          "id": "motif_existence",
+          "question": "旋律是否有明确的动机（2-4 个音符组成的短乐句）？",
+          "scoring": {
+            "yes": "2分",
+            "partial": "1分 — 有短乐句但不够明确",
+            "no": "0分 — 音符随机散布，没有可识别的动机"
+          }
+        },
+        {
+          "id": "motif_development",
+          "question": "动机是否有发展变化（重复、变奏、模进、倒影）？",
+          "scoring": {
+            "yes": "2分 — 至少 2 种发展手法",
+            "partial": "1分 — 仅有简单重复",
+            "no": "0分 — 每个乐句都完全不同"
+          }
+        },
+        {
+          "id": "melody_contour",
+          "question": "旋律线是否有方向感（上行、下行、波浪、拱形）？",
+          "scoring": {
+            "yes": "2分 — 有清晰的方向变化",
+            "partial": "1分 — 有一定方向但不够清晰",
+            "no": "0分 — 完全水平跳动或完全随机"
+          }
+        },
+        {
+          "id": "melody_range",
+          "question": "旋律音域是否在乐器合理范围内？",
+          "scoring": {
+            "yes": "2分 — 音域控制在 1-2 个八度内",
+            "partial": "1分 — 音域稍大但尚可接受",
+            "no": "0分 — 音域过大或过小"
+          },
+          "hint": "Piano: C3-C6, Violin: G3-A7, Flute: C4-C7, Synth Lead: C2-C7"
+        },
+        {
+          "id": "melody_climax",
+          "question": "旋律是否有明确的高潮点（最高音 + 最强力度）？",
+          "scoring": {
+            "yes": "2分 — 高潮点位置合理",
+            "partial": "1分 — 有较高音但力度配合不足",
+            "no": "0分 — 没有明显高潮"
+          }
+        }
+      ]
+    },
+    {
+      "id": "harmony",
+      "name": "和声质量",
+      "weight": 0.25,
+      "checks": [
+        {
+          "id": "chord_progression_natural",
+          "question": "和弦进行是否流畅自然？",
+          "scoring": {
+            "yes": "2分 — 使用常见进行或合理的替代",
+            "partial": "1分 — 大部分流畅但有生硬过渡",
+            "no": "0分 — 和弦跳跃过大或进行不自然"
+          }
+        },
+        {
+          "id": "tension_release",
+          "question": "是否有合适的张力建立和释放？",
+          "scoring": {
+            "yes": "2分 — 属和弦/减和弦解决得当",
+            "partial": "1分 — 有张力但解决不够明确",
+            "no": "0分 — 缺乏张力或张力无法释放"
+          }
+        },
+        {
+          "id": "harmonic_rhythm",
+          "question": "和声节奏是否合理？",
+          "scoring": {
+            "yes": "2分 — 和弦变化频率符合风格",
+            "partial": "1分 — 和弦变化稍快或稍慢",
+            "no": "0分 — 和弦变化过于频繁或过于稀疏"
+          },
+          "hint": "通常每拍或每两拍换一个和弦，战斗音乐可能更频繁"
+        },
+        {
+          "id": "melody_harmony_alignment",
+          "question": "旋律音是否与当前和弦协调？",
+          "scoring": {
+            "yes": "2分 — 旋律主要使用和弦音 + 合理的经过音",
+            "partial": "1分 — 大部分协调但有少量不协调",
+            "no": "0分 — 旋律与和弦严重冲突"
+          }
+        },
+        {
+          "id": "bass_voice_leading",
+          "question": "低音线声部进行是否合理？",
+          "scoring": {
+            "yes": "2分 — 平滑进行或有目的的跳跃",
+            "partial": "1分 — 有少量生硬跳跃",
+            "no": "0分 — 低音线混乱"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rhythm",
+      "name": "节奏质量",
+      "weight": 0.20,
+      "checks": [
+        {
+          "id": "groove_stability",
+          "question": "节拍感是否清晰稳定？",
+          "scoring": {
+            "yes": "2分 — 强弱拍分明",
+            "partial": "1分 — 节拍感存在但不够清晰",
+            "no": "0分 — 节拍混乱"
+          }
+        },
+        {
+          "id": "drum_pattern_match",
+          "question": "鼓点模式是否与音乐风格匹配？",
+          "scoring": {
+            "yes": "2分 — 鼓点模式符合风格惯例",
+            "partial": "1分 — 基本匹配但有改进空间",
+            "no": "0分 — 鼓点模式与风格不符"
+          }
+        },
+        {
+          "id": "rhythm_variation",
+          "question": "段落间是否有节奏变化？",
+          "scoring": {
+            "yes": "2分 — 每个段落有不同的节奏密度或模式",
+            "partial": "1分 — 有一定变化但不够明显",
+            "no": "0分 — 全曲节奏完全相同"
+          }
+        },
+        {
+          "id": "rhythm_layers",
+          "question": "各轨道的节奏层次是否分明？",
+          "scoring": {
+            "yes": "2分 — 低音、和弦、旋律、鼓组各有节奏特色",
+            "partial": "1分 — 大部分层次分明",
+            "no": "0分 — 所有轨道节奏雷同"
+          }
+        },
+        {
+          "id": "transition_fills",
+          "question": "段落过渡处是否有节奏 fills 或变化？",
+          "scoring": {
+            "yes": "2分 — 过渡处有明显的节奏变化",
+            "partial": "1分 — 有轻微变化",
+            "no": "0分 — 过渡处没有节奏变化"
+          }
+        }
+      ]
+    },
+    {
+      "id": "expression",
+      "name": "表现力",
+      "weight": 0.15,
+      "checks": [
+        {
+          "id": "velocity_range",
+          "question": "旋律轨道的力度变化范围是否足够？",
+          "scoring": {
+            "yes": "2分 — 力度跨度 >= 30",
+            "partial": "1分 — 力度跨度 15-30",
+            "no": "0分 — 力度跨度 < 15 或全部相同"
+          }
+        },
+        {
+          "id": "dynamic_curve",
+          "question": "是否有段落级别的渐强渐弱？",
+          "scoring": {
+            "yes": "2分 — 通过 velocity 或 CC7 实现",
+            "partial": "1分 — 有变化但不平滑",
+            "no": "0分 — 力度完全平坦"
+          }
+        },
+        {
+          "id": "pitch_bend_usage",
+          "question": "弯音事件使用是否合理？",
+          "scoring": {
+            "yes": "2分 — 适度使用，成对出现，增强表现",
+            "partial": "1分 — 使用过多或过少",
+            "no": "0分 — 完全没有弯音事件"
+          }
+        },
+        {
+          "id": "cc_expression",
+          "question": "CC 事件是否增强了音乐表现？",
+          "scoring": {
+            "yes": "2分 — 有 CC7/CC11 渐变，使用得当",
+            "partial": "1分 — 有 CC 事件但效果不明显",
+            "no": "0分 — 没有 CC 事件或 CC 事件使用不当"
+          }
+        },
+        {
+          "id": "articulation",
+          "question": "音符的时值是否有变化（长短交替、断连对比）？",
+          "scoring": {
+            "yes": "2分 — 有明显的断连对比",
+            "partial": "1分 — 有一定变化",
+            "no": "0分 — 所有音符时值相同"
+          }
+        }
+      ]
+    },
+    {
+      "id": "structure",
+      "name": "结构质量",
+      "weight": 0.15,
+      "checks": [
+        {
+          "id": "form_clarity",
+          "question": "歌曲形式是否清晰可辨？",
+          "scoring": {
+            "yes": "2分 — ABA/ABABC 等形式明确",
+            "partial": "1分 — 有一定结构但不够清晰",
+            "no": "0分 — 完全没有结构感"
+          }
+        },
+        {
+          "id": "section_contrast",
+          "question": "段落间对比是否明显？",
+          "scoring": {
+            "yes": "2分 — 旋律/和声/配器/力度都有变化",
+            "partial": "1分 — 有变化但不够明显",
+            "no": "0分 — 各段落听起来一样"
+          }
+        },
+        {
+          "id": "narrative_arc",
+          "question": "整体是否有起承转合？",
+          "scoring": {
+            "yes": "2分 — 有引入、发展、高潮、收束",
+            "partial": "1分 — 有基本的发展线索",
+            "no": "0分 — 平铺直叙没有发展"
+          }
+        },
+        {
+          "id": "duration_match",
+          "question": "时长是否符合用户要求？",
+          "scoring": {
+            "yes": "2分 — 误差在 10% 以内",
+            "partial": "1分 — 误差在 20% 以内",
+            "no": "0分 — 误差超过 20%"
+          }
+        },
+        {
+          "id": "ending_sense",
+          "question": "结尾是否有收束感？",
+          "scoring": {
+            "yes": "2分 — 使用终止式或渐弱收束",
+            "partial": "1分 — 有一定收束但不完整",
+            "no": "0分 — 突然中断或没有收束"
+          }
+        }
+      ]
+    }
+  ],
+
+  "priority_fix_strategies": {
+    "melody_low": [
+      "提取现有旋律中最强的 2-4 音符作为核心动机",
+      "使用重复 + 模进手法发展动机",
+      "为高潮段落创建更高的旋律线",
+      "确保旋律线有清晰的方向变化"
+    ],
+    "harmony_low": [
+      "检查和弦进行，替换生硬的过渡",
+      "在段落结尾添加终止式（V-I 或 vii°-I）",
+      "确保旋律音与当前和弦协调",
+      "调整低音线使其更平滑"
+    ],
+    "rhythm_low": [
+      "丰富鼓点模式，添加 hi-hat 变化",
+      "在段落过渡处添加 fills",
+      "调整各轨道的节奏密度层次",
+      "确保强弱拍分明"
+    ],
+    "expression_low": [
+      "扩展旋律 velocity 范围（跨度至少 30 以上）",
+      "添加段落级别的 CC7 渐变",
+      "在关键位置添加弯音装饰",
+      "添加音符时值变化（长短交替）"
+    ],
+    "structure_low": [
+      "明确标记段落（A/B/C），调整段落间对比",
+      "为高潮段落增加配器和力度",
+      "添加引入段和收束段",
+      "检查总时长是否符合要求"
+    ]
+  }
+}

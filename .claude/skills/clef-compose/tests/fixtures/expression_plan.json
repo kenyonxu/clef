@@ -1,0 +1,13 @@
+{
+  "tracks": [
+    {
+      "channel": 0,
+      "events": [
+        {"time_beats": 0.0, "type": "cc", "control": 7, "value": 90},
+        {"time_beats": 2.0, "type": "cc", "control": 7, "value": 70},
+        {"time_beats": 1.75, "type": "pitch_bend", "value": 12288},
+        {"time_beats": 2.25, "type": "pitch_bend", "value": 8192}
+      ]
+    }
+  ]
+}

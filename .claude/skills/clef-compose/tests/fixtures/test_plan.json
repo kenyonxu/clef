@@ -1,0 +1,9 @@
+{
+  "title": "Test",
+  "key": "D",
+  "bpm": 120,
+  "time_signature": "4/4",
+  "orchestration": {
+    "melody": {"channel": 0, "instrument": 73, "name": "Flute"}
+  }
+}

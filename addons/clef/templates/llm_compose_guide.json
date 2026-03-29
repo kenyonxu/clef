@@ -1,0 +1,113 @@
+{
+  "_comment": "Clef JSON v1.1 LLM 编曲指南 — 将此内容作为 system prompt 提供给大模型",
+
+  "format_spec": {
+    "format_version": "1.1",
+    "structure": {
+      "format_version": "必须为 \"1.1\"",
+      "tempo": "整数, BPM, 范围 1-300, 游戏常用 80-160",
+      "tempo_changes": "可选数组, 每项 {time: float(秒), bpm: int}",
+      "tracks": "数组, 每项为一个音轨",
+      "tracks[].name": "字符串, 音轨名称",
+      "tracks[].channel": "整数 0-15, 打击乐固定用 channel 9",
+      "tracks[].instrument": "整数 0-127, GM 标准音色号",
+      "tracks[].notes": "数组, 每项为一个音符",
+      "tracks[].notes[].pitch": "整数 0-127, 60=C4, 69=A4",
+      "tracks[].notes[].start": "浮点数≥0, 秒, 建议 0.125 倍数",
+      "tracks[].notes[].duration": "浮点数>0, 秒, 不能为 0",
+      "tracks[].notes[].velocity": "整数 0-127, 旋律建议 70-110, 打击乐 90-120",
+      "tracks[].cc_events": "可选数组, 每项 {time: float(秒), controller: int(0-127), value: int(0-127)}",
+      "tracks[].pitch_bend_events": "可选数组, 每项 {time: float(秒), value: int(0-16383)}"
+    }
+  },
+
+  "rules": {
+    "must": [
+      "duration 必须大于 0, 绝不能为 0",
+      "打击乐固定使用 channel 9, instrument 设为 0",
+      "pitch 范围 0-127, velocity 范围 1-127（不要使用 velocity 0）",
+      "所有音轨的 notes 数组不能为空"
+    ],
+    "must_not": [
+      "不要在同一个 track 的同一 start 时间写重复 pitch 的 note_on（会自动截断前一个）",
+      "不要使用 velocity 0 的音符（等同于 note_off）",
+      "不要手动处理 note_off, 只用 duration 控制音符长度",
+      "不要让同一时刻的总发声数超过 8-10 个（128 语音池上限, 多轨道共享）",
+      "不要在同一 track 的 channel 范围内写超过 16 个同时发声的音符"
+    ],
+    "should": [
+      "start 和 duration 建议使用 0.125 秒的倍数, 提高节拍精度",
+      "pitch_bend 弯音成对使用: 弯上去→回居中(8192)",
+      "cc_events 的 volume/pan 渐变需要密集采样(建议每 0.25 秒一个事件)",
+      "tempo_changes 做缓入缓出, 避免突变",
+      "旋律 velocity 变化增加动态感, 不要全部相同"
+    ]
+  },
+
+  "cc_reference": {
+    "7": {"name": "Volume", "desc": "通道音量, 0=静音 100=默认 127=最大"},
+    "10": {"name": "Pan", "desc": "声相, 0=全左 64=居中 127=全右"},
+    "11": {"name": "Expression", "desc": "表情/力度缩放, 127=正常"},
+    "1": {"name": "Modulation", "desc": "调制深度, 控制 5Hz 颤音, 0=无 127=最大"},
+    "64": {"name": "Sustain Pedal", "desc": "延音踏板, <64=释放 ≥64=延音"}
+  },
+
+  "pitch_bend_reference": {
+    "center": 8192,
+    "min": 0,
+    "max": 16383,
+    "range": "约 ±2 半音, 需要 8704-7680 以上的连续值才能有明显效果"
+  },
+
+  "instrument_reference": {
+    "piano": {"id": 0, "name": "Acoustic Grand Piano", "use": "通用钢琴"},
+    "square_lead": {"id": 80, "name": "Lead 1 (Square)", "use": "8-bit/chiptune 主旋律"},
+    "saw_lead": {"id": 81, "name": "Lead 2 (Sawtooth)", "use": "合成器主旋律"},
+    "synth_bass": {"id": 38, "name": "Synth Bass 1", "use": "低音/贝斯"},
+    "acoustic_bass": {"id": 32, "name": "Acoustic Bass", "use": "原声贝斯"},
+    "strings": {"id": 48, "name": "String Ensemble 1", "use": "弦乐 Pad"},
+    "choir": {"id": 52, "name": "Choir Aahs", "use": "人声/史诗氛围"},
+    "warm_pad": {"id": 89, "name": "Pad 2 (Warm)", "use": "暖色背景 Pad"},
+    "guitar": {"id": 25, "name": "Steel String Guitar", "use": "吉他"},
+    "flute": {"id": 73, "name": "Flute", "use": "长笛/笛"},
+    "drums": {"id": 0, "channel": 9, "name": "Standard Kit", "use": "打击乐(channel 固定 9)"},
+    "drum_notes": {
+      "36": "Bass Drum (底鼓)",
+      "38": "Snare (军鼓)",
+      "42": "Closed Hi-Hat (闭合踩镲)",
+      "46": "Open Hi-Hat (开放踩镲)",
+      "49": "Crash Cymbal (碎音镲)",
+      "51": "Ride Cymbal (叮叮镲)"
+    }
+  },
+
+  "polyphony_guide": {
+    "max_total_voices": 128,
+    "max_per_channel": 16,
+    "recommended_simultaneous": "8-10",
+    "voice_stealing": "超出时自动窃取最老的释放中/活跃中语音"
+  },
+
+  "example_patterns": {
+    "volume_fade_in": [
+      {"time": 0.0, "controller": 7, "value": 0},
+      {"time": 0.5, "controller": 7, "value": 64},
+      {"time": 1.0, "controller": 7, "value": 100}
+    ],
+    "volume_fade_out": [
+      {"time": 0.0, "controller": 7, "value": 100},
+      {"time": 1.0, "controller": 7, "value": 64},
+      {"time": 2.0, "controller": 7, "value": 0}
+    ],
+    "pitch_bend_up_and_back": [
+      {"time": 1.0, "value": 8192},
+      {"time": 1.5, "value": 8704},
+      {"time": 2.0, "value": 9344},
+      {"time": 2.5, "value": 8704},
+      {"time": 3.0, "value": 8192}
+    ],
+    "tempo_slow_down": [
+      {"time": 4.0, "bpm": 120}
+    ]
+  }
+}

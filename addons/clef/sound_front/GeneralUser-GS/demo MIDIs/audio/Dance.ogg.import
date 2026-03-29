@@ -1,0 +1,19 @@
+[remap]
+
+importer="oggvorbisstr"
+type="AudioStreamOggVorbis"
+uid="uid://gfcsvpq61etr"
+path="res://.godot/imported/Dance.ogg-0b5a8250d566ebe06bcc142968fdcc58.oggvorbisstr"
+
+[deps]
+
+source_file="res://addons/clef/sound_front/GeneralUser-GS/demo MIDIs/audio/Dance.ogg"
+dest_files=["res://.godot/imported/Dance.ogg-0b5a8250d566ebe06bcc142968fdcc58.oggvorbisstr"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4

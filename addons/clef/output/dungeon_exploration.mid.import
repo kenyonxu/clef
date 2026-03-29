@@ -1,0 +1,14 @@
+[remap]
+
+importer="clef"
+type="MidiResource"
+uid="uid://j1ippe3oddo0"
+path="res://.godot/imported/dungeon_exploration.mid-4cf0623c38f83053f22aea6419747a65.tres"
+
+[deps]
+
+source_file="res://addons/clef/output/dungeon_exploration.mid"
+dest_files=["res://.godot/imported/dungeon_exploration.mid-4cf0623c38f83053f22aea6419747a65.tres"]
+
+[params]
+

@@ -1,0 +1,14 @@
+[remap]
+
+importer="clef"
+type="MidiResource"
+uid="uid://dju8vlco5ttgr"
+path="res://.godot/imported/example_full.mid-779c918d6cb645beb8fbd6fa5ed17fd4.tres"
+
+[deps]
+
+source_file="res://addons/clef/templates/example_full.mid"
+dest_files=["res://.godot/imported/example_full.mid-779c918d6cb645beb8fbd6fa5ed17fd4.tres"]
+
+[params]
+

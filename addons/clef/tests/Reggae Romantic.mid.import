@@ -1,0 +1,14 @@
+[remap]
+
+importer="clef"
+type="MidiResource"
+uid="uid://btp3a3gpbvcan"
+path="res://.godot/imported/Reggae Romantic.mid-1fc49ae12200e8419a49b22d776be02e.tres"
+
+[deps]
+
+source_file="res://addons/clef/tests/Reggae Romantic.mid"
+dest_files=["res://.godot/imported/Reggae Romantic.mid-1fc49ae12200e8419a49b22d776be02e.tres"]
+
+[params]
+

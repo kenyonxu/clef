@@ -1,0 +1,44 @@
+[gd_scene format=3 uid="uid://bq7xjpm4k2fhn"]
+
+[ext_resource type="Script" path="res://addons/clef/ui/midi_player_ui.gd" id="1_ui"]
+
+[node name="MidiPlayerUI" type="Control"]
+layout_mode = 3
+anchors_preset = 0
+script = ExtResource("1_ui")
+
+[node name="HBox" type="HBoxContainer" parent="."]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 8
+
+[node name="PlayButton" type="Button" parent="HBox"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(36, 0)
+text = "▶"
+
+[node name="StopButton" type="Button" parent="HBox"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(36, 0)
+text = "⏹"
+
+[node name="ProgressSlider" type="HSlider" parent="HBox"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = 0.0
+max_value = 1.0
+step = 0.01
+value = 0.0
+
+[node name="TimeLabel" type="Label" parent="HBox"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(80, 0)
+text = "0:00 / 0:00"
+horizontal_alignment = 2

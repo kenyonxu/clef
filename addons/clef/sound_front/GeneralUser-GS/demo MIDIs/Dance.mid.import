@@ -1,0 +1,14 @@
+[remap]
+
+importer="clef"
+type="MidiResource"
+uid="uid://beqeldfd05h7g"
+path="res://.godot/imported/Dance.mid-d8cafd949de408b54d3ddd383ff5b912.tres"
+
+[deps]
+
+source_file="res://addons/clef/sound_front/GeneralUser-GS/demo MIDIs/Dance.mid"
+dest_files=["res://.godot/imported/Dance.mid-d8cafd949de408b54d3ddd383ff5b912.tres"]
+
+[params]
+

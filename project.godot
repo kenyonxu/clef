@@ -1,0 +1,39 @@
+; Engine configuration file.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
+
+config_version=5
+
+[application]
+
+config/name="Clef_Dev"
+config/features=PackedStringArray("4.6", "Forward Plus")
+config/icon="res://icon.svg"
+
+[audio]
+
+buses/default_bus_layout="uid://f6g3gfor8k6"
+
+[clef]
+
+default_soundfont="E:/GitHub/clef-dev/addons/clef/sound_front/GeneralUser-GS/GeneralUser-GS.sf2"
+
+[dotnet]
+
+project/assembly_name="Clef_Dev"
+
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/clef/plugin.cfg")
+
+[physics]
+
+3d/physics_engine="Jolt Physics"
+
+[rendering]
+
+rendering_device/driver.windows="d3d12"

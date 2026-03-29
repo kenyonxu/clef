@@ -1,0 +1,14 @@
+[remap]
+
+importer="clef"
+type="MidiResource"
+uid="uid://iwqr7bnl1q8n"
+path="res://.godot/imported/AerissThemeII.mid-f687c147965c6c0369558ea9ec4b310e.tres"
+
+[deps]
+
+source_file="res://addons/clef/midi_samples/AerissThemeII.mid"
+dest_files=["res://.godot/imported/AerissThemeII.mid-f687c147965c6c0369558ea9ec4b310e.tres"]
+
+[params]
+

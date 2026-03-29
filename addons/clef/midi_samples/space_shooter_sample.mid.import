@@ -1,0 +1,14 @@
+[remap]
+
+importer="clef"
+type="MidiResource"
+uid="uid://c7dihjffyhwld"
+path="res://.godot/imported/space_shooter_sample.mid-d60691d0c9a15860f6d1ac0b8539a41b.tres"
+
+[deps]
+
+source_file="res://addons/clef/midi_samples/space_shooter_sample.mid"
+dest_files=["res://.godot/imported/space_shooter_sample.mid-d60691d0c9a15860f6d1ac0b8539a41b.tres"]
+
+[params]
+
