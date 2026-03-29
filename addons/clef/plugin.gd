@@ -30,6 +30,7 @@ func _enter_tree() -> void:
 	_main_screen = ClefStation.new()
 	_main_screen.name = "ClefStation"
 	EditorInterface.get_editor_main_screen().add_child(_main_screen)
+	_main_screen.set_bridge(_bridge)
 	_make_visible(false)
 	_bridge = load("res://addons/clef/editor/clef_station_editor_bridge.gd").new()
 	_register_project_settings()

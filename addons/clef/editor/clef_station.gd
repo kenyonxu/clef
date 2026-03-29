@@ -5,6 +5,7 @@ class_name ClefStation
 extends Control
 
 const SoundfontBrowser = preload("res://addons/clef/editor/soundfont_browser/soundfont_browser.gd")
+const MidiMonitor = preload("res://addons/clef/editor/midi_monitor/midi_monitor.gd")
 
 var _left_panel: PanelContainer
 var _center_panel: PanelContainer
@@ -13,6 +14,8 @@ var _split_main: HSplitContainer
 var _btn_left: Button
 var _btn_right: Button
 var _soundfont_browser: SoundfontBrowser
+var _bridge: RefCounted = null
+var _midi_monitor: MidiMonitor
 
 
 func _init() -> void:
@@ -112,11 +115,13 @@ func _build_layout() -> void:
 	_right_panel.custom_minimum_size = Vector2i(180, 0)
 	_right_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_style_panel(_right_panel, Color(0.14, 0.10, 0.10))
-	var right_label := Label.new()
-	right_label.text = "MIDI Monitor"
-	right_label.add_theme_color_override("font_color", Color(1.0, 0.8, 0.7))
-	_right_panel.add_child(right_label)
+	_midi_monitor = MidiMonitor.new()
+	_right_panel.add_child(_midi_monitor)
 	split_right.add_child(_right_panel)
+
+	# 延迟连接 bridge（可能早于 _ready 设置）
+	if _bridge != null and _midi_monitor != null:
+		_midi_monitor.connect_bridge(_bridge)
 
 
 func _style_panel(panel: PanelContainer, bg_color: Color) -> void:
@@ -133,6 +138,12 @@ func set_left_panel_visible(visible: bool) -> void:
 
 func set_right_panel_visible(visible: bool) -> void:
 	_right_panel.visible = visible
+
+
+func set_bridge(bridge: RefCounted) -> void:
+	_bridge = bridge
+	if _midi_monitor != null:
+		_midi_monitor.connect_bridge(_bridge)
 
 
 func _on_patch_selected(preset_index: int, patch: PatchData) -> void:
