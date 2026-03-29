@@ -6,6 +6,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 始终使用中文与用户交互。
 
+## 仓库
+
+- GitHub: https://github.com/kenyonxu/clef-dev（私有）
+
 ## 项目概述
 
 Clef 是一个 Godot 4.6 MIDI 音乐插件 + Claude Code 多 Agent 作曲系统。由两大模块组成：
