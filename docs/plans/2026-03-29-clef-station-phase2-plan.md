@@ -1,5 +1,8 @@
 # Clef Station Phase 2 — 音色浏览器 Implementation Plan
 
+> **Status:** COMPLETED (2026-03-29)
+> **Commit:** `a8c22c5` feat: add SoundfontBrowser panel with patch list, search, and audition (Phase 2)
+
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
 **Goal:** 实现左栏音色浏览器，支持加载 SF2 profile JSON、按 GM 分类浏览 Patch 列表、搜索过滤、点击试听、显示 Patch 详细信息。
@@ -403,12 +406,25 @@ feat: add patch selection highlight and keyboard audition
 
 Phase 2 完成后应满足：
 
-1. 左栏显示 Tree 控件，按 GM 分类分组显示 Patch 列表
-2. 搜索框可按名称或编号过滤 Patch
-3. 选中 Patch 显示信息面板（音域、力度、甜区、品质）
-4. 双击或选中后按 Enter 可试听（播放 C4 约 1.5 秒）
-5. 无 SF2 profile 时显示空状态提示
-6. 切换标签/重新加载插件无报错
+1. 左栏显示 Tree 控件，按 GM 分类分组显示 Patch 列表 ✅
+2. 搜索框可按名称或编号过滤 Patch ✅
+3. 选中 Patch 显示信息面板（音域、力度、甜区、品质、层次） ✅
+4. 双击或选中后按 Enter 可试听（播放 C4 约 1.5 秒） ✅
+5. 无 SF2 profile 时显示空状态提示 ✅
+6. 切换标签/重新加载插件无报错 ✅
+
+## 实现笔记
+
+### 与计划的偏差
+
+1. **PatchData `Array[String]`**：JSON 解析返回普通 `Array`，无法赋值给 `Array[String]` 类型声明，改为 `Array`
+2. **`set_selectable` API**：Godot 4.x 需要 column 参数，`set_selectable(false)` 改为 `set_selectable(0, false)`
+3. **`KEY_RETURN`**：Godot 4.x 中不存在，改为 `KEY_ENTER`
+4. **lambda 闭合括号**：`_audition_patch` 中 `connect(func():)` 的 `)` 缺失，`_cleanup_timer.start()` 被错误包含在 lambda 内部
+5. **选中高亮**：遍历树重置所有项颜色会导致分组外音色无法恢复，改为追踪 `_selected_item` 引用
+6. **字体色一致性**：重置选中色用 `Color(1,1,1)` 比主题默认色更亮，改为 `_tree.get_theme_color("font_color", "Tree")`
+7. **信息面板背景**：添加 `PanelContainer` 包裹信息面板，用深色背景与列表区区分
+8. **Profile 自动生成**：在 `_load_soundfont_profile()` 中，当 profile JSON 不存在时自动调用 `sf2_profiler.py` 生成
 
 ## 文件清单
 
