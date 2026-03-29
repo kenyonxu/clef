@@ -75,11 +75,13 @@ player.start_playback()
 1. 在文件系统面板中选中一个 `MidiResource`（`.tres`）文件
 2. Inspector 底部会出现 Clef 预览面板：
    - **▶ Play** — 开始播放
+   - **⏸ Pause** — 暂停 / 恢复
    - **⏹ Stop** — 停止播放
-   - 进度条 — 显示当前播放进度
-   - **Export JSON** — 导出为 Clef JSON 格式
+   - 进度条 — 拖拽可跳转播放位置
+   - 时间标签 — 显示当前时间 / 总时长
+   - **Export JSON** — 导出为 Clef JSON v2.0 格式（供 LLM 编曲使用）
 
-> 前提：已在项目设置中配置了默认 SoundFont。
+> 前提：已在项目设置中配置了默认 SoundFont。未配置时播放按钮不可用，并显示提示文字。
 
 ---
 
@@ -189,25 +191,33 @@ func switch_soundfont(path: String):
 
 ## 7. LLM 辅助编曲
 
-Clef JSON 格式专为 LLM 辅助作曲设计。将 [系统提示词](user_docs/celf_composer_llm_system_prompt_cn.md) 提供给 ChatGPT / Claude 等 LLM，即可进行 AI 辅助作曲。
+Clef 提供两种 LLM 辅助作曲方式：**Clef Compose**（推荐，基于 Claude Code 多 Agent 协作）和 **模板编曲**（手动将 JSON 提交给任意 LLM）。
 
-### 工作模式
+### 方式一：Clef Compose（推荐）
 
-LLM 支持三种模式：
+在 Claude Code 中使用 `/clef-compose` 命令，用自然语言描述音乐需求即可自动生成 MIDI。系统通过 7 个专业 Agent 协作完成：旋律创作 → 和声编配 → 节奏设计 → 表现力注入 → 质量评审 → 自动迭代 → MIDI 输出。
 
-1. **创作** — 描述你想要的音乐（风格、情绪、时长），LLM 生成 Clef JSON
-2. **分析** — 提供已有的 Clef JSON，LLM 分析其风格、配器、结构
-3. **参考编曲** — 提供参考 JSON + 新需求，LLM 基于参考进行改编
+使用示例：
 
-### 使用流程
+```
+/clef-compose 帮我写一段 boss 战斗音乐，D大调，140BPM，30秒，管弦风格
+```
+
+详细用法参见 [LLM 作曲使用指南](user_docs/llm_midi_composer_guide_cn.md)。
+
+### 方式二：模板编曲
+
+将 [系统提示词](user_docs/celf_composer_llm_system_prompt_cn.md) 和 [模板文件](../templates/) 提供给 ChatGPT / Claude 等 LLM，手动完成 JSON → MIDI 转换。
+
+使用流程：
 
 1. 将 [templates/default.json](../templates/default.json) 作为起始模板
-2. 向 LLM 描述你的需求
+2. 向 LLM 描述你的需求，附带系统提示词
 3. LLM 返回 Clef JSON
-4. 在 Godot 中使用编辑器工具转换为 MIDI
+4. 在 Godot 中使用编辑器工具（右键 `.json` → Convert to MIDI）转换为 MIDI
 5. 在 Inspector 中预览试听
 
-### 模板文件
+#### 模板文件
 
 | 文件 | 用途 |
 |------|------|
