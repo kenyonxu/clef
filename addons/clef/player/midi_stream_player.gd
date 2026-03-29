@@ -16,6 +16,10 @@ extends Node
 var bus: String = "Master" : set = set_bus
 
 signal note_triggered(channel: int, pitch: int, velocity: int)
+signal note_released(channel: int, pitch: int)
+signal cc_received(channel: int, controller: int, value: int)
+signal pitch_bend_received(channel: int, value: int)
+signal program_changed(channel: int, preset_index: int)
 signal finished
 signal progress_updated(position: float, duration: float)
 
@@ -123,7 +127,9 @@ func set_bus(value: String) -> void:
 ## 设置音频总线 (ClefMaster + 16 个通道总线)
 func _setup_audio_buses() -> void:
 	# 检查是否已存在
-	if AudioServer.get_bus_index("ClefMaster") >= 0:
+	var existing_idx := AudioServer.get_bus_index("ClefMaster")
+	if existing_idx >= 0:
+		_clef_master_bus_idx = existing_idx
 		return
 	# 创建主总线
 	AudioServer.add_bus(-1)
@@ -263,9 +269,12 @@ func _preprocess_events_up_to(target_tick: int) -> void:
 			_ticks_per_second = event["bpm"] / 60.0 * float(_timebase)
 		elif event_type == "program_change":
 			_channel_instruments[event["channel"]] = event["preset_index"]
+			program_changed.emit(event["channel"], event["preset_index"])
 		elif event_type == "control_change":
+			cc_received.emit(event["channel"], event["controller"], event["value"])
 			_process_cc(event)
 		elif event_type == "pitch_bend":
+			pitch_bend_received.emit(event["channel"], event["value"])
 			_process_pitch_bend(event)
 		_event_index += 1
 
@@ -454,13 +463,17 @@ func _process_event(event: Dictionary) -> void:
 						voice._sustained = true
 			else:
 				_voice_pool.stop_note(ch, event["pitch"])
+				note_released.emit(ch, event["pitch"])
 		"program_change":
 			_channel_instruments[event["channel"]] = event["preset_index"]
+			program_changed.emit(event["channel"], event["preset_index"])
 		"tempo_change":
 			_ticks_per_second = event["bpm"] / 60.0 * float(_timebase)
 		"control_change":
+			cc_received.emit(event["channel"], event["controller"], event["value"])
 			_process_cc(event)
 		"pitch_bend":
+			pitch_bend_received.emit(event["channel"], event["value"])
 			_process_pitch_bend(event)
 
 

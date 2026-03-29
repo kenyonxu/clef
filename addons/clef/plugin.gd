@@ -9,6 +9,8 @@ var _submenu: PopupMenu = null
 var _file_context_menu: ClefFileContextMenu
 var _import_plugin: MidiImportPlugin
 var _inspector_plugin: MidiInspectorPlugin
+var _main_screen: ClefStation = null
+var _bridge: RefCounted = null
 
 
 func _enter_tree() -> void:
@@ -24,10 +26,21 @@ func _enter_tree() -> void:
 	add_inspector_plugin(_inspector_plugin)
 	_file_context_menu = ClefFileContextMenu.new()
 	add_context_menu_plugin(EditorContextMenuPlugin.CONTEXT_SLOT_FILESYSTEM, _file_context_menu)
+	# Clef Station 主屏幕
+	_main_screen = ClefStation.new()
+	_main_screen.name = "ClefStation"
+	EditorInterface.get_editor_main_screen().add_child(_main_screen)
+	_make_visible(false)
+	_bridge = load("res://addons/clef/editor/clef_station_editor_bridge.gd").new()
 	_register_project_settings()
 
 
 func _exit_tree() -> void:
+	if _main_screen != null:
+		_main_screen.queue_free()
+		_main_screen = null
+	if _bridge != null:
+		_bridge = null
 	if _inspector_plugin != null:
 		remove_inspector_plugin(_inspector_plugin)
 		_inspector_plugin = null
@@ -43,6 +56,27 @@ func _exit_tree() -> void:
 		_file_context_menu = null
 
 
+# ─── Main Screen ───────────────────────────────────────────
+
+func _has_main_screen() -> bool:
+	return true
+
+
+func _make_visible(visible: bool) -> void:
+	if _main_screen:
+		_main_screen.visible = visible
+
+
+func _get_plugin_name() -> String:
+	return "Clef"
+
+
+func _get_main_screen_icon() -> Texture2D:
+	return EditorInterface.get_editor_theme().get_icon("AudioStreamPlayer", "EditorIcons")
+
+
+# ─── Project Settings ──────────────────────────────────────
+
 func _register_project_settings() -> void:
 	var setting_name: String = "clef/default_soundfont"
 	if not ProjectSettings.has_setting(setting_name):
@@ -55,6 +89,8 @@ func _register_project_settings() -> void:
 		"hint_string": "*.sf2",
 	})
 
+
+# ─── Menu Actions ──────────────────────────────────────────
 
 func _on_submenu_id_pressed(id: int) -> void:
 	match id:
@@ -190,4 +226,3 @@ func _show_error(message: String) -> void:
 	dialog.popup_centered(Vector2i(400, 150))
 	dialog.confirmed.connect(dialog.queue_free)
 	dialog.close_requested.connect(dialog.queue_free)
-
