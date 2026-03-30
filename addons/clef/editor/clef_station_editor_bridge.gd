@@ -12,6 +12,8 @@ signal midi_note_off(channel: int, pitch: int)
 signal midi_cc(channel: int, controller: int, value: int)
 signal midi_pitch_bend(channel: int, value: int)
 signal midi_program_change(channel: int, preset_index: int)
+signal progress_updated(position: float, duration: float)
+signal playback_finished()
 
 var current_player: MidiStreamPlayer = null : set = set_current_player
 var _connected_players: Array[MidiStreamPlayer] = []
@@ -35,6 +37,8 @@ func _connect_player(player: MidiStreamPlayer) -> void:
 	player.cc_received.connect(_on_cc_received)
 	player.pitch_bend_received.connect(_on_pitch_bend_received)
 	player.program_changed.connect(_on_program_changed)
+	player.finished.connect(func(): playback_finished.emit())
+	player.progress_updated.connect(progress_updated.emit)
 	_connected_players.append(player)
 	player_connected.emit(player)
 

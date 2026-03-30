@@ -33,6 +33,9 @@ var _clef_master_bus_idx: int = -1
 ## 编辑器预览播放时绕过 _process 中的 editor_hint 守卫
 var _editor_preview: bool = false
 var _debug_note_counts: Dictionary = {}
+var _muted_channels: Array[int] = []
+## 混音台独立音量 (0.0-1.0)，与 CC#7 volume 分离
+var _mixer_volumes: Array[float] = []
 ## 调试: 设为 >= 0 时仅播放该通道 (-1 = 全部通道)
 @export var debug_channel_filter: int = -1 : set = set_debug_channel_filter  # -1=all, 0-15=single channel
 var _debug_channel_filter: int = -1
@@ -68,16 +71,18 @@ func _get_property_list() -> Array[Dictionary]:
 func _ready() -> void:
 	for i in range(16):
 		_channel_states.append(MidiChannelState.new())
+		_mixer_volumes.append(1.0)
 	_clef_bank = ClefBank.new()
-	_voice_pool = ClefVoicePool.new(self, max_polyphony)
-	_setup_audio_buses()
-	# 应用初始属性 (反序列化阶段 setter 被调用时总线/voice_pool 尚未创建)
-	set_volume_db(volume_db)
-	set_bus(bus)
-	# 补加载 SF2
-	if soundfont != "":
-		set_soundfont(soundfont)
-	call_deferred("_deferred_play")
+	if _editor_preview:
+		call_deferred("_editor_preview_init")
+	else:
+		_voice_pool = ClefVoicePool.new(self, max_polyphony)
+		_setup_audio_buses()
+		set_volume_db(volume_db)
+		set_bus(bus)
+		if soundfont != "":
+			set_soundfont(soundfont)
+		call_deferred("_deferred_play")
 
 
 func _deferred_play() -> void:
@@ -85,6 +90,15 @@ func _deferred_play() -> void:
 		return
 	if autoplay:
 		start_playback()
+
+
+func _editor_preview_init() -> void:
+	_voice_pool = ClefVoicePool.new(self, max_polyphony)
+	_setup_audio_buses()
+	set_volume_db(volume_db)
+	set_bus(bus)
+	if soundfont != "":
+		set_soundfont(soundfont)
 
 
 func set_midi_resource(value: MidiResource) -> void:
@@ -164,12 +178,6 @@ func start_playback(from_position: float = 0.0) -> void:
 	_is_paused = false
 	_is_playing = true
 	# 预处理: 跳到目标位置前的所有 tempo/program 事件
-	_debug_note_counts.clear()
-	var _dbg_on: int = 0
-	for _e in _sorted_events:
-		if _e["type"] == "note_on":
-			_dbg_on += 1
-	print("[PLAY_START] events=%d note_on=%d" % [_sorted_events.size(), _dbg_on])
 	_preprocess_events_up_to(int(_current_tick))
 	# 取消静音 (如果之前是暂停状态)
 	if _clef_master_bus_idx >= 0:
@@ -227,6 +235,21 @@ func is_playing() -> bool:
 ## 是否暂停中
 func is_paused() -> bool:
 	return _is_paused
+
+
+## 设置混音台通道音量 (0.0-1.0)，独立于 CC#7
+func set_channel_volume(channel: int, vol: float) -> void:
+	if channel < 0 or channel >= _mixer_volumes.size():
+		return
+	_mixer_volumes[channel] = clampf(vol, 0.0, 1.0)
+	_apply_channel_volume(channel)
+
+
+## 获取混音台通道音量 (0.0-1.0)
+func get_channel_volume(channel: int) -> float:
+	if channel < 0 or channel >= _mixer_volumes.size():
+		return 0.0
+	return _mixer_volumes[channel]
 
 
 ## 跳转到指定位置
@@ -541,13 +564,33 @@ func _release_sustained_notes(ch: int) -> void:
 			voice.stop_note()
 
 
-## 应用通道音量到音频总线
+## 应用通道音量到音频总线（CC#7 volume × 混音台 volume）
 func _apply_channel_volume(ch: int) -> void:
-	var state: MidiChannelState = _channel_states[ch]
 	var bus_idx: int = AudioServer.get_bus_index("clef_ch_%d" % ch)
 	if bus_idx < 0:
 		return
-	AudioServer.set_bus_volume_db(bus_idx, linear_to_db(maxf(state.get_effective_volume(), 0.001)))
+	if ch in _muted_channels:
+		AudioServer.set_bus_mute(bus_idx, true)
+		return
+	AudioServer.set_bus_mute(bus_idx, false)
+	var state: MidiChannelState = _channel_states[ch]
+	var mixer_vol: float = _mixer_volumes[ch] if ch < _mixer_volumes.size() else 1.0
+	var effective: float = state.get_effective_volume() * mixer_vol
+	AudioServer.set_bus_volume_db(bus_idx, linear_to_db(maxf(effective, 0.001)))
+
+
+## 静音/取消静音通道
+func set_channel_mute(channel: int, muted: bool) -> void:
+	if muted and not (channel in _muted_channels):
+		_muted_channels.append(channel)
+	elif not muted and channel in _muted_channels:
+		_muted_channels.erase(channel)
+	_apply_channel_volume(channel)
+
+
+## 检查通道是否静音
+func is_channel_muted(channel: int) -> bool:
+	return channel in _muted_channels
 
 
 ## 应用通道声相到音频总线

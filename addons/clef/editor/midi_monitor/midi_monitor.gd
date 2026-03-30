@@ -45,6 +45,7 @@ const _EVENT_NAMES: Dictionary = {
 	EventType.PROGRAM_CHANGE: "PC",
 }
 
+const _CONFIG_PATH = "user://clef_editor.cfg"
 const MAX_EVENTS: int = 500
 
 var _event_log: RichTextLabel
@@ -58,11 +59,14 @@ var _auto_scroll: bool = true
 var _rate_timer: Timer = null
 var _rate_count: int = 0
 var _current_rate: int = 0
+var _filter_btns: Dictionary = {}
+var _scroll_btn: Button = null
 
 
 func _ready() -> void:
 	size_flags_vertical = Control.SIZE_EXPAND_FILL
 	size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_load_config()
 	_build_ui()
 
 
@@ -89,19 +93,27 @@ func _build_ui() -> void:
 		btn.text = _EVENT_NAMES[type_key]
 		btn.custom_minimum_size = Vector2i(42, 0)
 		btn.toggle_mode = true
-		btn.button_pressed = true
+		var active: bool = bool(_filter_types & (1 << type_key))
+		btn.button_pressed = active
 		btn.tooltip_text = "Toggle %s filter" % _EVENT_NAMES[type_key]
-		btn.pressed.connect(_on_type_filter_pressed.bind(type_key, btn))
+		_set_toggle_style(btn, active, _EVENT_COLORS.get(type_key, Color(1, 1, 1)))
+		btn.toggled.connect(_on_type_filter_toggled.bind(type_key, btn))
 		toolbar.add_child(btn)
+		_filter_btns[type_key] = btn
 
-	var scroll_btn := Button.new()
-	scroll_btn.text = "Auto"
-	scroll_btn.custom_minimum_size = Vector2i(36, 0)
-	scroll_btn.toggle_mode = true
-	scroll_btn.button_pressed = true
-	scroll_btn.tooltip_text = "Toggle auto-scroll"
-	scroll_btn.pressed.connect(func(pressed: bool): _auto_scroll = pressed)
-	toolbar.add_child(scroll_btn)
+	_scroll_btn = Button.new()
+	_scroll_btn.text = "Auto"
+	_scroll_btn.custom_minimum_size = Vector2i(36, 0)
+	_scroll_btn.toggle_mode = true
+	_scroll_btn.button_pressed = _auto_scroll
+	_scroll_btn.tooltip_text = "Toggle auto-scroll"
+	_set_toggle_style(_scroll_btn, _auto_scroll, Color(0.5, 0.5, 0.6))
+	_scroll_btn.toggled.connect(func(pressed: bool):
+		_auto_scroll = pressed
+		_set_toggle_style(_scroll_btn, pressed, Color(0.5, 0.5, 0.6))
+		_save_config()
+	)
+	toolbar.add_child(_scroll_btn)
 
 	var clear_btn := Button.new()
 	clear_btn.text = "Clear"
@@ -110,16 +122,29 @@ func _build_ui() -> void:
 	clear_btn.pressed.connect(_clear_log)
 	toolbar.add_child(clear_btn)
 
+	var copy_btn := Button.new()
+	copy_btn.text = "Copy"
+	copy_btn.custom_minimum_size = Vector2i(36, 0)
+	copy_btn.tooltip_text = "Copy event log to clipboard"
+	copy_btn.pressed.connect(_copy_log)
+	toolbar.add_child(copy_btn)
+
 	add_child(toolbar)
 
-	# 事件流
+	# 事件流（带滚动条）
+	var scroll_container := ScrollContainer.new()
+	scroll_container.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll_container.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll_container.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+
 	_event_log = RichTextLabel.new()
 	_event_log.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_event_log.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_event_log.scroll_following = true
-	_event_log.bbcode_enabled = true
 	_event_log.fit_content = true
-	add_child(_event_log)
+	scroll_container.add_child(_event_log)
+	add_child(scroll_container)
 
 	# 统计栏
 	var stats_container := PanelContainer.new()
@@ -139,6 +164,20 @@ func _build_ui() -> void:
 	_rate_timer.timeout.connect(_update_rate)
 	add_child(_rate_timer)
 	_rate_timer.start()
+
+
+## 设置切换按钮样式（参考 TransportBar Loop 按钮）
+func _set_toggle_style(btn: Button, active: bool, accent: Color) -> void:
+	var style := StyleBoxFlat.new()
+	if active:
+		style.bg_color = Color(accent.r * 0.25, accent.g * 0.25, accent.b * 0.25)
+		btn.add_theme_color_override("font_color", accent)
+	else:
+		style.bg_color = Color(0.18, 0.18, 0.20)
+		btn.add_theme_color_override("font_color", Color(0.45, 0.45, 0.45))
+	style.set_content_margin_all(4)
+	style.set_corner_radius_all(3)
+	btn.add_theme_stylebox_override("normal", style)
 
 
 func connect_bridge(bridge: RefCounted) -> void:
@@ -208,7 +247,9 @@ func _append_event_line(evt: MidiEvent) -> void:
 		return
 	var color: Color = _EVENT_COLORS.get(evt.type, Color(1, 1, 1))
 	var text := _format_event(evt)
-	_event_log.append_text("[color #%s]%s[/color]\n" % [color.to_html(false), text])
+	_event_log.push_color(color)
+	_event_log.append_text(text + "\n")
+	_event_log.pop()
 	if _auto_scroll:
 		_event_log.scroll_to_line(_event_log.get_line_count() - 1)
 
@@ -244,11 +285,13 @@ func _passes_filter(evt: MidiEvent) -> bool:
 	return true
 
 
-func _on_type_filter_pressed(type_val: int, btn: Button) -> void:
-	if btn.button_pressed:
+func _on_type_filter_toggled(pressed: bool, type_val: int, btn: Button) -> void:
+	if pressed:
 		_filter_types |= (1 << type_val)
 	else:
 		_filter_types &= ~(1 << type_val)
+	_set_toggle_style(btn, pressed, _EVENT_COLORS.get(type_val, Color(1, 1, 1)))
+	_save_config()
 	_event_log.clear()
 	_rebuild_log()
 
@@ -269,3 +312,30 @@ func _clear_log() -> void:
 	_current_rate = 0
 	_event_log.clear()
 	_update_rate()
+
+
+func _copy_log() -> void:
+	var text := ""
+	for evt in _events:
+		if _passes_filter(evt):
+			text += _format_event(evt) + "\n"
+	if text == "":
+		text = "(empty)"
+	DisplayServer.clipboard_set(text)
+
+
+# ─── 配置持久化 ────────────────────────────────────────
+
+func _load_config() -> void:
+	var config := ConfigFile.new()
+	if config.load(_CONFIG_PATH) == OK:
+		_filter_types = config.get_value("midi_monitor", "filter_types", 0x1F)
+		_auto_scroll = config.get_value("midi_monitor", "auto_scroll", true)
+
+
+func _save_config() -> void:
+	var config := ConfigFile.new()
+	config.load(_CONFIG_PATH)  # 保留其他 section（如 editor）
+	config.set_value("midi_monitor", "filter_types", _filter_types)
+	config.set_value("midi_monitor", "auto_scroll", _auto_scroll)
+	config.save(_CONFIG_PATH)

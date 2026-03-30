@@ -6,6 +6,11 @@ extends Control
 
 const SoundfontBrowser = preload("res://addons/clef/editor/soundfont_browser/soundfont_browser.gd")
 const MidiMonitor = preload("res://addons/clef/editor/midi_monitor/midi_monitor.gd")
+const EditorPlayer = preload("res://addons/clef/editor/editor_player/editor_player.gd")
+const TransportBar = preload("res://addons/clef/editor/transport_bar/transport_bar.gd")
+const MiniMixer = preload("res://addons/clef/editor/mini_mixer/mini_mixer.gd")
+
+const _CONFIG_PATH = "user://clef_editor.cfg"
 
 var _left_panel: PanelContainer
 var _center_panel: PanelContainer
@@ -16,6 +21,13 @@ var _btn_right: Button
 var _soundfont_browser: SoundfontBrowser
 var _bridge: RefCounted = null
 var _midi_monitor: MidiMonitor
+var _editor_player: EditorPlayer
+var _transport_bar: TransportBar
+var _mini_mixer: MiniMixer
+var _progress_timer: Timer = null
+var _last_midi_dir: String = ""
+var _last_midi_file: String = ""
+var _auto_load: bool = false
 
 
 func _init() -> void:
@@ -27,8 +39,14 @@ func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_load_editor_config()
 	_build_layout()
 	_load_soundfont_profile()
+	_init_editor_player()
+	_init_progress_timer()
+	# 自动加载上次文件
+	if _auto_load and _last_midi_file != "" and FileAccess.file_exists(_last_midi_file):
+		_load_midi_file(_last_midi_file)
 
 
 func _build_layout() -> void:
@@ -92,21 +110,51 @@ func _build_layout() -> void:
 	split_right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_split_main.add_child(split_right)
 
-	# 中栏：混音台
+	# 中栏：混音台 + 播放控制
 	_center_panel = PanelContainer.new()
 	_center_panel.name = "CenterPanel"
 	_center_panel.custom_minimum_size = Vector2i(200, 0)
 	_center_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_center_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_style_panel(_center_panel, Color(0.10, 0.10, 0.14))
-	var center_label := Label.new()
-	center_label.text = "Mixer & Transport"
-	center_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	center_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	center_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	center_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	center_label.add_theme_color_override("font_color", Color(0.7, 1.0, 0.7))
-	_center_panel.add_child(center_label)
+	var center_vbox := VBoxContainer.new()
+	center_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	center_vbox.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	center_vbox.add_theme_constant_override("separation", 4)
+
+	_transport_bar = TransportBar.new()
+
+	# 加载按钮行
+	var load_row := HBoxContainer.new()
+	load_row.add_theme_constant_override("separation", 6)
+	var load_btn := Button.new()
+	load_btn.text = "Load MIDI"
+	load_btn.tooltip_text = "Load .mid / .tres / .json file"
+	load_btn.pressed.connect(_on_load_pressed)
+	load_row.add_child(load_btn)
+
+	var auto_load_btn := Button.new()
+	auto_load_btn.text = "Auto"
+	auto_load_btn.custom_minimum_size = Vector2i(36, 0)
+	auto_load_btn.toggle_mode = true
+	auto_load_btn.button_pressed = _auto_load
+	auto_load_btn.tooltip_text = "Auto-load last file on startup"
+	_set_toggle_style(auto_load_btn, _auto_load, Color(0.5, 0.8, 0.5))
+	auto_load_btn.toggled.connect(func(pressed: bool):
+		_auto_load = pressed
+		_set_toggle_style(auto_load_btn, pressed, Color(0.5, 0.8, 0.5))
+		_save_editor_config()
+	)
+	load_row.add_child(auto_load_btn)
+
+	center_vbox.add_child(load_row)
+
+	center_vbox.add_child(_transport_bar)
+
+	_mini_mixer = MiniMixer.new()
+	center_vbox.add_child(_mini_mixer)
+
+	_center_panel.add_child(center_vbox)
 	split_right.add_child(_center_panel)
 
 	# 右栏：MIDI 监视器
@@ -119,9 +167,23 @@ func _build_layout() -> void:
 	_right_panel.add_child(_midi_monitor)
 	split_right.add_child(_right_panel)
 
-	# 延迟连接 bridge（可能早于 _ready 设置）
-	if _bridge != null and _midi_monitor != null:
-		_midi_monitor.connect_bridge(_bridge)
+	# 延迟连接 bridge
+	if _bridge != null:
+		if _midi_monitor != null:
+			_midi_monitor.connect_bridge(_bridge)
+
+
+func _set_toggle_style(btn: Button, active: bool, accent: Color) -> void:
+	var style := StyleBoxFlat.new()
+	if active:
+		style.bg_color = Color(accent.r * 0.25, accent.g * 0.25, accent.b * 0.25)
+		btn.add_theme_color_override("font_color", accent)
+	else:
+		style.bg_color = Color(0.18, 0.18, 0.20)
+		btn.add_theme_color_override("font_color", Color(0.45, 0.45, 0.45))
+	style.set_content_margin_all(4)
+	style.set_corner_radius_all(3)
+	btn.add_theme_stylebox_override("normal", style)
 
 
 func _style_panel(panel: PanelContainer, bg_color: Color) -> void:
@@ -144,10 +206,117 @@ func set_bridge(bridge: RefCounted) -> void:
 	_bridge = bridge
 	if _midi_monitor != null:
 		_midi_monitor.connect_bridge(_bridge)
+	if _editor_player != null:
+		_editor_player.setup(self, _bridge)
+
+
+func _init_editor_player() -> void:
+	_editor_player = EditorPlayer.new()
+	_editor_player.setup(self, _bridge)
+	_wire_transport()
+	_wire_mixer()
+
+
+func _init_progress_timer() -> void:
+	_progress_timer = Timer.new()
+	_progress_timer.wait_time = 0.05
+	_progress_timer.timeout.connect(_update_progress)
+	add_child(_progress_timer)
+	_progress_timer.start()
+
+
+func _can_drop_data(at_position: Vector2, data: Variant) -> bool:
+	if data is Dictionary and data.has("type") and data["type"] == "files":
+		var files: Array = data.get("files", [])
+		for f in files:
+			if f.ends_with(".mid") or f.ends_with(".tres") or f.ends_with(".json"):
+				return true
+	return false
+
+
+func _drop_data(at_position: Vector2, data: Variant) -> void:
+	if not _can_drop_data(at_position, data):
+		return
+	var files: Array = data.get("files", [])
+	for f in files:
+		if f.ends_with(".mid") or f.ends_with(".tres") or f.ends_with(".json"):
+			_load_midi_file(f)
+			break
+
+
+func _load_midi_file(path: String) -> void:
+	_last_midi_file = path
+	_last_midi_dir = path.get_base_dir()
+	_save_editor_config()
+	_editor_player.load_file(path)
+	_transport_bar.set_file_name(path.get_file())
+
+
+func _on_load_pressed() -> void:
+	var dialog := EditorFileDialog.new()
+	dialog.file_mode = EditorFileDialog.FILE_MODE_OPEN_FILE
+	dialog.access = EditorFileDialog.ACCESS_RESOURCES
+	dialog.title = "Load MIDI"
+	dialog.filters = PackedStringArray(["*.mid ; MIDI", "*.tres ; MidiResource", "*.json ; JSON"])
+	if _last_midi_dir != "":
+		dialog.current_dir = _last_midi_dir
+	EditorInterface.get_base_control().add_child(dialog)
+	dialog.file_selected.connect(func(path: String):
+		_load_midi_file(path)
+		EditorInterface.get_base_control().remove_child(dialog)
+		dialog.queue_free()
+	)
+	dialog.popup_centered(Vector2i(800, 600))
+
+
+func _wire_transport() -> void:
+	_transport_bar.play_pressed.connect(func():
+		if _editor_player.is_playing():
+			return
+		_editor_player.play()
+		_progress_timer.start()
+	)
+	_transport_bar.stop_pressed.connect(func():
+		_editor_player.stop()
+		_transport_bar.update_progress(0.0, _editor_player.get_duration())
+		_progress_timer.stop()
+	)
+	_transport_bar.pause_pressed.connect(func():
+		_editor_player.pause()
+	)
+	_transport_bar.seek_requested.connect(func(pos: float):
+		_editor_player.seek(pos)
+	)
+
+
+func _wire_mixer() -> void:
+	_mini_mixer.master_volume_changed.connect(func(vol: float):
+		_editor_player.set_master_volume(vol)
+	)
+	_mini_mixer.channel_volume_changed.connect(func(ch: int, vol: float):
+		_editor_player.set_channel_volume(ch, vol)
+	)
+	_mini_mixer.channel_mute_changed.connect(func(ch: int, muted: bool):
+		_editor_player.set_channel_mute(ch, muted)
+	)
+
+
+func _update_progress() -> void:
+	if _editor_player.is_playing() or _editor_player.is_paused():
+		_transport_bar.update_progress(
+			_editor_player.get_position(),
+			_editor_player.get_duration()
+		)
+	# 检测播放结束（不在播放/暂停状态且有已加载文件）
+	if not _editor_player.is_playing() and not _editor_player.is_paused() and _editor_player.get_duration() > 0:
+		if _transport_bar.is_looping():
+			_editor_player.play()
+		else:
+			_progress_timer.stop()
+			_transport_bar.update_progress(0.0, _editor_player.get_duration())
 
 
 func _on_patch_selected(preset_index: int, patch: PatchData) -> void:
-	# Phase 3 将联动混音台，当前仅打印日志
 	print("[ClefStation] Patch selected: %03d %s" % [preset_index, patch.name])
 
 
@@ -157,11 +326,9 @@ func _load_soundfont_profile() -> void:
 		return
 	if not FileAccess.file_exists(sf2_path):
 		return
-	# 确定同目录下的 profile JSON 路径
 	var sf2_dir: String = sf2_path.get_base_dir()
 	var sf2_name: String = sf2_path.get_file().get_basename()
 	var profile_path: String = sf2_dir.path_join(sf2_name + "_profile.json")
-	# 自动生成 profile（如果不存在）
 	if not FileAccess.file_exists(profile_path):
 		var profiler := ProjectSettings.globalize_path("res://.claude/skills/clef-compose/scripts/sf2_profiler.py")
 		var global_sf2 := ProjectSettings.globalize_path(sf2_path)
@@ -171,3 +338,20 @@ func _load_soundfont_profile() -> void:
 	if FileAccess.file_exists(profile_path):
 		_soundfont_browser.load_profile(profile_path)
 		_soundfont_browser.setup_audition(sf2_path)
+
+
+func _load_editor_config() -> void:
+	var config := ConfigFile.new()
+	if config.load(_CONFIG_PATH) == OK:
+		_last_midi_dir = config.get_value("editor", "last_midi_dir", "")
+		_last_midi_file = config.get_value("editor", "last_midi_file", "")
+		_auto_load = config.get_value("editor", "auto_load", false)
+
+
+func _save_editor_config() -> void:
+	var config := ConfigFile.new()
+	config.load(_CONFIG_PATH)  # 保留其他 section（如 midi_monitor）
+	config.set_value("editor", "last_midi_dir", _last_midi_dir)
+	config.set_value("editor", "last_midi_file", _last_midi_file)
+	config.set_value("editor", "auto_load", _auto_load)
+	config.save(_CONFIG_PATH)
