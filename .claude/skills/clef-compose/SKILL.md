@@ -218,13 +218,13 @@ python scripts/snapshot.py --step 0 --note "需求确认：boss battle, D大调,
 1. 用户明确指定 → 直接使用
 2. 基础值 = 8 小节
 3. 按 BPM 调整：
-   - BPM ≥ 140 → 4 小节（快板动机短即可表达）
-   - BPM ≤ 80 → 12 小节（慢板需要更多时间展现流动感）
+   - BPM >= 140 -> 4 小节（快板动机短即可表达）
+   - BPM <= 80 -> 12 小节（慢板需要更多时间展现流动感）
 4. 按风格调整：
-   - 8-bit/chiptune/极简 → min(length, 4)
-   - epic/orchestral/symphonic → max(length, 8)
+   - 8-bit/chiptune/极简 -> min(length, 4)
+   - epic/orchestral/symphonic -> max(length, 8)
 5. 按结构调整：
-   - 确保 ≥ A 段小节数（完整段落至少听完一次）
+   - 确保 >= A 段小节数（完整段落至少听完一次）
 6. 最终限制：max(2, min(length, 16))
 ```
 
@@ -287,23 +287,47 @@ python scripts/snapshot.py --step 0 --note "需求确认：boss battle, D大调,
    python scripts/clef_tools.py analyze .clef-work/base.mid -o .clef-work/analysis_report.txt
    ```
 
-**2b. Leader 迭代**
+**2b. Leader 迭代（Agent Teams 并行）**
 
 7. Agent: Reviewer — 音乐质量评审 → `.clef-work/review_report.json`
 8. Agent: Leader — 分析两份报告，生成 `.clef-work/tasks.json`
 9. 如果 `iteration_complete == true`，进入 Step 3
-10. 否则，按 tasks.json 中的任务列表派发 Agent：
-    - 读取 tasks.json 中的每个任务
-    - 按依赖顺序派发对应 Agent（使用定向修改模式）
-    - Agent 修改后重新 merge → analyze → validate → review → Leader
-    - 每轮迭代完成后运行 `python scripts/snapshot.py --step 2b-iter<N> --output "score.abc" --note "第N轮迭代完成"`
-    - 依赖任务中间步骤：merge → abc_to_midi → analyze → validate → 派发下一个依赖 Agent；整轮结束后才做 review
-    - 最多 3 轮迭代
-11. **依赖任务中间同步**：tasks.json 中存在 `depends_on` 时，每个依赖任务完成后必须 merge → analyze → validate 确认通过后，再派发下一个依赖 Agent。详见 clef-leader.md「3.1 依赖任务状态传递」。
+10. 否则，使用 Agent Teams 并行执行 tasks.json 中的任务：
+
+**并行执行协议：**
+
+a. 解析 tasks.json，将任务分为两批：
+   - **独立任务批**：`depends_on` 为 null 的任务
+   - **依赖任务批**：`depends_on` 不为 null 的任务
+
+b. 如果独立任务批有 **2+ 个任务**，使用 Agent Teams 并行执行：
+   1. `TeamCreate(team_name="clef-iter-{round}", description="第{round}轮迭代")`
+   2. 在**一条消息中同时**派发所有独立任务（每个任务一个 Agent 调用，携带 `team_name` 和 `name` 参数）：
+      ```
+      Agent(subagent_type=task.agent, team_name="clef-iter-{round}", name="{agent}-{index}", prompt=定向修改指令)
+      ```
+   3. 等待所有 teammate 返回结果，收集 ABC 片段
+   4. `TeamDelete`
+   5. 合并所有并行任务的输出到 score.abc（使用 merge_abc.py）
+   6. `abc_to_midi.py` → `clef_tools.py analyze` → `validate_abc.py`
+   7. 如果 validate 报告 FAIL → 派 Revision Agent 修正
+
+c. 如果独立任务批只有 **0-1 个任务**，按原有串行方式逐个派发。
+
+d. 执行依赖任务批（按 `depends_on` 顺序串行）：
+   - 每个依赖任务完成后：merge → abc_to_midi → analyze → validate
+   - 如果 validate FAIL → 派 Revision Agent 修正
+
+e. 全部任务完成后：派 Reviewer → Leader → 判断是否继续迭代
+
+- 每轮迭代完成后运行 `python scripts/snapshot.py --step 2b-iter<N> --output "score.abc" --note "第N轮迭代完成"`
+- 最多 3 轮迭代
+
+11. **依赖任务中间同步**（不变）：tasks.json 中存在 `depends_on` 时，每个依赖任务完成后必须 merge → abc_to_midi → analyze → validate 确认通过后，再派发下一个依赖 Agent。详见 clef-leader.md「3.1 依赖任务状态传递」。
 
 迭代流程：
 ```
-score.abc → validate → review → Leader决策 → Agent修改 → merge → validate → review → Leader决策 → ...
+score.abc -> validate -> review -> Leader决策 -> [并行/串行]Agent修改 -> merge -> validate -> review -> Leader决策 -> ...
 ```
 
 **注意：** 如果 validate_abc.py 报告 FAIL（格式错误），直接派 Revision Agent 修正格式，不计入迭代轮数。
