@@ -72,6 +72,12 @@ func force_stop_all() -> void:
 		voice.force_stop()
 
 
+## 快速停止所有音符（50ms 短 release，用于用户手动 Stop）
+func quick_stop_all() -> void:
+	for voice in _voices:
+		voice.quick_stop()
+
+
 ## 停止所有音符 (自然释放)
 ## @param p_channel 仅停止指定通道 (-1 表示所有通道)
 func stop_all(p_channel: int = -1) -> void:

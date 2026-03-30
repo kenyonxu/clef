@@ -135,6 +135,16 @@ func stop_note() -> void:
 	_request_release = true
 
 
+## 快速停止（用于用户手动 Stop，短 release 避免拖尾）
+func quick_stop() -> void:
+	if state == State.IDLE or state == State.FINISHED:
+		return
+	if state == State.RELEASE:
+		return
+	_release = 0.05  # 50ms 快速衰减
+	_trigger_release()
+
+
 ## 强制停止 (立即静音，释放内部缓冲区)
 func force_stop() -> void:
 	state = State.IDLE
@@ -178,9 +188,12 @@ func is_releasing() -> bool:
 	return state == State.RELEASE
 
 
-## 进入释放阶段 (从 sustain level 开始，与 MidiPlayer 一致)
+## 进入释放阶段（从当前实际音量开始，避免 click/pop）
 func _trigger_release() -> void:
-	_release_start_db = _sustain_db
+	# 捕获当前 ADSR 电平（而非固定用 sustain_db），确保无论 voice 处于
+	# ATTACK/DECAY/SUSTAIN 哪个阶段，release 起始音量都与当前实际输出一致
+	var current_adsr_db: float = volume_db - _velocity_db - _inst_volume_db
+	_release_start_db = current_adsr_db
 	state = State.RELEASE
 	_adsr_timer = 0.0
 

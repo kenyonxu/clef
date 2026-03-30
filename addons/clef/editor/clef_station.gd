@@ -216,6 +216,8 @@ func set_bridge(bridge: RefCounted) -> void:
 		_midi_monitor.connect_bridge(_bridge)
 	if _editor_player != null:
 		_editor_player.setup(self, _bridge)
+	if _mini_mixer != null:
+		_bridge.midi_program_change.connect(_mini_mixer.set_channel_instrument)
 
 
 func _init_editor_player() -> void:

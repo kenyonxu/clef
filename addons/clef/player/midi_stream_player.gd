@@ -192,10 +192,10 @@ func start_playback(from_position: float = 0.0) -> void:
 		AudioServer.set_bus_mute(_clef_master_bus_idx, false)
 
 
-## 停止播放
+## 停止播放（快速衰减，避免 click/pop）
 func stop() -> void:
 	if _voice_pool != null:
-		_voice_pool.stop_all()
+		_voice_pool.quick_stop_all()
 	_current_tick = 0.0
 	_is_paused = false
 	_is_playing = false
