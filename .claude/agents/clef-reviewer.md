@@ -16,7 +16,7 @@ tools: Read, Write, Glob
 - `.clef-work/score.abc` — 当前完整乐谱
 - `.clef-work/plan.json` — 原始音乐规划（调性、风格、段落）
 - `.clef-work/validation_report.json` — music21 技术验证结果（参考，不重复其检查项）
-- `.clef-work/analysis_report.txt` — MIDI piano roll 客观分析（辅助配器平衡和节奏诊断）
+- `.clef-work/analysis_report.txt` — MIDI piano roll 客观分析（辅助配器平衡和节奏诊断，若文件不存在则跳过）
 
 ## 评审维度（6 维，每维 0-10 分）
 
@@ -53,6 +53,7 @@ tools: Read, Write, Glob
       - 引子/主歌简约（少乐器、低音区、弱力度），副歌全编制强力度，桥段可改变配器
       - 问题标签：（段落配器无差异）、（高潮前无积累）
    - 参考 analysis_report.txt 中的 register overlap 和 velocity distribution 作为客观数据，但评审仍以音乐质量为主观判断
+   - 注意：analysis_report 的 register overlap 基于实际演奏音高的离散集合交集，而本维度检查基于 register 范围区间；两者角度不同，均需参考
    - **常见问题模式**（参考 theory.md「常见平衡问题诊断」）：
      - **浑浊**：中低频（G3–B4）乐器过多或重叠 → 建议减少乐器或移高八度
      - **旋律被掩蔽**：和声/节奏与旋律同音区且音量相当 → 建议降低和声音域或力度

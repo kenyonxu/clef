@@ -53,6 +53,7 @@ GM_PROGRAM_NAMES: dict[int, str] = {
 
 # Unicode density bars (8 levels)
 _DENSITY_BARS = "\u2581\u2582\u2583\u2584\u2585\u2586\u2587\u2588"
+_DENSITY_BAR_MAX_LEVEL = len(_DENSITY_BARS) - 1  # 7
 
 # Channel 9 (drums) — skip pitch analysis
 _DRUM_CHANNEL = 9
@@ -63,7 +64,18 @@ _DRUM_CHANNEL = 9
 
 def analyze(midi_path: str, segment_sec: float = 2.0) -> str:
     """Analyze MIDI file and return compact text report."""
-    midi = mido.MidiFile(midi_path)
+    import os as _os
+
+    if not _os.path.isfile(midi_path):
+        return f"MIDI Analysis Error: file not found: {midi_path}"
+    if segment_sec <= 0:
+        raise ValueError(f"segment_sec must be positive, got {segment_sec}")
+
+    try:
+        midi = mido.MidiFile(midi_path)
+    except (OSError, ValueError, IOError) as e:
+        return f"MIDI Analysis Error: failed to read {midi_path}: {e}"
+
     channels = _parse_tracks(midi)
 
     total_notes = sum(len(ch["notes"]) for ch in channels)
@@ -146,7 +158,11 @@ def _detect_tempo(midi: mido.MidiFile) -> float:
 
 
 def _total_duration_sec(midi: mido.MidiFile, tempo: float) -> float:
-    """Convert max absolute tick to seconds."""
+    """Convert max absolute tick to seconds.
+
+    Assumes Type 1 MIDI (tracks play simultaneously).
+    For Type 0 (single-track), this still works since all events are in one track.
+    """
     abs_tick = 0
     max_tick = 0
     for track in midi.tracks:
@@ -209,7 +225,7 @@ def _format_per_channel(channels: list[dict[str, Any]]) -> str:
 
         vel_min = min(velocities)
         vel_max = max(velocities)
-        vel_avg = sum(velocities) / len(velocities)
+        vel_avg = statistics.fmean(velocities)
 
         lines.append(
             f"{label:<20s} notes:{note_count:<4d} {pitch_range:<8s} "
@@ -252,7 +268,7 @@ def _format_density(
             max_count = 1
         bar = ""
         for c in counts:
-            level = int(c / max_count * 7)
+            level = int(c / max_count * _DENSITY_BAR_MAX_LEVEL)
             if c > 0 and level == 0:
                 level = 1
             bar += _DENSITY_BARS[level]
@@ -277,7 +293,6 @@ def _format_overlap(channels: list[dict[str, Any]]) -> str:
             ch_b = melodic[j]
             pitches_a = {n[1] for n in ch_a["notes"]}
             pitches_b = {n[1] for n in ch_b["notes"]}
-            overlap = len(pitches_a & pitches_b)
             overlap_semitones = len(pitches_a & pitches_b)
 
             if overlap_semitones > 12:
@@ -338,7 +353,8 @@ def _format_gaps(
             continue
 
         # Compute gaps between consecutive note ends and next note starts
-        sorted_notes = sorted(notes, key=lambda n: n[0])
+        # Notes are pre-sorted by _parse_tracks, but re-sort defensively
+        sorted_notes = notes  # already sorted by start_tick
         gaps: list[float] = []
         for k in range(len(sorted_notes) - 1):
             end_tick = sorted_notes[k][0] + sorted_notes[k][3]

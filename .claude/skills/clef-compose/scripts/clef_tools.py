@@ -124,6 +124,9 @@ def cmd_analyze(args):
     if not os.path.isfile(args.input):
         print(f"Error: file not found: {args.input}")
         return 1
+    if args.segment <= 0:
+        print("Error: --segment must be positive", file=sys.stderr)
+        return 1
     from analyze_midi import analyze
     report = analyze(args.input, segment_sec=args.segment)
     sys.stdout.write(report)
@@ -180,7 +183,7 @@ def main():
     # analyze
     p = sub.add_parser('analyze', help='MIDI piano roll analysis report')
     p.add_argument('input', help='MIDI 文件')
-    p.add_argument('--segment', type=float, default=2.0, help='密度条时间分段（秒）')
+    p.add_argument('--segment', type=float, default=2.0, help='密度条时间分段（秒，最小 0.1）')
 
     # snapshot
     p = sub.add_parser('snapshot', help='备份 score.abc + 写入步骤日志')

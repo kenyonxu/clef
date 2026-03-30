@@ -40,8 +40,9 @@ tools: Read, Write, Glob
 当任务列表中存在 `depends_on` 依赖时，**每完成一个依赖任务**，必须执行以下步骤后才能派发下一个依赖任务：
 
 1. **Merge**: 将修改后的声部片段 merge 到 score.abc
-1.5. **Analyze**: 运行 MIDI 分析生成客观数据：
+1.5. **Analyze**: 先转换 score.abc 为 MIDI，再运行 MIDI 分析生成客观数据：
    ```bash
+   python .claude/skills/clef-compose/scripts/abc_to_midi.py .clef-work/score.abc -o .clef-work/base.mid
    python .claude/skills/clef-compose/scripts/clef_tools.py analyze .clef-work/base.mid -o .clef-work/analysis_report.txt
    ```
 2. **Validate**: 运行 `validate_abc.py` 检查格式正确性

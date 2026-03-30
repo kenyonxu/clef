@@ -281,7 +281,11 @@ python scripts/snapshot.py --step 0 --note "需求确认：boss battle, D大调,
 4. 运行 `merge_abc.py` 合并所有声部 → `.clef-work/score.abc`
 5. 运行 `python scripts/snapshot.py --step 2a --output "score.abc" --note "首轮创作完成"`
 6. 运行 `validate_abc.py` 技术验证 → `.clef-work/validation_report.json`
-6.5. 运行 `clef_tools.py analyze` → `.clef-work/analysis_report.txt`
+6.5. 转换为 MIDI 并运行分析：
+   ```bash
+   python scripts/abc_to_midi.py .clef-work/score.abc -o .clef-work/base.mid
+   python scripts/clef_tools.py analyze .clef-work/base.mid -o .clef-work/analysis_report.txt
+   ```
 
 **2b. Leader 迭代**
 
@@ -293,6 +297,7 @@ python scripts/snapshot.py --step 0 --note "需求确认：boss battle, D大调,
     - 按依赖顺序派发对应 Agent（使用定向修改模式）
     - Agent 修改后重新 merge → analyze → validate → review → Leader
     - 每轮迭代完成后运行 `python scripts/snapshot.py --step 2b-iter<N> --output "score.abc" --note "第N轮迭代完成"`
+    - 依赖任务中间步骤：merge → abc_to_midi → analyze → validate → 派发下一个依赖 Agent；整轮结束后才做 review
     - 最多 3 轮迭代
 11. **依赖任务中间同步**：tasks.json 中存在 `depends_on` 时，每个依赖任务完成后必须 merge → analyze → validate 确认通过后，再派发下一个依赖 Agent。详见 clef-leader.md「3.1 依赖任务状态传递」。
 
