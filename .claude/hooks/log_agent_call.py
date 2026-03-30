@@ -16,10 +16,10 @@ def infer_step(prompt: str) -> str:
     p = prompt.lower()
     if any(k in p for k in ("step 0", "需求解析")):
         return "0"
-    if any(k in p for k in ("step 1b", "方向小样", "direction sample", "demo")):
-        return "1b"
     if any(k in p for k in ("step 1a", "规划", "plan.json")):
         return "1a"
+    if any(k in p for k in ("step 1b", "方向小样", "direction sample", "demo")):
+        return "1b"
     if any(k in p for k in ("step 2a", "首轮", "full creation", "完整创作")):
         return "2a"
     if any(k in p for k in ("step 2b", "iter", "迭代")):
@@ -72,8 +72,8 @@ def main():
         with open(log_file, "a", encoding="utf-8") as f:
             f.write(json.dumps(entry, ensure_ascii=False) + "\n")
 
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"agent_cost_log: {e}", file=sys.stderr)
 
 
 if __name__ == "__main__":

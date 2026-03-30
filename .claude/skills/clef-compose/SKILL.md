@@ -218,13 +218,13 @@ python scripts/snapshot.py --step 0 --note "需求确认：boss battle, D大调,
 1. 用户明确指定 → 直接使用
 2. 基础值 = 8 小节
 3. 按 BPM 调整：
-   - BPM >= 140 -> 4 小节（快板动机短即可表达）
-   - BPM <= 80 -> 12 小节（慢板需要更多时间展现流动感）
+   - BPM ≥ 140 → 4 小节（快板动机短即可表达）
+   - BPM ≤ 80 → 12 小节（慢板需要更多时间展现流动感）
 4. 按风格调整：
-   - 8-bit/chiptune/极简 -> min(length, 4)
-   - epic/orchestral/symphonic -> max(length, 8)
+   - 8-bit/chiptune/极简 → min(length, 4)
+   - epic/orchestral/symphonic → max(length, 8)
 5. 按结构调整：
-   - 确保 >= A 段小节数（完整段落至少听完一次）
+   - 确保 ≥ A 段小节数（完整段落至少听完一次）
 6. 最终限制：max(2, min(length, 16))
 ```
 
@@ -327,7 +327,7 @@ e. 全部任务完成后：派 Reviewer → Leader → 判断是否继续迭代
 
 迭代流程：
 ```
-score.abc -> validate -> review -> Leader决策 -> [并行/串行]Agent修改 -> merge -> validate -> review -> Leader决策 -> ...
+score.abc → validate → review → Leader决策 → [并行/串行]Agent修改 → merge → validate → review → Leader决策 → ...
 ```
 
 **注意：** 如果 validate_abc.py 报告 FAIL（格式错误），直接派 Revision Agent 修正格式，不计入迭代轮数。

@@ -24,12 +24,11 @@ Desktop.ini
 
 # Claude Code (exclude everything except clef-compose content)
 .claude/*
-!.claude/agents/
 !.claude/agents/clef-*
 !.claude/skills/
 !.claude/skills/clef-compose/
 !.claude/settings.json
-!.claude/hooks/
+!.claude/hooks/*.py
 # Re-ignore user-specific and local files
 .claude/settings.local.json
 .claude/worktrees/
