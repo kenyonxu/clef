@@ -93,5 +93,27 @@ B,, z D, z B,, B,, z z |
 
 ### Rhythmist SF2 约束
 - 低音线音域优先在 sf2.sweet_spot 的下半部分
+- 低音线所有音符必须落在 plan.orchestration.bass.sf2.key_range 内
 - sf2.avg_attack > 0.05s 的贝斯：避免极快的十六分低音线
 - sf2.vel_layers == 1 时：velocity 变化限制在 ±5
+
+## 输出自检（生成后必须执行）
+
+生成 ABC 片段后，必须逐项验证以下内容：
+
+1. **小节时值**：每小节所有音符/休止符的时值总和必须等于拍号规定的拍数。
+   - L:1/8 + M:4/4 时，每小节 = 8 个八分音符（duration 值求和 = 8）
+   - 计算方法：逐小节累加每个音符的 duration 值（z 也计入）
+
+2. **音域合规**：所有低音音符必须在 plan.json `orchestration.bass.sf2.key_range` 范围内。
+
+3. **ABC 八度规则**（与 abc_to_midi.py 一致）：
+   - 小写字母 = C4 起始八度（a=A4=MIDI69, c=C4=MIDI60）
+   - 大写字母 = C3 起始八度（A=A3=MIDI57, C=C3=MIDI48）
+   - 逗号 `,` = 降低八度（A,=A2=MIDI45, C,=C3=MIDI48）
+   - 撇号 `'` = 升高八度（a'=A5=MIDI81）
+   - **禁止使用无逗号的小写字母作为低音**（c=C5=MIDI72，超出低音域）
+
+4. **声部小节数**：输出小节数必须与 plan.json 对应 section 的 measures 一致。
+
+如果自检发现错误，必须在输出中修正后再返回。不要输出未通过自检的 ABC。

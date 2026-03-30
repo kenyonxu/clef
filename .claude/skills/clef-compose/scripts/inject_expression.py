@@ -203,6 +203,35 @@ def _convert_sections_format(plan: dict, plan_path: str) -> list[dict]:
 	return result
 
 
+def _validate_expression_plan(plan: dict) -> list[str]:
+	"""Validate expression_plan.json structure. Returns list of error messages."""
+	errors = []
+	if "tracks" not in plan:
+		errors.append("Missing top-level 'tracks' key")
+		return errors
+
+	for i, track in enumerate(plan["tracks"]):
+		if "channel" not in track:
+			errors.append(f"Track {i}: missing 'channel'")
+		if "events" not in track:
+			errors.append(f"Track {i}: missing 'events'")
+			continue
+		for j, event in enumerate(track["events"]):
+			if "type" not in event:
+				errors.append(f"Track {i} event {j}: missing 'type'")
+			elif event["type"] not in ("cc", "pitch_bend"):
+				errors.append(f"Track {i} event {j}: invalid type '{event['type']}'")
+			if "time_beats" not in event:
+				errors.append(f"Track {i} event {j}: missing 'time_beats'")
+			if event.get("type") == "cc" and "control" not in event:
+				errors.append(f"Track {i} event {j}: cc event missing 'control'")
+			if event.get("type") == "cc" and "value" not in event:
+				errors.append(f"Track {i} event {j}: cc event missing 'value'")
+			if event.get("type") == "pitch_bend" and "value" not in event:
+				errors.append(f"Track {i} event {j}: pitch_bend event missing 'value'")
+	return errors
+
+
 def inject(base_midi_path: str, plan_path: str, output_path: str) -> None:
 	"""Inject expression plan events into a base MIDI file.
 
@@ -220,6 +249,15 @@ def inject(base_midi_path: str, plan_path: str, output_path: str) -> None:
 
 	with open(plan_path, 'r', encoding='utf-8') as f:
 		plan = json.load(f)
+
+	# Validate plan structure before injection (only for 'tracks' format;
+	# 'sections' and 'channels' formats have their own conversion logic)
+	if 'tracks' in plan:
+		schema_errors = _validate_expression_plan(plan)
+		if schema_errors:
+			for err in schema_errors:
+				print(f"Error (inject): {err}", file=sys.stderr)
+			raise ValueError(f"expression_plan.json has {len(schema_errors)} validation error(s)")
 
 	ticks_per_beat = midi.ticks_per_beat
 

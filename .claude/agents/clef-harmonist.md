@@ -87,3 +87,23 @@ tools: Read, Write, Glob
 - sf2.quality == "low" 的乐器：简化织体，不要写密集和弦
 - sf2.vel_layers == 1 时：velocity 变化限制在 ±8
 - sf2.characteristics 含 "sustained" 时：适合长音 pad 和连奏和弦
+
+## 输出自检（生成后必须执行）
+
+生成 ABC 片段后，必须逐项验证以下内容：
+
+1. **小节时值**：每小节所有音符/休止符/和弦的时值总和必须等于拍号规定的拍数。
+   - L:1/8 + M:4/4 时，每小节 = 8 个八分音符（duration 值求和 = 8）
+   - 和弦 [ACE]8 的 duration = 8，[ACE]4 的 duration = 4
+   - 计算方法：逐小节累加每个元素（音符、z、和弦方括号）的 duration 值
+
+2. **音域合规**：所有和弦音符必须落在 plan.json `orchestration.harmony.register` 范围内。
+
+3. **ABC 八度规则**（与 abc_to_midi.py 一致）：
+   - 小写字母 = C4 起始八度（a=A4=MIDI69, c=C4=MIDI60）
+   - 大写字母 = C3 起始八度（A=A3=MIDI57, C=C3=MIDI48）
+   - 逗号 `,` = 降低八度，撇号 `'` = 升高八度
+
+4. **声部小节数**：输出小节数必须与 plan.json 对应 section 的 measures 一致。
+
+如果自检发现错误，必须在输出中修正后再返回。不要输出未通过自检的 ABC。

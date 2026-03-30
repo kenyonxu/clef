@@ -34,7 +34,7 @@ description: LLM 辅助 MIDI 作曲 Skill。基于 ABC 记谱法，通过多 Age
 | `merge_abc.py` | 合并多声部 ABC | `python scripts/merge_abc.py` (通过函数调用) |
 | `inject_expression.py` | 注入 CC/弯音到 MIDI | `python scripts/inject_expression.py <mid> <plan> <out>` |
 | `extract_solo.py` | 分轨 Solo 提取 | `python scripts/extract_solo.py <mid> <start> <end> <dir>` |
-| `analyze_midi.py` | MIDI piano roll 分析（密度/重叠/力度/间隙） | `python scripts/clef_tools.py analyze <mid> [-o <report>]` |
+| `analyze_midi.py` | MIDI piano roll 分析（密度/重叠/力度/间隙） | `python scripts/clef_tools.py analyze <mid>` |
 | `snapshot.py` | 备份 score.abc + 步骤日志 | `python scripts/snapshot.py --step <N> --output <file> --note <desc>` |
 | `sf2_profiler.py` | SF2 → profile JSON | `python scripts/sf2_profiler.py <sf2> -o <output.json>` |
 
@@ -284,7 +284,7 @@ python scripts/snapshot.py --step 0 --note "需求确认：boss battle, D大调,
 6.5. 转换为 MIDI 并运行分析：
    ```bash
    python scripts/abc_to_midi.py .clef-work/score.abc -o .clef-work/base.mid
-   python scripts/clef_tools.py analyze .clef-work/base.mid -o .clef-work/analysis_report.txt
+   python scripts/clef_tools.py analyze .clef-work/base.mid
    ```
 
 **2b. Leader 迭代（Agent Teams 并行）**

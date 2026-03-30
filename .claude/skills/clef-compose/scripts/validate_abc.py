@@ -92,6 +92,16 @@ class ValidationReport:
 # Helper functions
 # ---------------------------------------------------------------------------
 
+def _abc_midi(pitch_obj) -> int:
+    """Convert music21 pitch to abc_to_midi compatible MIDI number.
+
+    music21 ABC parser maps 'a' to A5(81), but abc_to_midi.py maps
+    'a' to A4(69). This -12 offset aligns validate_abc.py with the
+    conversion tool's octave convention.
+    """
+    return pitch_obj.midi - 12
+
+
 def _load_plan(plan_path: str) -> dict:
     with open(plan_path, "r", encoding="utf-8") as f:
         return json.load(f)
@@ -225,10 +235,10 @@ def check_pitch_range(score: music21.stream.Score, plan: dict, abc_path: str = "
         for note in part.recurse().notes:
             # Handle both Note (.pitch) and Chord (.pitches) objects
             if hasattr(note, 'pitches'):
-                midi_notes = [p.midi for p in note.pitches]
+                midi_notes = [_abc_midi(p) for p in note.pitches]
                 pitch_names = [p.nameWithOctave for p in note.pitches]
             else:
-                midi_notes = [note.pitch.midi]
+                midi_notes = [_abc_midi(note.pitch)]
                 pitch_names = [note.pitch.nameWithOctave]
 
             for midi, pitch_name in zip(midi_notes, pitch_names):
@@ -389,6 +399,10 @@ def _calc_abc_duration(tokens: str, default_length: float) -> float:
     # from being parsed as note names.
     tokens = re.sub(r"![^!]*!", "", tokens)
 
+    # Remove chord annotations ("Am", "Dm", etc.) to prevent letters inside
+    # (e.g. D in "Dm") from being parsed as note names.
+    tokens = re.sub(r'"[^"]*"', "", tokens)
+
     # Remove whitespace
     tokens = tokens.strip()
 
@@ -547,9 +561,9 @@ def check_voice_overlap(score: music21.stream.Score, plan: dict, abc_path: str =
         midi_notes = []
         for note in part.recurse().notes:
             if hasattr(note, 'pitches'):
-                midi_notes.extend(p.midi for p in note.pitches)
+                midi_notes.extend(_abc_midi(p) for p in note.pitches)
             else:
-                midi_notes.append(note.pitch.midi)
+                midi_notes.append(_abc_midi(note.pitch))
         if midi_notes:
             actual_ranges[idx] = (min(midi_notes), max(midi_notes))
 
@@ -661,7 +675,7 @@ def check_sweet_spot(score: music21.stream.Score, plan: dict, abc_path: str = ""
             pitches = note.pitches if hasattr(note, 'pitches') else [note.pitch]
             for p in pitches:
                 total_notes += 1
-                if ss_lo <= p.midi <= ss_hi:
+                if ss_lo <= _abc_midi(p) <= ss_hi:
                     in_spot += 1
 
         if total_notes == 0:
