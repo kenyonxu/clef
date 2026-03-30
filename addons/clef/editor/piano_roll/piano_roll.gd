@@ -3,6 +3,8 @@
 class_name PianoRoll
 extends Control
 
+const ChannelColors = preload("res://addons/clef/editor/channel_colors.gd")
+
 ## 点击卷帘请求跳转到指定时间位置
 signal seek_requested(position: float)
 
@@ -21,26 +23,6 @@ class RollNote:
 		duration = dur
 		velocity = vel
 
-
-## 16 通道颜色（各色相、中等饱和度）
-const _CHANNEL_COLORS: Array[Color] = [
-	Color(0.85, 0.45, 0.45),  # Ch 0  红
-	Color(0.45, 0.80, 0.45),  # Ch 1  绿
-	Color(0.45, 0.60, 0.90),  # Ch 2  蓝
-	Color(0.90, 0.80, 0.40),  # Ch 3  黄
-	Color(0.80, 0.50, 0.85),  # Ch 4  紫
-	Color(0.45, 0.85, 0.80),  # Ch 5  青
-	Color(0.90, 0.60, 0.40),  # Ch 6  橙
-	Color(0.70, 0.70, 0.80),  # Ch 7  灰蓝
-	Color(0.85, 0.55, 0.70),  # Ch 8  粉
-	Color(0.60, 0.75, 0.55),  # Ch 9  鼓绿
-	Color(0.55, 0.55, 0.90),  # Ch 10 靛蓝
-	Color(0.90, 0.70, 0.55),  # Ch 11 桃
-	Color(0.50, 0.80, 0.70),  # Ch 12 薄荷
-	Color(0.80, 0.65, 0.85),  # Ch 13 薰衣草
-	Color(0.75, 0.85, 0.45),  # Ch 14 黄绿
-	Color(0.85, 0.80, 0.75),  # Ch 15 米色
-]
 
 ## GM Level 1 乐器名称（128 个）
 const _GM_NAMES: PackedStringArray = [
@@ -247,7 +229,7 @@ func _draw_legend() -> void:
 	var x := 6.0
 	var font := ThemeDB.fallback_font
 	for ch in _active_channels:
-		var color: Color = _CHANNEL_COLORS[ch % 16]
+		var color: Color = ChannelColors.COLORS[ch % 16]
 		# 色块 (20x20)
 		draw_rect(Rect2(x, 4, 20, 20), color)
 		x += 24.0
@@ -287,7 +269,7 @@ func _draw_notes() -> void:
 		var y := _pitch_to_y(note.pitch + 1)  # +1 因为 pitch_to_y 是顶部
 		var h := _pixels_per_note - 1.0
 		# 通道颜色 * 力度亮度
-		var base_color := _CHANNEL_COLORS[note.channel % 16]
+		var base_color := ChannelColors.COLORS[note.channel % 16]
 		var brightness := 0.5 + (float(note.velocity) / 127.0) * 0.5
 		var color := Color(
 			base_color.r * brightness,

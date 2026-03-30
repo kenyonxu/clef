@@ -381,6 +381,9 @@ func _update_piano_roll() -> void:
 		if not track.channel in channel_instruments:
 			channel_instruments[track.channel] = track.instrument
 	_piano_roll.set_channel_instruments(channel_instruments)
+	_mini_mixer.clear_instruments()
+	for ch in channel_instruments:
+		_mini_mixer.set_channel_instrument(ch, channel_instruments[ch])
 
 
 func _on_patch_selected(preset_index: int, patch: PatchData) -> void:

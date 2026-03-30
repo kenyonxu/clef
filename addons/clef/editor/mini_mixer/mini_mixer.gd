@@ -1,7 +1,9 @@
-## 迷你混音台 — 16 通道音量滑块 + 乐器名 + 静音 + 主音量
+## 迷你混音台 — 16 通道音量滑块 + 颜色标识 + 静音 + 主音量
 @tool
 class_name MiniMixer
 extends VBoxContainer
+
+const ChannelColors = preload("res://addons/clef/editor/channel_colors.gd")
 
 signal channel_volume_changed(channel: int, volume_db: float)
 signal channel_mute_changed(channel: int, muted: bool)
@@ -50,7 +52,8 @@ const GM_INSTRUMENT_NAMES: PackedStringArray = [
 
 var _channel_sliders: Array[VSlider] = []
 var _mute_buttons: Array[Button] = []
-var _instrument_labels: Array[Label] = []
+var _channel_labels: Array[Label] = []
+var _color_indicators: Array[ColorRect] = []
 var _master_slider: HSlider
 var _master_label: Label
 
@@ -88,22 +91,22 @@ func _build_ui() -> void:
 		strip.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		strip.add_theme_constant_override("separation", 2)
 
+		# 通道颜色指示条（有乐器时才显示）
+		var color_rect := ColorRect.new()
+		color_rect.color = ChannelColors.COLORS[i]
+		color_rect.custom_minimum_size = Vector2i(0, 6)
+		color_rect.visible = false
+		strip.add_child(color_rect)
+		_color_indicators.append(color_rect)
+
 		var ch_lbl := Label.new()
 		ch_lbl.text = "Ch%d" % i
 		ch_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		ch_lbl.add_theme_font_size_override("font_size", 18)
 		ch_lbl.add_theme_color_override("font_color", Color(0.7, 0.7, 0.7))
+		ch_lbl.tooltip_text = "Channel %d" % i
 		strip.add_child(ch_lbl)
-
-		var inst_lbl := Label.new()
-		inst_lbl.text = ""
-		inst_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		inst_lbl.clip_text = true
-		inst_lbl.autowrap_mode = TextServer.AUTOWRAP_OFF
-		inst_lbl.add_theme_font_size_override("font_size", 14)
-		inst_lbl.add_theme_color_override("font_color", Color(0.55, 0.65, 0.75))
-		strip.add_child(inst_lbl)
-		_instrument_labels.append(inst_lbl)
+		_channel_labels.append(ch_lbl)
 
 		var slider := VSlider.new()
 		slider.min_value = 0.0
@@ -165,16 +168,23 @@ func _build_ui() -> void:
 	add_child(master_row)
 
 
-## 更新通道乐器名（由 Bridge.midi_program_change 触发）
+## 清除所有通道的乐器指示（加载新文件前调用）
+func clear_instruments() -> void:
+	for i in range(_color_indicators.size()):
+		_color_indicators[i].visible = false
+		_channel_labels[i].tooltip_text = "Channel %d" % i
+
+
+## 更新通道乐器名（由 Bridge.midi_program_change 触发，更新 tooltip + 颜色指示条）
 func set_channel_instrument(channel: int, preset_index: int) -> void:
-	if channel < 0 or channel >= _instrument_labels.size():
+	if channel < 0 or channel >= _channel_labels.size():
 		return
 	var name: String = ""
 	if preset_index >= 0 and preset_index < GM_INSTRUMENT_NAMES.size():
 		name = GM_INSTRUMENT_NAMES[preset_index]
-	var lbl: Label = _instrument_labels[channel]
-	lbl.text = name
+	var lbl: Label = _channel_labels[channel]
 	lbl.tooltip_text = "Ch%d: %s" % [channel, name]
+	_color_indicators[channel].visible = name != ""
 
 
 func _set_mute_style(btn: Button, muted: bool) -> void:
