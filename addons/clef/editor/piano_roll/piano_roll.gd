@@ -245,6 +245,7 @@ func _draw_legend() -> void:
 	draw_line(Vector2(0, _LEGEND_HEIGHT), Vector2(size.x, _LEGEND_HEIGHT), Color(0.2, 0.2, 0.25))
 	# 各通道色块 + 标签
 	var x := 6.0
+	var font := ThemeDB.fallback_font
 	for ch in _active_channels:
 		var color: Color = _CHANNEL_COLORS[ch % 16]
 		# 色块 (20x20)
@@ -257,14 +258,15 @@ func _draw_legend() -> void:
 			if preset >= 0 and preset < _GM_NAMES.size():
 				label += " " + _GM_NAMES[preset]
 		draw_string(
-			ThemeDB.fallback_font,
+			font,
 			Vector2(x, 20),
 			label,
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 20,
 			Color(0.6, 0.6, 0.65)
-		)
-		# 估算文字宽度并推进 x（粗略按每字符 8px）
-		x += label.length() * 8.0 + 16.0
+			)
+		# 精确测量文字宽度
+		var text_size := font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, 20)
+		x += text_size.x + 16.0
 
 
 func _draw_pitch_grid() -> void:
