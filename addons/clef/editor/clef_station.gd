@@ -375,6 +375,12 @@ func _update_piano_roll() -> void:
 			))
 	var duration: float = _editor_player.get_duration()
 	_piano_roll.set_notes(roll_notes, duration)
+	# 提取每个通道的乐器（TrackResource.instrument）
+	var channel_instruments: Dictionary = {}
+	for track in midi_res.tracks:
+		if not track.channel in channel_instruments:
+			channel_instruments[track.channel] = track.instrument
+	_piano_roll.set_channel_instruments(channel_instruments)
 
 
 func _on_patch_selected(preset_index: int, patch: PatchData) -> void:

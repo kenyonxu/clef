@@ -42,12 +42,48 @@ const _CHANNEL_COLORS: Array[Color] = [
 	Color(0.85, 0.80, 0.75),  # Ch 15 米色
 ]
 
+## GM Level 1 乐器名称（128 个）
+const _GM_NAMES: PackedStringArray = [
+	"Acoustic Grand Piano", "Bright Acoustic Piano", "Electric Grand Piano", "Honky-tonk Piano",
+	"Electric Piano 1", "Electric Piano 2", "Harpsichord", "Clavinet",
+	"Celesta", "Glockenspiel", "Music Box", "Vibraphone",
+	"Marimba", "Xylophone", "Tubular Bells", "Dulcimer",
+	"Drawbar Organ", "Percussive Organ", "Rock Organ", "Church Organ",
+	"Reed Organ", "Accordion", "Harmonica", "Tango Accordion",
+	"Nylon Guitar", "Steel Guitar", "Jazz Guitar", "Clean Guitar",
+	"Muted Guitar", "Overdriven Guitar", "Distortion Guitar", "Guitar Harmonics",
+	"Acoustic Bass", "Finger Bass", "Pick Bass", "Fretless Bass",
+	"Slap Bass 1", "Slap Bass 2", "Synth Bass 1", "Synth Bass 2",
+	"Violin", "Viola", "Cello", "Contrabass",
+	"Tremolo Strings", "Pizzicato Strings", "Orchestral Harp", "Timpani",
+	"String Ensemble 1", "String Ensemble 2", "Synth Strings 1", "Synth Strings 2",
+	"Choir Aahs", "Voice Oohs", "Synth Choir", "Orchestra Hit",
+	"Trumpet", "Trombone", "Tuba", "Muted Trumpet",
+	"French Horn", "Brass Section", "Synth Brass 1", "Synth Brass 2",
+	"Soprano Sax", "Alto Sax", "Tenor Sax", "Baritone Sax",
+	"Oboe", "English Horn", "Bassoon", "Clarinet",
+	"Piccolo", "Flute", "Recorder", "Pan Flute",
+	"Blown Bottle", "Shakuhachi", "Whistle", "Ocarina",
+	"Lead 1 (square)", "Lead 2 (sawtooth)", "Lead 3 (calliope)", "Lead 4 (chiff)",
+	"Lead 5 (charang)", "Lead 6 (voice)", "Lead 7 (fifths)", "Lead 8 (bass+lead)",
+	"Pad 1 (new age)", "Pad 2 (warm)", "Pad 3 (polysynth)", "Pad 4 (choir)",
+	"Pad 5 (bowed)", "Pad 6 (metallic)", "Pad 7 (halo)", "Pad 8 (sweep)",
+	"FX 1 (rain)", "FX 2 (soundtrack)", "FX 3 (crystal)", "FX 4 (atmosphere)",
+	"FX 5 (brightness)", "FX 6 (goblins)", "FX 7 (echoes)", "FX 8 (sci-fi)",
+	"Sitar", "Banjo", "Shamisen", "Koto",
+	"Kalimba", "Bagpipe", "Fiddle", "Shanai",
+	"Tinkle Bell", "Agogo", "Steel Drums", "Woodblock",
+	"Taiko Drum", "Melodic Tom", "Synth Drum", "Reverse Cymbal",
+	"Guitar Fret Noise", "Breath Noise", "Seashore", "Bird Tweet",
+	"Telephone Ring", "Helicopter", "Applause", "Gunshot",
+]
+
 const _BG_COLOR := Color(0.06, 0.06, 0.09)
 const _LEGEND_BG := Color(0.08, 0.08, 0.11)
 const _GRID_LINE_COLOR := Color(0.12, 0.12, 0.16)
 const _GRID_C_COLOR := Color(0.18, 0.18, 0.22)
 const _PLAYBACK_COLOR := Color(1.0, 1.0, 1.0, 0.8)
-const _LEGEND_HEIGHT: float = 18.0
+const _LEGEND_HEIGHT: float = 28.0
 
 var _notes: Array[RollNote] = []
 var _duration: float = 0.0
@@ -57,6 +93,7 @@ var _max_pitch: int = 127
 var _pixels_per_second: float = 100.0
 var _pixels_per_note: float = 10.0
 var _active_channels: Array[int] = []
+var _channel_instruments: Dictionary = {}  ## channel -> preset_index
 
 
 func _ready() -> void:
@@ -77,6 +114,12 @@ func set_notes(notes: Array[RollNote], duration: float) -> void:
 	queue_redraw()
 
 
+## 设置通道乐器映射 (channel -> preset_index)
+func set_channel_instruments(instruments: Dictionary) -> void:
+	_channel_instruments = instruments
+	queue_redraw()
+
+
 ## 更新播放头位置
 func set_playback_position(position: float) -> void:
 	_playback_position = position
@@ -93,6 +136,7 @@ func clear_notes() -> void:
 	_pixels_per_second = 100.0
 	_pixels_per_note = 10.0
 	_active_channels.clear()
+	_channel_instruments.clear()
 	queue_redraw()
 
 
@@ -203,19 +247,24 @@ func _draw_legend() -> void:
 	var x := 6.0
 	for ch in _active_channels:
 		var color: Color = _CHANNEL_COLORS[ch % 16]
-		# 色块
-		draw_rect(Rect2(x, 4, 10, 10), color)
-		# 标签 "ChN"
+		# 色块 (20x20)
+		draw_rect(Rect2(x, 4, 20, 20), color)
+		x += 24.0
+		# "ChN InstrumentName"
 		var label := "Ch%d" % (ch + 1)
-		x += 13
+		if _channel_instruments.has(ch):
+			var preset: int = _channel_instruments[ch]
+			if preset >= 0 and preset < _GM_NAMES.size():
+				label += " " + _GM_NAMES[preset]
 		draw_string(
 			ThemeDB.fallback_font,
-			Vector2(x, 13),
+			Vector2(x, 20),
 			label,
-			HORIZONTAL_ALIGNMENT_LEFT, -1, 10,
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 20,
 			Color(0.6, 0.6, 0.65)
 		)
-		x += 28.0
+		# 估算文字宽度并推进 x（粗略按每字符 8px）
+		x += label.length() * 8.0 + 16.0
 
 
 func _draw_pitch_grid() -> void:
