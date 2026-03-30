@@ -132,6 +132,12 @@ func get_duration() -> float:
 	return _player.get_duration()
 
 
+func get_midi_resource() -> MidiResource:
+	if _player == null:
+		return null
+	return _player.midi_resource
+
+
 func set_channel_volume(channel: int, vol: float) -> void:
 	if _player == null:
 		return

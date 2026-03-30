@@ -9,6 +9,7 @@ const MidiMonitor = preload("res://addons/clef/editor/midi_monitor/midi_monitor.
 const EditorPlayer = preload("res://addons/clef/editor/editor_player/editor_player.gd")
 const TransportBar = preload("res://addons/clef/editor/transport_bar/transport_bar.gd")
 const MiniMixer = preload("res://addons/clef/editor/mini_mixer/mini_mixer.gd")
+const PianoRoll = preload("res://addons/clef/editor/piano_roll/piano_roll.gd")
 
 const _CONFIG_PATH = "user://clef_editor.cfg"
 const SUPPORTED_EXTENSIONS: PackedStringArray = [".mid", ".tres", ".json"]
@@ -25,6 +26,7 @@ var _bridge: RefCounted = null
 var _midi_monitor: MidiMonitor
 var _editor_player: EditorPlayer
 var _transport_bar: TransportBar
+var _piano_roll: PianoRoll
 var _mini_mixer: MiniMixer
 var _progress_timer: Timer = null
 var _last_midi_dir: String = ""
@@ -119,7 +121,7 @@ func _build_layout() -> void:
 	_split_right.dragged.connect(_on_split_dragged)
 	_split_main.add_child(_split_right)
 
-	# 中栏：混音台 + 播放控制
+	# 中栏：传输控制 + 钢琴卷帘 + 混音台
 	_center_panel = PanelContainer.new()
 	_center_panel.name = "CenterPanel"
 	_center_panel.custom_minimum_size = Vector2i(200, 0)
@@ -159,6 +161,12 @@ func _build_layout() -> void:
 	center_vbox.add_child(load_row)
 
 	center_vbox.add_child(_transport_bar)
+
+	_piano_roll = PianoRoll.new()
+	_piano_roll.seek_requested.connect(func(pos: float):
+		_editor_player.seek(pos)
+	)
+	center_vbox.add_child(_piano_roll)
 
 	_mini_mixer = MiniMixer.new()
 	center_vbox.add_child(_mini_mixer)
@@ -235,6 +243,9 @@ func set_bridge(bridge: RefCounted) -> void:
 func _init_editor_player() -> void:
 	_editor_player = EditorPlayer.new()
 	_editor_player.setup(self, _bridge)
+	_editor_player.file_loaded.connect(func(_path: String, _dur: float):
+		_update_piano_roll()
+	)
 	_wire_transport()
 	_wire_mixer()
 
@@ -335,6 +346,7 @@ func _update_progress() -> void:
 			_editor_player.get_position(),
 			_editor_player.get_duration()
 		)
+		_piano_roll.set_playback_position(_editor_player.get_position())
 	# 检测播放结束（不在播放/暂停状态且有已加载文件）
 	if not _editor_player.is_playing() and not _editor_player.is_paused() and _editor_player.get_duration() > 0:
 		if _transport_bar.is_looping():
@@ -342,6 +354,27 @@ func _update_progress() -> void:
 		else:
 			_progress_timer.stop()
 			_transport_bar.update_progress(0.0, _editor_player.get_duration())
+			_piano_roll.set_playback_position(0.0)
+
+
+func _update_piano_roll() -> void:
+	var midi_res: MidiResource = _editor_player.get_midi_resource()
+	if midi_res == null or midi_res.tracks.is_empty():
+		_piano_roll.clear_notes()
+		return
+	var roll_notes: Array[PianoRoll.RollNote] = []
+	var ticks_per_second: float = float(midi_res.tempo) / 60.0 * float(midi_res.timebase)
+	if ticks_per_second <= 0.0:
+		return
+	for track in midi_res.tracks:
+		for note in track.notes:
+			var start_time: float = float(note.start_ticks) / ticks_per_second
+			var duration: float = float(note.duration_ticks) / ticks_per_second
+			roll_notes.append(PianoRoll.RollNote.new(
+				track.channel, note.pitch, start_time, duration, note.velocity
+			))
+	var duration: float = _editor_player.get_duration()
+	_piano_roll.set_notes(roll_notes, duration)
 
 
 func _on_patch_selected(preset_index: int, patch: PatchData) -> void:
