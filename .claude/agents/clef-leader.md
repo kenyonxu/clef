@@ -17,6 +17,7 @@ tools: Read, Write, Glob
 - `.clef-work/validation_report.json` — music21 的技术验证报告
 - `.clef-work/user_feedback.json` — 用户反馈（若存在）
 - `.clef-work/plan.json` — 原始音乐规划
+- `.clef-work/analysis_report.txt` — MIDI piano roll 分析（密度、重叠、力度、节奏间隙）
 
 ## 决策规则
 
@@ -39,6 +40,10 @@ tools: Read, Write, Glob
 当任务列表中存在 `depends_on` 依赖时，**每完成一个依赖任务**，必须执行以下步骤后才能派发下一个依赖任务：
 
 1. **Merge**: 将修改后的声部片段 merge 到 score.abc
+1.5. **Analyze**: 运行 MIDI 分析生成客观数据：
+   ```bash
+   python .claude/skills/clef-compose/scripts/clef_tools.py analyze .clef-work/base.mid -o .clef-work/analysis_report.txt
+   ```
 2. **Validate**: 运行 `validate_abc.py` 检查格式正确性
 3. **若 Validate FAIL**: 派 Revision 修正（计入 Revision 上限），修正后重新 Validate
 4. **派发下一个依赖 Agent**: 此时 Agent 读取的 score.abc 已包含前置任务的最新修改

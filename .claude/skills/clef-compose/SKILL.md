@@ -34,6 +34,7 @@ description: LLM 辅助 MIDI 作曲 Skill。基于 ABC 记谱法，通过多 Age
 | `merge_abc.py` | 合并多声部 ABC | `python scripts/merge_abc.py` (通过函数调用) |
 | `inject_expression.py` | 注入 CC/弯音到 MIDI | `python scripts/inject_expression.py <mid> <plan> <out>` |
 | `extract_solo.py` | 分轨 Solo 提取 | `python scripts/extract_solo.py <mid> <start> <end> <dir>` |
+| `analyze_midi.py` | MIDI piano roll 分析（密度/重叠/力度/间隙） | `python scripts/clef_tools.py analyze <mid> [-o <report>]` |
 | `snapshot.py` | 备份 score.abc + 步骤日志 | `python scripts/snapshot.py --step <N> --output <file> --note <desc>` |
 | `sf2_profiler.py` | SF2 → profile JSON | `python scripts/sf2_profiler.py <sf2> -o <output.json>` |
 
@@ -280,6 +281,7 @@ python scripts/snapshot.py --step 0 --note "需求确认：boss battle, D大调,
 4. 运行 `merge_abc.py` 合并所有声部 → `.clef-work/score.abc`
 5. 运行 `python scripts/snapshot.py --step 2a --output "score.abc" --note "首轮创作完成"`
 6. 运行 `validate_abc.py` 技术验证 → `.clef-work/validation_report.json`
+6.5. 运行 `clef_tools.py analyze` → `.clef-work/analysis_report.txt`
 
 **2b. Leader 迭代**
 
@@ -289,10 +291,10 @@ python scripts/snapshot.py --step 0 --note "需求确认：boss battle, D大调,
 10. 否则，按 tasks.json 中的任务列表派发 Agent：
     - 读取 tasks.json 中的每个任务
     - 按依赖顺序派发对应 Agent（使用定向修改模式）
-    - Agent 修改后重新 merge → validate → review → Leader
+    - Agent 修改后重新 merge → analyze → validate → review → Leader
     - 每轮迭代完成后运行 `python scripts/snapshot.py --step 2b-iter<N> --output "score.abc" --note "第N轮迭代完成"`
     - 最多 3 轮迭代
-11. **依赖任务中间同步**：tasks.json 中存在 `depends_on` 时，每个依赖任务完成后必须 merge → validate 确认通过后，再派发下一个依赖 Agent。详见 clef-leader.md「3.1 依赖任务状态传递」。
+11. **依赖任务中间同步**：tasks.json 中存在 `depends_on` 时，每个依赖任务完成后必须 merge → analyze → validate 确认通过后，再派发下一个依赖 Agent。详见 clef-leader.md「3.1 依赖任务状态传递」。
 
 迭代流程：
 ```

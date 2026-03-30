@@ -120,6 +120,17 @@ def cmd_extract_solo(args):
     return 0
 
 
+def cmd_analyze(args):
+    if not os.path.isfile(args.input):
+        print(f"Error: file not found: {args.input}")
+        return 1
+    from analyze_midi import analyze
+    report = analyze(args.input, segment_sec=args.segment)
+    sys.stdout.write(report)
+    sys.stdout.write("\n")
+    return 0
+
+
 def cmd_snapshot(args):
     from snapshot import snapshot
     return snapshot(args.step, args.status, args.output, args.note, args.workdir)
@@ -166,6 +177,11 @@ def main():
     p.add_argument('end', type=float, help='结束时间（秒）')
     p.add_argument('output_dir', help='输出目录')
 
+    # analyze
+    p = sub.add_parser('analyze', help='MIDI piano roll analysis report')
+    p.add_argument('input', help='MIDI 文件')
+    p.add_argument('--segment', type=float, default=2.0, help='密度条时间分段（秒）')
+
     # snapshot
     p = sub.add_parser('snapshot', help='备份 score.abc + 写入步骤日志')
     p.add_argument('--step', required=True, help='步骤编号 (如 2a)')
@@ -183,6 +199,7 @@ def main():
         'merge': cmd_merge,
         'inject': cmd_inject,
         'extract-solo': cmd_extract_solo,
+        'analyze': cmd_analyze,
         'snapshot': cmd_snapshot,
     }
 
