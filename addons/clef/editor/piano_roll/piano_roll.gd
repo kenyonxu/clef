@@ -252,7 +252,7 @@ func _draw_legend() -> void:
 		draw_rect(Rect2(x, 4, 20, 20), color)
 		x += 24.0
 		# "ChN InstrumentName"
-		var label := "Ch%d" % (ch + 1)
+		var label := "Ch%d" % ch
 		if _channel_instruments.has(ch):
 			var preset: int = _channel_instruments[ch]
 			if preset >= 0 and preset < _GM_NAMES.size():
