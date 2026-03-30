@@ -32,6 +32,8 @@ tools: Read, Write, Glob, Bash
 
 ## expression_plan.json 结构
 
+**⚠ 格式硬约束：必须使用 `tracks` 格式。** `inject_expression.py` 只识别 `tracks` 和 `channels` 两种顶层键。**绝不能**使用 `sections` 作为顶层键，否则注入脚本会静默跳过所有事件。
+
 ```json
 {
   "tracks": [
@@ -47,6 +49,12 @@ tools: Read, Write, Glob, Bash
   ]
 }
 ```
+
+**验证规则**（写入文件前自检）：
+1. 顶层键必须是 `tracks`（数组），不能是 `sections` 或其他
+2. 每个元素必须有 `channel`（整数）和 `events`（数组）
+3. 每个 event 必须有 `type`（"cc" 或 "pitch_bend"）和 `time_beats`（浮点数）
+4. `channel` 值必须与 plan.json `orchestration` 中定义的一致
 
 ### 事件类型
 - `cc`: 控制变化事件。control=7(通道音量), control=11(表现力), control=1(颤音)

@@ -6,6 +6,9 @@ while preserving all existing events and correct delta-time ordering.
 """
 
 import json
+import os
+import sys
+
 import mido
 
 
@@ -118,12 +121,95 @@ def _convert_channels_format(plan: dict) -> list[dict]:
 	return tracks
 
 
+def _convert_sections_format(plan: dict, plan_path: str) -> list[dict]:
+	"""Convert 'sections' format plan to 'tracks' format.
+
+	The 'sections' format groups CC by section with per-channel values:
+	  {"sections": [{"id": "A", "channels": {"0": {"cc7": 100, "cc11": 80}}}]}
+
+	The 'tracks' format uses beat-based events:
+	  {"tracks": [{"channel": 0, "events": [{"type": "cc", "time_beats": 0, ...}]}]}
+
+	Requires plan.json to compute section beat ranges. Falls back to start_beat
+	from section data if plan.json is not available.
+	"""
+	# Try to load plan.json for section beat ranges
+	plan_dir = os.path.dirname(os.path.abspath(plan_path))
+	plan_json_path = os.path.join(plan_dir, 'plan.json')
+	section_beats = {}
+
+	if os.path.isfile(plan_json_path):
+		with open(plan_json_path, 'r', encoding='utf-8') as f:
+			plan_json = json.load(f)
+		section_beats = {
+			s['id']: s.get('start_beat', 0) for s in plan_json.get('sections', [])
+		}
+		# Compute start_beat from cumulative measures if not set
+		ts_str = plan_json.get('time_signature', '4/4')
+		try:
+			beats_per_measure = int(ts_str.split('/')[0])
+		except (ValueError, IndexError):
+			beats_per_measure = 4
+		cumulative = 0
+		for s in plan_json.get('sections', []):
+			sid = s['id']
+			if sid not in section_beats or (section_beats[sid] == 0 and cumulative > 0):
+				section_beats[sid] = cumulative
+			cumulative += s.get('measures', 0) * beats_per_measure
+
+	# Map shorthand CC names to control numbers
+	cc_name_map = {
+		'cc7': 7, 'cc11': 11, 'cc1': 1, 'cc10': 10, 'cc64': 64, 'cc91': 91, 'cc93': 93,
+	}
+
+	tracks: dict[int, list[dict]] = {}
+
+	for section in plan.get('sections', []):
+		sid = section.get('id', '')
+		start_beat = section_beats.get(sid, 0)
+		channels = section.get('channels', {})
+
+		for ch_str, ch_data in channels.items():
+			channel = int(ch_str)
+			if channel not in tracks:
+				tracks[channel] = []
+
+			for key, value in ch_data.items():
+				if key in cc_name_map:
+					tracks[channel].append({
+						'type': 'cc',
+						'time_beats': start_beat,
+						'control': cc_name_map[key],
+						'value': value,
+					})
+				elif key == 'pitch_bend':
+					if isinstance(value, list):
+						for pb_event in value:
+							tracks[channel].append({
+								'type': 'pitch_bend',
+								'time_beats': start_beat + pb_event.get('offset_beats', 0),
+								'value': pb_event['value'],
+							})
+					else:
+						tracks[channel].append({
+							'type': 'pitch_bend',
+							'time_beats': start_beat,
+							'value': value,
+						})
+
+	result = [{'channel': ch, 'events': events} for ch, events in tracks.items() if events]
+	if not result:
+		print(f"Warning: 'sections' format produced no events (plan: {plan_path})", file=sys.stderr)
+	return result
+
+
 def inject(base_midi_path: str, plan_path: str, output_path: str) -> None:
 	"""Inject expression plan events into a base MIDI file.
 
-	Supports two plan formats:
-	- 'tracks' format: list of track dicts with beat-based events
+	Supports three plan formats:
+	- 'tracks' format: list of track dicts with beat-based events (preferred)
 	- 'channels' format: dict of channel data with tick-based CC events
+	- 'sections' format: per-section CC values (auto-converted, requires plan.json)
 
 	Args:
 		base_midi_path: Path to the input MIDI file.
@@ -137,12 +223,21 @@ def inject(base_midi_path: str, plan_path: str, output_path: str) -> None:
 
 	ticks_per_beat = midi.ticks_per_beat
 
-	# Support both 'tracks' and 'channels' plan formats
+	# Support 'tracks', 'channels', and 'sections' plan formats
 	if 'tracks' in plan:
 		track_plans = plan['tracks']
 	elif 'channels' in plan:
 		track_plans = _convert_channels_format(plan)
+	elif 'sections' in plan:
+		track_plans = _convert_sections_format(plan, plan_path)
 	else:
+		top_keys = list(plan.keys())[:5]
+		print(
+			f"Error: expression_plan.json has unrecognized format. "
+			f"Expected top-level key 'tracks', 'channels', or 'sections', "
+			f"but found: {top_keys}. No events injected.",
+			file=sys.stderr,
+		)
 		track_plans = []
 
 	for track_plan in track_plans:

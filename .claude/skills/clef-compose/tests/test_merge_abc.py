@@ -141,3 +141,93 @@ class TestMerge:
         result = merge(plan, fragments, mode='full')
         assert isinstance(result, str)
         assert len(result) > 0
+
+    def test_semantic_voice_mapping_with_reversed_keys(self):
+        """Orchestration keys in non-standard order should still map correctly by role name."""
+        plan = {
+            "title": "Test",
+            "time_signature": "4/4",
+            "bpm": 120,
+            "key": "D",
+            "orchestration": {
+                "drums": {"channel": 9, "instrument": 0, "name": "Drums"},
+                "bass": {"channel": 2, "instrument": 32, "name": "Bass"},
+                "harmony": {"channel": 1, "instrument": 48, "name": "Strings"},
+                "melody": {"channel": 0, "instrument": 73, "name": "Flute"},
+            }
+        }
+        fragments = {
+            "V:1": '| d2 f2 |',
+            "V:2": '| [FAc]2 [FAc]2 |',
+        }
+        result = merge(plan, fragments, mode='full')
+        # V:1 should get melody (channel 0, program 73) regardless of dict order
+        assert '%%MIDI channel 0' in result
+        assert '%%MIDI program 73' in result
+        # V:2 should get harmony (channel 1, program 48)
+        assert '%%MIDI channel 1' in result
+        assert '%%MIDI program 48' in result
+
+    def test_semantic_voice_mapping_all_four_voices(self):
+        """All 4 standard voices should map to correct channels by semantic role."""
+        plan = {
+            "title": "Test",
+            "time_signature": "4/4",
+            "bpm": 120,
+            "key": "C",
+            "orchestration": {
+                "melody": {"channel": 0, "instrument": 73},
+                "harmony": {"channel": 1, "instrument": 48},
+                "bass": {"channel": 2, "instrument": 32},
+                "drums": {"channel": 9, "instrument": 0},
+            }
+        }
+        fragments = {
+            "V:1": '| c2 e2 |',
+            "V:2": '| [CEG]2 [CEG]2 |',
+            "V:3": '| C,2 C,2 |',
+            "V:4": '| z2 z2 |',
+        }
+        result = merge(plan, fragments, mode='full')
+
+        # V:1 -> melody channel 0
+        lines = result.split('\n')
+        v1_idx = next(i for i, l in enumerate(lines) if 'V:1' in l)
+        assert '%%MIDI channel 0' in lines[v1_idx - 2]
+        assert '%%MIDI program 73' in lines[v1_idx - 1]
+
+        # V:2 -> harmony channel 1
+        v2_idx = next(i for i, l in enumerate(lines) if 'V:2' in l)
+        assert '%%MIDI channel 1' in lines[v2_idx - 2]
+        assert '%%MIDI program 48' in lines[v2_idx - 1]
+
+        # V:3 -> bass channel 2
+        v3_idx = next(i for i, l in enumerate(lines) if 'V:3' in l)
+        assert '%%MIDI channel 2' in lines[v3_idx - 2]
+        assert '%%MIDI program 32' in lines[v3_idx - 1]
+
+        # V:4 -> drums channel 9
+        v4_idx = next(i for i, l in enumerate(lines) if 'V:4' in l)
+        assert '%%MIDI channel 9' in lines[v4_idx - 2]
+
+    def test_semantic_mapping_fallback_to_positional(self):
+        """Non-standard role names should fall back to positional indexing."""
+        plan = {
+            "title": "Test",
+            "time_signature": "4/4",
+            "bpm": 120,
+            "key": "C",
+            "orchestration": {
+                "lead": {"channel": 3, "instrument": 80},
+                "pad": {"channel": 4, "instrument": 90},
+            }
+        }
+        fragments = {
+            "V:1": '| c2 e2 |',
+            "V:2": '| [CEG]2 [CEG]2 |',
+        }
+        result = merge(plan, fragments, mode='full')
+        # "lead" and "pad" are not in the voice_to_role map,
+        # so fallback to positional: V:1 -> index 0 -> lead
+        assert '%%MIDI channel 3' in result
+        assert '%%MIDI channel 4' in result

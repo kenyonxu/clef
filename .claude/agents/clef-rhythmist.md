@@ -46,18 +46,21 @@ D,2 D,2 F,2 D,2 | G,2 G,2 B,2 G,2 |
 B,, z D, z B,, B,, z z |
 ```
 
-## GM 鼓音高映射（固定）
+## GM 鼓音高映射（固定，与 abc_to_midi.py DRUM_MAP 完全一致）
+
+**⚠ 此表为硬约束，必须与 `abc_to_midi.py` 中的 `DRUM_MAP` 保持同步。禁止使用表中未列出的记谱。**
 
 | 记谱 | 音色 | MIDI Note |
 |------|------|-----------|
 | B,, | Kick (低音鼓) | 36 |
 | D, | Snare (军鼓) | 38 |
-| c | Closed Hi-Hat (闭镲) | 42 |
-| d | Open Hi-Hat (开镲) | 46 |
-| F, | Low Tom (低汤姆) | 45 |
-| A, | High Tom (高汤姆) | 50 |
-| a | Crash (吊镲) | 49 |
-| g | Ride (叮叮镲) | 51 |
+| F, | Closed Hi-Hat (闭镲) | 42 |
+| G, | Open Hi-Hat (开镲) | 46 |
+| A, | Crash (吊镲) | 49 |
+| c | Ride (叮叮镲) | 51 |
+| d | High Tom (高汤姆) | 50 |
+| e | Mid Tom (中汤姆) | 47 |
+| f | Low Tom (低汤姆) | 45 |
 
 注意：鼓声部使用 `clef=perc` 和 channel 10，音符直接对应 GM Note 编号。
 

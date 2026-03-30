@@ -208,7 +208,7 @@ python scripts/snapshot.py --step 0 --note "需求确认：boss battle, D大调,
 
 允许自定义标签，Orchestrator 按语义理解处理。
 
-**用户确认点 1：** 展示 plan.json 的关键参数（调性、BPM、段落结构、配器方案、频段分配），等待用户确认。
+**⛔ 用户确认点 1（必须停住）：** 展示 plan.json 的关键参数（调性、BPM、段落结构、配器方案、频段分配），**必须等待用户明确回复后才能进入 Step 1b。**
 
 **方向小样长度计算（demo_length_bars）：**
 
@@ -233,7 +233,7 @@ python scripts/snapshot.py --step 0 --note "需求确认：boss battle, D大调,
 - `chords_only`：仅和弦走向（2-4 小节）
 - `melody_only`：仅旋律线
 
-**用户确认点 1：** 展示 plan.json 的关键参数（调性、BPM、段落结构、配器方案、频段分配、小样长度），等待用户确认。
+**⛔ 用户确认点 1（必须停住）：** 展示 plan.json 的关键参数（调性、BPM、段落结构、配器方案、频段分配、小样长度），**必须等待用户明确回复后才能进入 Step 1b。**
 
 **1b. 方向小样（长度由 plan.json `demo_length_bars` 决定）**
 
@@ -255,7 +255,7 @@ python scripts/snapshot.py --step 0 --note "需求确认：boss battle, D大调,
 
 生成前清理旧文件：`rm -f addons/clef/output/<name>_sample.mid`
 
-**用户确认点 2：** 展示审核报告摘要 + 试听文件。用户决策：方向对不对？
+**⛔ 用户确认点 2（必须停住）：** 展示审核报告摘要 + 试听文件。**必须等待用户明确回复后才能进入 Step 2a。** 用户可能要求调整方向或确认继续。
 
 **方向小样反馈回路：** 如果用户要求修改方向：
 1. 根据用户反馈定向修改对应声部（Composer/Harmonist）
@@ -343,7 +343,7 @@ python scripts/abc_to_midi.py .clef-work/score.abc
 cp addons/clef/output/<name>.mid .clef-work/base.mid
 ```
 
-**用户确认点 3：** 展示试听文件。用户可以试听并提出反馈。
+**⛔ 用户确认点 3（必须停住）：** 展示试听文件 + 审核报告摘要。**必须等待用户明确回复后才能进入 Step 3。** 不允许自动跳过此确认点。用户可能要求迭代修改（回到 Step 2b）或确认进入下一步。
 
 ---
 
@@ -430,9 +430,10 @@ python scripts/extract_solo.py addons/clef/output/<name>.mid <start_sec> <end_se
 ## 注意事项
 
 1. **始终用中文与用户交流**
-2. **中间步骤默认自动执行**，不需要用户确认每一步（Step 1/2 的用户确认点除外）
-3. **ABC 输出前必须通过 validate_abc.py 验证**
-4. **如果用户对结果不满意**，根据反馈处理流程修改，不要从头来
-5. **尊重用户的需求描述**，不要过度添加用户没要求的东西
-6. **文件保存路径**：默认 `addons/clef/output/`，用户可指定
-7. **工作目录**：中间文件保存到 `.clef-work/`
+2. **⛔ 用户确认点是硬性边界，绝不允许自动跳过。** 标记为「⛔ 用户确认点 N（必须停住）」的步骤，必须输出结果后停止，等待用户明确回复（如"OK""继续""可以"等）后才能进入下一步。任何情况下都不能自动推进。
+3. **中间步骤默认自动执行**，不需要用户确认每一步（用户确认点除外）
+4. **ABC 输出前必须通过 validate_abc.py 验证**
+5. **如果用户对结果不满意**，根据反馈处理流程修改，不要从头来
+6. **尊重用户的需求描述**，不要过度添加用户没要求的东西
+7. **文件保存路径**：默认 `addons/clef/output/`，用户可指定
+8. **工作目录**：中间文件保存到 `.clef-work/`

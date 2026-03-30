@@ -132,16 +132,26 @@ def merge(plan: dict, fragments: dict, mode: str = "full") -> str:
         voice_num = v.replace("V:", "")
         midi_lines = []
 
-        # Try to find the matching orchestration entry by voice number
-        orch_keys = list(orchestration.keys())
-        voice_index = int(voice_num) - 1 if voice_num.isdigit() else 0
+        # Map voice number to orchestration role by semantic key name
+        voice_to_role = {"1": "melody", "2": "harmony", "3": "bass", "4": "drums"}
+        role = voice_to_role.get(voice_num) if voice_num.isdigit() else None
 
-        if 0 <= voice_index < len(orch_keys):
-            orch = orchestration[orch_keys[voice_index]]
-            channel = orch.get("channel", voice_index)
+        if role and role in orchestration:
+            orch = orchestration[role]
+            channel = orch.get("channel", 0)
             instrument = orch.get("instrument", 0)
             midi_lines.append(f"%%MIDI channel {channel}")
             midi_lines.append(f"%%MIDI program {instrument}")
+        elif voice_num.isdigit():
+            # Fallback: try positional indexing for non-standard roles
+            orch_keys = list(orchestration.keys())
+            voice_index = int(voice_num) - 1
+            if 0 <= voice_index < len(orch_keys):
+                orch = orchestration[orch_keys[voice_index]]
+                channel = orch.get("channel", voice_index)
+                instrument = orch.get("instrument", 0)
+                midi_lines.append(f"%%MIDI channel {channel}")
+                midi_lines.append(f"%%MIDI program {instrument}")
 
         parts.extend(midi_lines)
         parts.append(v)
