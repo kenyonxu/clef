@@ -62,7 +62,7 @@ func load_file(path: String) -> bool:
 
 	_player = MidiStreamPlayer.new()
 	_player.name = "EditorMidiPlayer"
-	_player._editor_preview = true
+	_player.enable_editor_preview()
 	_player.midi_resource = midi_res
 	_player.soundfont = ProjectSettings.get_setting("clef/default_soundfont", "")
 	_player.volume_db = -12.0
@@ -70,7 +70,10 @@ func load_file(path: String) -> bool:
 	Engine.get_main_loop().root.add_child(_player)
 
 	_current_path = path
-	await _host_node.get_tree().process_frame
+	if _host_node and is_instance_valid(_host_node) and _host_node.get_tree():
+		await _host_node.get_tree().process_frame
+	if _player == null:
+		return false
 	var duration: float = 0.0
 	if midi_res != null and midi_res.has_method("get_duration_seconds"):
 		duration = midi_res.get_duration_seconds()

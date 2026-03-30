@@ -11,6 +11,7 @@ const TransportBar = preload("res://addons/clef/editor/transport_bar/transport_b
 const MiniMixer = preload("res://addons/clef/editor/mini_mixer/mini_mixer.gd")
 
 const _CONFIG_PATH = "user://clef_editor.cfg"
+const SUPPORTED_EXTENSIONS: PackedStringArray = [".mid", ".tres", ".json"]
 
 var _left_panel: PanelContainer
 var _center_panel: PanelContainer
@@ -194,6 +195,13 @@ func _style_panel(panel: PanelContainer, bg_color: Color) -> void:
 	panel.add_theme_stylebox_override("panel", style)
 
 
+func _is_supported_file(path: String) -> bool:
+	for ext in SUPPORTED_EXTENSIONS:
+		if path.ends_with(ext):
+			return true
+	return false
+
+
 func set_left_panel_visible(visible: bool) -> void:
 	_left_panel.visible = visible
 
@@ -222,14 +230,13 @@ func _init_progress_timer() -> void:
 	_progress_timer.wait_time = 0.05
 	_progress_timer.timeout.connect(_update_progress)
 	add_child(_progress_timer)
-	_progress_timer.start()
 
 
 func _can_drop_data(at_position: Vector2, data: Variant) -> bool:
 	if data is Dictionary and data.has("type") and data["type"] == "files":
 		var files: Array = data.get("files", [])
 		for f in files:
-			if f.ends_with(".mid") or f.ends_with(".tres") or f.ends_with(".json"):
+			if _is_supported_file(f):
 				return true
 	return false
 
@@ -239,12 +246,15 @@ func _drop_data(at_position: Vector2, data: Variant) -> void:
 		return
 	var files: Array = data.get("files", [])
 	for f in files:
-		if f.ends_with(".mid") or f.ends_with(".tres") or f.ends_with(".json"):
+		if _is_supported_file(f):
 			_load_midi_file(f)
 			break
 
 
 func _load_midi_file(path: String) -> void:
+	if not _is_supported_file(path):
+		push_warning("ClefStation: unsupported file format: %s" % path)
+		return
 	_last_midi_file = path
 	_last_midi_dir = path.get_base_dir()
 	_save_editor_config()
@@ -261,6 +271,10 @@ func _on_load_pressed() -> void:
 	if _last_midi_dir != "":
 		dialog.current_dir = _last_midi_dir
 	EditorInterface.get_base_control().add_child(dialog)
+	dialog.canceled.connect(func():
+		EditorInterface.get_base_control().remove_child(dialog)
+		dialog.queue_free()
+	)
 	dialog.file_selected.connect(func(path: String):
 		_load_midi_file(path)
 		EditorInterface.get_base_control().remove_child(dialog)
@@ -317,7 +331,7 @@ func _update_progress() -> void:
 
 
 func _on_patch_selected(preset_index: int, patch: PatchData) -> void:
-	print("[ClefStation] Patch selected: %03d %s" % [preset_index, patch.name])
+	pass
 
 
 func _load_soundfont_profile() -> void:

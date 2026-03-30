@@ -138,6 +138,10 @@ func _on_tool_menu_pressed() -> void:
 	dialog.filters = PackedStringArray(["*.mid ; MIDI 文件"])
 	dialog.current_dir = json_path.get_base_dir()
 	dialog.current_file = json_path.get_file().get_basename() + ".mid"
+	dialog.canceled.connect(func():
+		EditorInterface.get_base_control().remove_child(dialog)
+		dialog.queue_free()
+	)
 	dialog.file_selected.connect(func(path: String) -> void:
 		var out_file := FileAccess.open(path, FileAccess.WRITE)
 		if out_file == null:
@@ -203,6 +207,10 @@ func _on_export_menu_pressed() -> void:
 	dialog.filters = PackedStringArray(["*.json ; JSON 文件"])
 	dialog.current_dir = input_path.get_base_dir()
 	dialog.current_file = input_path.get_file().get_basename() + ".json"
+	dialog.canceled.connect(func():
+		EditorInterface.get_base_control().remove_child(dialog)
+		dialog.queue_free()
+	)
 	dialog.file_selected.connect(func(path: String) -> void:
 		var file := FileAccess.open(path, FileAccess.WRITE)
 		if file == null:

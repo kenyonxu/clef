@@ -23,6 +23,8 @@ signal program_changed(channel: int, preset_index: int)
 signal finished
 signal progress_updated(position: float, duration: float)
 
+const PROGRESS_UPDATE_INTERVAL_FRAMES: int = 6  # ~10Hz @ 60fps
+
 var _progress_frame: int = 0
 var _clef_bank: ClefBank
 var _voice_pool: ClefVoicePool
@@ -37,12 +39,16 @@ var _muted_channels: Array[int] = []
 ## 混音台独立音量 (0.0-1.0)，与 CC#7 volume 分离
 var _mixer_volumes: Array[float] = []
 ## 调试: 设为 >= 0 时仅播放该通道 (-1 = 全部通道)
-@export var debug_channel_filter: int = -1 : set = set_debug_channel_filter  # -1=all, 0-15=single channel
+@export var debug_channel_filter: int = -1 : set = _set_debug_channel_filter
 var _debug_channel_filter: int = -1
 
-func set_debug_channel_filter(v: int) -> void:
-	debug_channel_filter = v
+func _set_debug_channel_filter(v: int) -> void:
 	_debug_channel_filter = v
+
+
+## 启用编辑器预览模式
+func enable_editor_preview() -> void:
+	_editor_preview = true
 
 # 音序器状态
 var _sorted_events: Array[Dictionary] = []
@@ -140,27 +146,29 @@ func set_bus(value: String) -> void:
 
 ## 设置音频总线 (ClefMaster + 16 个通道总线)
 func _setup_audio_buses() -> void:
-	# 检查是否已存在
+	# 检查主总线是否已存在
 	var existing_idx := AudioServer.get_bus_index("ClefMaster")
 	if existing_idx >= 0:
 		_clef_master_bus_idx = existing_idx
-		return
-	# 创建主总线
-	AudioServer.add_bus(-1)
-	_clef_master_bus_idx = AudioServer.get_bus_count() - 1
-	AudioServer.set_bus_name(_clef_master_bus_idx, "ClefMaster")
-	AudioServer.set_bus_send(_clef_master_bus_idx, bus)
-	AudioServer.set_bus_volume_db(_clef_master_bus_idx, volume_db)
-	# 为每个通道创建子总线 + panner
-	for i in range(16):
+	else:
 		AudioServer.add_bus(-1)
-		var ch_idx: int = AudioServer.get_bus_count() - 1
-		AudioServer.set_bus_name(ch_idx, "clef_ch_%d" % i)
-		AudioServer.set_bus_send(ch_idx, "ClefMaster")
-		AudioServer.set_bus_volume_db(ch_idx, 0.0)
-		var panner := AudioEffectPanner.new()
-		panner.pan = 0.0
-		AudioServer.add_bus_effect(ch_idx, panner)
+		_clef_master_bus_idx = AudioServer.get_bus_count() - 1
+		AudioServer.set_bus_name(_clef_master_bus_idx, "ClefMaster")
+		AudioServer.set_bus_send(_clef_master_bus_idx, bus)
+		AudioServer.set_bus_volume_db(_clef_master_bus_idx, volume_db)
+	# 为每个通道创建子总线（如已存在则跳过）
+	for i in range(16):
+		var ch_name := "clef_ch_%d" % i
+		var ch_idx := AudioServer.get_bus_index(ch_name)
+		if ch_idx < 0:
+			AudioServer.add_bus(-1)
+			ch_idx = AudioServer.get_bus_count() - 1
+			AudioServer.set_bus_name(ch_idx, ch_name)
+			AudioServer.set_bus_send(ch_idx, "ClefMaster")
+			AudioServer.set_bus_volume_db(ch_idx, 0.0)
+			var panner := AudioEffectPanner.new()
+			panner.pan = 0.0
+			AudioServer.add_bus_effect(ch_idx, panner)
 
 
 ## 开始播放
@@ -429,7 +437,7 @@ func _process(delta: float) -> void:
 
 	_progress_frame += 1
 	# 发射进度更新信号 (~10Hz 节流，避免每帧信号开销)
-	if _progress_frame % 6 == 0 and _duration_ticks > 0:
+	if _progress_frame % PROGRESS_UPDATE_INTERVAL_FRAMES == 0 and _duration_ticks > 0:
 		var pos: float = _current_tick / _ticks_per_second
 		var dur: float = float(_duration_ticks) / _ticks_per_second
 		progress_updated.emit(pos, dur)
@@ -445,7 +453,6 @@ func _process(delta: float) -> void:
 			_channel_instruments.clear()
 			for state in _channel_states:
 				state.reset()
-			_build_sorted_events()
 			_preprocess_events_up_to(0)
 		elif _voice_pool.get_active_voices().size() == 0:
 			stop()
@@ -457,7 +464,7 @@ func _process_event(event: Dictionary) -> void:
 	match event["type"]:
 		"note_on":
 			var channel: int = event["channel"]
-			if debug_channel_filter >= 0 and channel != debug_channel_filter:
+			if _debug_channel_filter >= 0 and channel != _debug_channel_filter:
 				return
 			var key: int = event["pitch"]
 			var velocity: int = event["velocity"]
