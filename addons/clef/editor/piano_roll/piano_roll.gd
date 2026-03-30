@@ -43,9 +43,11 @@ const _CHANNEL_COLORS: Array[Color] = [
 ]
 
 const _BG_COLOR := Color(0.06, 0.06, 0.09)
+const _LEGEND_BG := Color(0.08, 0.08, 0.11)
 const _GRID_LINE_COLOR := Color(0.12, 0.12, 0.16)
 const _GRID_C_COLOR := Color(0.18, 0.18, 0.22)
 const _PLAYBACK_COLOR := Color(1.0, 1.0, 1.0, 0.8)
+const _LEGEND_HEIGHT: float = 18.0
 
 var _notes: Array[RollNote] = []
 var _duration: float = 0.0
@@ -54,6 +56,7 @@ var _min_pitch: int = 0
 var _max_pitch: int = 127
 var _pixels_per_second: float = 100.0
 var _pixels_per_note: float = 10.0
+var _active_channels: Array[int] = []
 
 
 func _ready() -> void:
@@ -69,6 +72,7 @@ func _ready() -> void:
 func set_notes(notes: Array[RollNote], duration: float) -> void:
 	_notes = notes
 	_duration = duration
+	_collect_active_channels()
 	_recalc_layout()
 	queue_redraw()
 
@@ -88,6 +92,7 @@ func clear_notes() -> void:
 	_max_pitch = 127
 	_pixels_per_second = 100.0
 	_pixels_per_note = 10.0
+	_active_channels.clear()
 	queue_redraw()
 
 
@@ -102,14 +107,24 @@ func _pixel_to_time(px: float) -> float:
 
 
 func _pitch_to_y(pitch: int) -> float:
-	return (_max_pitch - pitch) * _pixels_per_note
+	return _LEGEND_HEIGHT + (_max_pitch - pitch) * _pixels_per_note
 
 
 func _y_to_pitch(py: float) -> int:
-	return _max_pitch - int(py / _pixels_per_note)
+	return _max_pitch - int((py - _LEGEND_HEIGHT) / _pixels_per_note)
 
 
 # ─── 布局计算 ─────────────────────────────────────────────
+
+func _collect_active_channels() -> void:
+	_active_channels.clear()
+	var seen: Dictionary = {}
+	for note in _notes:
+		if not seen.has(note.channel):
+			seen[note.channel] = true
+			_active_channels.append(note.channel)
+	_active_channels.sort()
+
 
 func _recalc_layout() -> void:
 	if _notes.is_empty():
@@ -127,8 +142,8 @@ func _recalc_layout() -> void:
 	var w := float(size.x)
 	if w > 0.0 and _duration > 0.0:
 		_pixels_per_second = w / _duration
-	# 像素/音高：音域适配高度
-	var h := float(size.y)
+	# 像素/音高：音域适配高度（减去图例高度）
+	var h := float(size.y) - _LEGEND_HEIGHT
 	var note_range := _max_pitch - _min_pitch + 1
 	if h > 0.0 and note_range > 0:
 		_pixels_per_note = h / float(note_range)
@@ -169,12 +184,38 @@ func _draw() -> void:
 		)
 		return
 
+	# 通道图例条
+	_draw_legend()
 	# 八度网格线
 	_draw_pitch_grid()
 	# 音符矩形
 	_draw_notes()
 	# 播放头
 	_draw_playback_cursor()
+
+
+func _draw_legend() -> void:
+	# 图例背景
+	draw_rect(Rect2(0, 0, size.x, _LEGEND_HEIGHT), _LEGEND_BG)
+	# 底部分隔线
+	draw_line(Vector2(0, _LEGEND_HEIGHT), Vector2(size.x, _LEGEND_HEIGHT), Color(0.2, 0.2, 0.25))
+	# 各通道色块 + 标签
+	var x := 6.0
+	for ch in _active_channels:
+		var color: Color = _CHANNEL_COLORS[ch % 16]
+		# 色块
+		draw_rect(Rect2(x, 4, 10, 10), color)
+		# 标签 "ChN"
+		var label := "Ch%d" % (ch + 1)
+		x += 13
+		draw_string(
+			ThemeDB.fallback_font,
+			Vector2(x, 13),
+			label,
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 10,
+			Color(0.6, 0.6, 0.65)
+		)
+		x += 28.0
 
 
 func _draw_pitch_grid() -> void:
@@ -209,4 +250,5 @@ func _draw_playback_cursor() -> void:
 	if _playback_position < 0.0 or _duration <= 0.0:
 		return
 	var x := _time_to_x(_playback_position)
+	# 图例区域也画线
 	draw_line(Vector2(x, 0), Vector2(x, size.y), _PLAYBACK_COLOR, 2.0)
