@@ -76,6 +76,7 @@ var _pixels_per_second: float = 100.0
 var _pixels_per_note: float = 10.0
 var _active_channels: Array[int] = []
 var _channel_instruments: Dictionary = {}  ## channel -> preset_index
+var _muted_channels: Dictionary = {}      ## channel -> bool
 
 
 func _ready() -> void:
@@ -102,6 +103,21 @@ func set_channel_instruments(instruments: Dictionary) -> void:
 	queue_redraw()
 
 
+## 设置通道静音状态（由 MiniMixer 触发）
+func set_channel_muted(channel: int, muted: bool) -> void:
+	if muted:
+		_muted_channels[channel] = true
+	else:
+		_muted_channels.erase(channel)
+	queue_redraw()
+
+
+## 清除所有静音状态（加载新文件时调用）
+func clear_muted_channels() -> void:
+	_muted_channels.clear()
+	queue_redraw()
+
+
 ## 更新播放头位置
 func set_playback_position(position: float) -> void:
 	_playback_position = position
@@ -119,6 +135,7 @@ func clear_notes() -> void:
 	_pixels_per_note = 10.0
 	_active_channels.clear()
 	_channel_instruments.clear()
+	_muted_channels.clear()
 	queue_redraw()
 
 
@@ -225,10 +242,12 @@ func _draw_legend() -> void:
 	draw_rect(Rect2(0, 0, size.x, _LEGEND_HEIGHT), _LEGEND_BG)
 	# 底部分隔线
 	draw_line(Vector2(0, _LEGEND_HEIGHT), Vector2(size.x, _LEGEND_HEIGHT), Color(0.2, 0.2, 0.25))
-	# 各通道色块 + 标签
+	# 各通道色块 + 标签（跳过静音通道）
 	var x := 6.0
 	var font := ThemeDB.fallback_font
 	for ch in _active_channels:
+		if _muted_channels.has(ch):
+			continue
 		var color: Color = ChannelColors.COLORS[ch % 16]
 		# 色块 (20x20)
 		draw_rect(Rect2(x, 4, 20, 20), color)
@@ -261,6 +280,8 @@ func _draw_pitch_grid() -> void:
 
 func _draw_notes() -> void:
 	for note in _notes:
+		if _muted_channels.has(note.channel):
+			continue
 		var x := _time_to_x(note.start_time)
 		var w := note.duration * _pixels_per_second
 		# 鼓声（channel 9）最小 2px 宽

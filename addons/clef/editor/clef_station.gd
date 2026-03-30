@@ -169,6 +169,7 @@ func _build_layout() -> void:
 	center_vbox.add_child(_piano_roll)
 
 	_mini_mixer = MiniMixer.new()
+	_mini_mixer.channel_mute_changed.connect(_piano_roll.set_channel_muted)
 	center_vbox.add_child(_mini_mixer)
 
 	_center_panel.add_child(center_vbox)
@@ -361,6 +362,7 @@ func _update_piano_roll() -> void:
 	var midi_res: MidiResource = _editor_player.get_midi_resource()
 	if midi_res == null or midi_res.tracks.is_empty():
 		_piano_roll.clear_notes()
+		_piano_roll.clear_muted_channels()
 		return
 	var roll_notes: Array[PianoRoll.RollNote] = []
 	var ticks_per_second: float = float(midi_res.tempo) / 60.0 * float(midi_res.timebase)
