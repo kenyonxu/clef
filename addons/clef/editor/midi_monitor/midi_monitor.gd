@@ -51,6 +51,8 @@ const MAX_EVENTS: int = 500
 var _event_log: RichTextLabel
 var _stats_label: Label
 var _events: Array[MidiEvent] = []
+var _pending_events: Array[MidiEvent] = []
+var _needs_rebuild: bool = false
 var _active_notes: int = 0
 var _event_count: int = 0
 var _filter_channel: int = -1
@@ -68,6 +70,10 @@ func _ready() -> void:
 	size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_load_config()
 	_build_ui()
+
+
+func _process(_delta: float) -> void:
+	_flush_pending_events()
 
 
 func _build_ui() -> void:
@@ -200,46 +206,65 @@ func connect_bridge(bridge: RefCounted) -> void:
 		)
 
 
-# ─── 事件接收 ──────────────────────────────────────────
+# ─── 事件接收（缓冲，不直接操作 UI）──────────────────
 
 func _on_midi_note_on(ch: int, pitch: int, vel: int) -> void:
-	_append_event(MidiEvent.new(EventType.NOTE_ON, ch, pitch, vel))
+	_buffer_event(MidiEvent.new(EventType.NOTE_ON, ch, pitch, vel))
 	_active_notes += 1
 	_rate_count += 1
 
 
 func _on_midi_note_off(ch: int, pitch: int) -> void:
-	_append_event(MidiEvent.new(EventType.NOTE_OFF, ch, pitch, 0))
+	_buffer_event(MidiEvent.new(EventType.NOTE_OFF, ch, pitch, 0))
 	_active_notes = maxi(0, _active_notes - 1)
 	_rate_count += 1
 
 
 func _on_midi_cc(ch: int, controller: int, value: int) -> void:
-	_append_event(MidiEvent.new(EventType.CC, ch, controller, value))
+	_buffer_event(MidiEvent.new(EventType.CC, ch, controller, value))
 	_rate_count += 1
 
 
 func _on_midi_pitch_bend(ch: int, value: int) -> void:
-	_append_event(MidiEvent.new(EventType.PITCH_BEND, ch, value, 0))
+	_buffer_event(MidiEvent.new(EventType.PITCH_BEND, ch, value, 0))
 	_rate_count += 1
 
 
 func _on_midi_program_change(ch: int, preset: int) -> void:
-	_append_event(MidiEvent.new(EventType.PROGRAM_CHANGE, ch, preset, 0))
+	_buffer_event(MidiEvent.new(EventType.PROGRAM_CHANGE, ch, preset, 0))
 	_rate_count += 1
 
 
-# ─── 事件渲染 ──────────────────────────────────────────
+# ─── 事件缓冲与渲染 ────────────────────────────────────
 
-func _append_event(evt: MidiEvent) -> void:
+func _buffer_event(evt: MidiEvent) -> void:
 	_events.append(evt)
 	_event_count += 1
 	if _events.size() > MAX_EVENTS:
 		_events.pop_front()
+		_needs_rebuild = true
+	_pending_events.append(evt)
+
+
+func _flush_pending_events() -> void:
+	if _pending_events.is_empty() and not _needs_rebuild:
+		return
+	# 需要完整重建（事件被裁剪后）
+	if _needs_rebuild:
 		_event_log.clear()
 		_rebuild_log()
+		_needs_rebuild = false
+		_pending_events.clear()  # rebuild 已覆盖 _events 中所有事件
+		if _auto_scroll:
+			_event_log.scroll_to_line(_event_log.get_line_count() - 1)
 		return
-	_append_event_line(evt)
+	# 批量追加新事件行
+	for evt in _pending_events:
+		_append_event_line(evt)
+	_pending_events.clear()
+	# 仅在需要时滚动（每帧最多一次）
+	if _auto_scroll:
+		_event_log.scroll_to_line(_event_log.get_line_count() - 1)
 
 
 func _append_event_line(evt: MidiEvent) -> void:
@@ -250,8 +275,6 @@ func _append_event_line(evt: MidiEvent) -> void:
 	_event_log.push_color(color)
 	_event_log.append_text(text + "\n")
 	_event_log.pop()
-	if _auto_scroll:
-		_event_log.scroll_to_line(_event_log.get_line_count() - 1)
 
 
 func _format_event(evt: MidiEvent) -> String:
@@ -292,8 +315,7 @@ func _on_type_filter_toggled(pressed: bool, type_val: int, btn: Button) -> void:
 		_filter_types &= ~(1 << type_val)
 	_set_toggle_style(btn, pressed, _EVENT_COLORS.get(type_val, Color(1, 1, 1)))
 	_save_config()
-	_event_log.clear()
-	_rebuild_log()
+	_needs_rebuild = true
 
 
 # ─── 统计 ──────────────────────────────────────────────
@@ -306,10 +328,12 @@ func _update_rate() -> void:
 
 func _clear_log() -> void:
 	_events.clear()
+	_pending_events.clear()
 	_active_notes = 0
 	_event_count = 0
 	_rate_count = 0
 	_current_rate = 0
+	_needs_rebuild = false
 	_event_log.clear()
 	_update_rate()
 

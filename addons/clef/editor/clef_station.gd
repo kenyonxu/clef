@@ -17,6 +17,7 @@ var _left_panel: PanelContainer
 var _center_panel: PanelContainer
 var _right_panel: PanelContainer
 var _split_main: HSplitContainer
+var _split_right: HSplitContainer
 var _btn_left: Button
 var _btn_right: Button
 var _soundfont_browser: SoundfontBrowser
@@ -29,6 +30,10 @@ var _progress_timer: Timer = null
 var _last_midi_dir: String = ""
 var _last_midi_file: String = ""
 var _auto_load: bool = false
+var _left_visible: bool = true
+var _right_visible: bool = true
+var _saved_split_main_offset: int = 220
+var _saved_split_right_offset: int = -200
 
 
 func _init() -> void:
@@ -42,6 +47,7 @@ func _ready() -> void:
 	size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_load_editor_config()
 	_build_layout()
+	_apply_saved_layout()
 	_load_soundfont_profile()
 	_init_editor_player()
 	_init_progress_timer()
@@ -68,7 +74,7 @@ func _build_layout() -> void:
 	_btn_left = Button.new()
 	_btn_left.text = "SF2 Browser"
 	_btn_left.toggle_mode = true
-	_btn_left.button_pressed = true
+	_btn_left.button_pressed = _left_visible
 	_btn_left.tooltip_text = "Toggle Soundfont Browser panel"
 	_btn_left.toggled.connect(set_left_panel_visible)
 	toolbar.add_child(_btn_left)
@@ -76,7 +82,7 @@ func _build_layout() -> void:
 	_btn_right = Button.new()
 	_btn_right.text = "MIDI Monitor"
 	_btn_right.toggle_mode = true
-	_btn_right.button_pressed = true
+	_btn_right.button_pressed = _right_visible
 	_btn_right.tooltip_text = "Toggle MIDI Monitor panel"
 	_btn_right.toggled.connect(set_right_panel_visible)
 	toolbar.add_child(_btn_right)
@@ -90,7 +96,8 @@ func _build_layout() -> void:
 	_split_main.name = "SplitMain"
 	_split_main.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_split_main.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_split_main.split_offset = 220
+	_split_main.split_offset = _saved_split_main_offset
+	_split_main.dragged.connect(_on_split_dragged)
 	root.add_child(_split_main)
 
 	# 左栏：音色浏览器
@@ -105,11 +112,12 @@ func _build_layout() -> void:
 	_split_main.add_child(_left_panel)
 
 	# 中右分割
-	var split_right := HSplitContainer.new()
-	split_right.name = "SplitRight"
-	split_right.split_offset = -200
-	split_right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_split_main.add_child(split_right)
+	_split_right = HSplitContainer.new()
+	_split_right.name = "SplitRight"
+	_split_right.split_offset = _saved_split_right_offset
+	_split_right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_split_right.dragged.connect(_on_split_dragged)
+	_split_main.add_child(_split_right)
 
 	# 中栏：混音台 + 播放控制
 	_center_panel = PanelContainer.new()
@@ -156,7 +164,7 @@ func _build_layout() -> void:
 	center_vbox.add_child(_mini_mixer)
 
 	_center_panel.add_child(center_vbox)
-	split_right.add_child(_center_panel)
+	_split_right.add_child(_center_panel)
 
 	# 右栏：MIDI 监视器
 	_right_panel = PanelContainer.new()
@@ -166,7 +174,7 @@ func _build_layout() -> void:
 	_style_panel(_right_panel, Color(0.14, 0.10, 0.10))
 	_midi_monitor = MidiMonitor.new()
 	_right_panel.add_child(_midi_monitor)
-	split_right.add_child(_right_panel)
+	_split_right.add_child(_right_panel)
 
 	# 延迟连接 bridge
 	if _bridge != null:
@@ -203,11 +211,15 @@ func _is_supported_file(path: String) -> bool:
 
 
 func set_left_panel_visible(visible: bool) -> void:
+	_left_visible = visible
 	_left_panel.visible = visible
+	_save_editor_config()
 
 
 func set_right_panel_visible(visible: bool) -> void:
+	_right_visible = visible
 	_right_panel.visible = visible
+	_save_editor_config()
 
 
 func set_bridge(bridge: RefCounted) -> void:
@@ -356,12 +368,31 @@ func _load_soundfont_profile() -> void:
 		_soundfont_browser.setup_audition(sf2_path)
 
 
+# ─── 布局持久化 ────────────────────────────────────────
+
+func _apply_saved_layout() -> void:
+	_split_main.split_offset = _saved_split_main_offset
+	_split_right.split_offset = _saved_split_right_offset
+	_left_panel.visible = _left_visible
+	_right_panel.visible = _right_visible
+	_btn_left.button_pressed = _left_visible
+	_btn_right.button_pressed = _right_visible
+
+
+func _on_split_dragged(_offset: int) -> void:
+	_save_editor_config()
+
+
 func _load_editor_config() -> void:
 	var config := ConfigFile.new()
 	if config.load(_CONFIG_PATH) == OK:
 		_last_midi_dir = config.get_value("editor", "last_midi_dir", "")
 		_last_midi_file = config.get_value("editor", "last_midi_file", "")
 		_auto_load = config.get_value("editor", "auto_load", false)
+		_left_visible = config.get_value("layout", "left_visible", true)
+		_right_visible = config.get_value("layout", "right_visible", true)
+		_saved_split_main_offset = clamp(config.get_value("layout", "split_main_offset", 220), -2000, 2000)
+		_saved_split_right_offset = clamp(config.get_value("layout", "split_right_offset", -200), -2000, 2000)
 
 
 func _save_editor_config() -> void:
@@ -370,4 +401,8 @@ func _save_editor_config() -> void:
 	config.set_value("editor", "last_midi_dir", _last_midi_dir)
 	config.set_value("editor", "last_midi_file", _last_midi_file)
 	config.set_value("editor", "auto_load", _auto_load)
+	config.set_value("layout", "split_main_offset", _split_main.split_offset)
+	config.set_value("layout", "split_right_offset", _split_right.split_offset)
+	config.set_value("layout", "left_visible", _left_visible)
+	config.set_value("layout", "right_visible", _right_visible)
 	config.save(_CONFIG_PATH)
