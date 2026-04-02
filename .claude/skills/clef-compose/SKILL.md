@@ -411,6 +411,14 @@ python scripts/inject_expression.py .clef-work/base.mid --balance .clef-work/pla
 - 完整 ABC: `.clef-work/score.abc`
 - 表现力计划: `.clef-work/expression_plan.json`
 
+**3e. 归档到曲目文件夹**
+
+将 score.abc、plan.json、所有 .mid 文件归档到 `.clef-work/output/{曲目名}/` 目录：
+
+```bash
+python scripts/archive.py --workdir .clef-work
+```
+
 ---
 
 ## 用户反馈处理

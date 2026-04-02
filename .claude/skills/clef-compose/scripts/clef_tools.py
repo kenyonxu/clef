@@ -134,6 +134,13 @@ def cmd_analyze(args):
     return 0
 
 
+def cmd_archive(args):
+    from archive import archive
+    dest = archive(args.workdir)
+    print(f"Archived to: {dest}")
+    return 0
+
+
 def cmd_snapshot(args):
     from snapshot import snapshot
     return snapshot(args.step, args.status, args.output, args.note, args.workdir)
@@ -193,6 +200,10 @@ def main():
     p.add_argument('--note', default='', help='补充说明')
     p.add_argument('--workdir', default='.clef-work', help='工作目录')
 
+    # archive
+    p = sub.add_parser('archive', help='归档最终产出到 output/{title}/ 目录')
+    p.add_argument('--workdir', default='.clef-work', help='工作目录')
+
     args = parser.parse_args()
 
     commands = {
@@ -204,6 +215,7 @@ def main():
         'extract-solo': cmd_extract_solo,
         'analyze': cmd_analyze,
         'snapshot': cmd_snapshot,
+        'archive': cmd_archive,
     }
 
     func = commands.get(args.command)
