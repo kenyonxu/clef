@@ -3,7 +3,12 @@
     "PostToolUse": [
       {
         "matcher": "Agent",
-        "command": "python .claude/hooks/log_agent_call.py"
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python .claude/hooks/log_agent_call.py"
+          }
+        ]
       }
     ]
   }
