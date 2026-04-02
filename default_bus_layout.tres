@@ -3,6 +3,7 @@
 [sub_resource type="AudioEffectPanner" id="AudioEffectPanner_j3pel"]
 
 [sub_resource type="AudioEffectPanner" id="AudioEffectPanner_g28q7"]
+pan = -0.08661418
 
 [sub_resource type="AudioEffectPanner" id="AudioEffectPanner_n8wo2"]
 
@@ -17,9 +18,10 @@
 [sub_resource type="AudioEffectPanner" id="AudioEffectPanner_k2ilm"]
 
 [sub_resource type="AudioEffectPanner" id="AudioEffectPanner_2g6t7"]
+pan = 0.007874016
 
 [sub_resource type="AudioEffectPanner" id="AudioEffectPanner_y2dp7"]
-pan = -0.30708662
+pan = -0.27559054
 
 [sub_resource type="AudioEffectPanner" id="AudioEffectPanner_dapn3"]
 pan = 0.007874016
@@ -39,7 +41,7 @@ bus/1/name = &"ClefMaster"
 bus/1/solo = false
 bus/1/mute = false
 bus/1/bypass_fx = false
-bus/1/volume_db = -12.0
+bus/1/volume_db = 1.0
 bus/1/send = &"Master"
 bus/2/name = &"clef_ch_0"
 bus/2/solo = false
