@@ -286,7 +286,7 @@ func _drop_data(at_position: Vector2, data: Variant) -> void:
 
 func _load_midi_file(path: String) -> void:
 	if not _is_supported_file(path):
-		push_warning("ClefStation: unsupported file format: %s" % path)
+		push_warning("ClefStation: unsupported file format: %s" % path)  # Debug-only, not localized
 		return
 	_last_midi_file = path
 	_last_midi_dir = path.get_base_dir()

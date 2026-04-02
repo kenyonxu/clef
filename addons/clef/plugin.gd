@@ -43,10 +43,6 @@ func _enter_tree() -> void:
 
 
 func _exit_tree() -> void:
-	if _l10n:
-		MidiComposerConverter.l10n = null
-		_l10n.cleanup()
-		_l10n = null
 	if _main_screen != null:
 		_main_screen.queue_free()
 		_main_screen = null
@@ -65,6 +61,11 @@ func _exit_tree() -> void:
 	if _file_context_menu != null:
 		remove_context_menu_plugin(_file_context_menu)
 		_file_context_menu = null
+	# Cleanup l10n last — child plugins may still reference it during teardown
+	if _l10n:
+		MidiComposerConverter.l10n = null
+		_l10n.cleanup()
+		_l10n = null
 
 
 # ─── Main Screen ───────────────────────────────────────────

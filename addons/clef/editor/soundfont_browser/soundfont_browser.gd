@@ -22,100 +22,73 @@ func _ready() -> void:
 
 
 func _build_ui() -> void:
-	# 搜索栏
+	# Search bar
 	var search_bar := HBoxContainer.new()
 	search_bar.add_theme_constant_override("separation", 4)
 	var search_label := Label.new()
-	search_label.text = l10n.t("Search:")
+	search_label.text = l10n.t("Search:") if l10n else "Search:"
 	search_label.custom_minimum_size = Vector2i(36, 0)
 	search_bar.add_child(search_label)
 	_search_line = LineEdit.new()
-	_search_line.placeholder_text = l10n.t("Name or number...")
+	_search_line.placeholder_text = l10n.t("Name or number...") if l10n else "Name or number..."
 	_search_line.text_changed.connect(_on_search_changed)
 	_search_line.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	search_bar.add_child(_search_line)
 	add_child(search_bar)
 
-	# Patch 列表
+	# Patch list
 	_tree = Tree.new()
 	_tree.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_tree.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_tree.hide_root = true
 	_tree.columns = 1
-	_tree.set_column_title(0, l10n.t("Preset"))
-	_tree.item_selected.connect(_on_item_selected)
+	_tree.set_column_title(0, l10n.t("Preset") if l10n else "Preset")
 	_tree.item_activated.connect(_on_item_activated)
+	_tree.item_selected.connect(_on_item_selected)
 	add_child(_tree)
 
-	# 信息面板
-	var info_container := PanelContainer.new()
-	info_container.custom_minimum_size = Vector2i(0, 80)
-	var info_style := StyleBoxFlat.new()
-	info_style.bg_color = Color(0.08, 0.08, 0.12)
-	info_style.set_content_margin_all(6)
-	info_container.add_theme_stylebox_override("panel", info_style)
+	# Info panel
 	_info_panel = VBoxContainer.new()
-	info_container.add_child(_info_panel)
-	add_child(info_container)
-
-	# 初始空状态
-	_show_empty_state()
+	_info_panel.visible = false
+	add_child(_info_panel)
 
 
-func load_profile(json_path: String) -> bool:
-	var file := FileAccess.open(json_path, FileAccess.READ)
-	if file == null:
-		return false
-	var json := JSON.new()
-	var err := json.parse(file.get_as_text())
-	file.close()
-	if err != OK:
-		return false
-	var data = json.get_data()
-	if not data is Dictionary or not data.has("presets"):
-		return false
-	_patches.clear()
-	for key in data["presets"]:
-		var preset_index := int(key)
-		_patches.append(PatchData.from_dict(preset_index, data["presets"][key]))
-	_patches.sort_custom(func(a, b): return a.preset_index < b.preset_index)
-	_populate_tree("")
-	return true
+func set_patches(patches: Array[PatchData]) -> void:
+	_patches = patches
+	_populate_tree(_search_line.text)
 
 
-func _populate_tree(filter_text: String) -> void:
+func clear_selection() -> void:
+	if _selected_item:
+		_selected_item.deselect(0)
+		_selected_item = null
+	_info_panel.visible = false
+
+
+func _populate_tree(filter_text: String = "") -> void:
 	_tree.clear()
-	if _patches.is_empty():
-		_show_empty_state()
-		return
-
-	var current_category: String = ""
-	var category_root: TreeItem = null
-	var has_items: bool = false
+	var root := _tree.create_item()
+	var has_items := false
 
 	for patch in _patches:
-		var matches := true
 		if filter_text != "":
 			var query := filter_text.to_lower()
-			matches = query in patch.name.to_lower() or query in str(patch.preset_index)
-		if not matches:
-			continue
+			var name_match := patch.name.to_lower().find(query) >= 0
+			var num_match := ("%03d" % patch.preset_index).find(query) >= 0
+			if not name_match and not num_match:
+				continue
 
-		if patch.gm_category != current_category:
-			current_category = patch.gm_category
-			category_root = _tree.create_item()
-			category_root.set_text(0, current_category)
-
-		var item := _tree.create_item(category_root)
+		var item := _tree.create_item(root)
 		item.set_text(0, "%03d %s" % [patch.preset_index, patch.name])
 		item.set_metadata(0, patch)
 		has_items = true
 
 	if not has_items:
-		_show_empty_state(l10n.t("No matching results"))
+		_show_empty_state(l10n.t("No matching results") if l10n else "No matching results")
 
 
-func _show_empty_state(text: String = l10n.t("No soundfont loaded")) -> void:
+func _show_empty_state(text: String = "") -> void:
+	if text == "":
+		text = l10n.t("No soundfont loaded") if l10n else "No soundfont loaded"
 	_tree.clear()
 	var root := _tree.create_item()
 	var item := _tree.create_item(root)
@@ -128,95 +101,91 @@ func _on_search_changed(text: String) -> void:
 	_populate_tree(text)
 
 
+func _on_item_activated() -> void:
+	_try_audition()
+
+
 func _on_item_selected() -> void:
 	var item := _tree.get_selected()
 	if item == null or item.get_metadata(0) == null:
-		_update_info_panel(null)
 		return
-	# 清除之前的高亮（使用主题默认字体色）
-	if _selected_item != null and is_instance_valid(_selected_item):
-		_selected_item.set_custom_color(0, _tree.get_theme_color("font_color", "Tree"))
 	var patch: PatchData = item.get_metadata(0)
-	item.set_custom_color(0, Color(1.0, 0.85, 0.4))
-	_selected_item = item
-	patch_selected.emit(patch.preset_index, patch)
 	_update_info_panel(patch)
 
 
-func _on_item_activated() -> void:
+func _update_info_panel(patch: PatchData) -> void:
+	_info_panel.visible = true
+	for child in _info_panel.get_children():
+		child.queue_free()
+
+	var info_data := [
+		[l10n.t("Range: %s") % patch.range_str if l10n else "Range: %s" % patch.range_str],
+		[l10n.t("Velocity: %s") % patch.velocity_str if l10n else "Velocity: %s" % patch.velocity_str],
+		[l10n.t("Sweet spot: %s") % patch.sweet_spot_str if l10n else "Sweet spot: %s" % patch.sweet_spot_str],
+		[l10n.t("Quality: %s") % patch.quality_str if l10n else "Quality: %s" % patch.quality_str],
+		[l10n.t("Layers: %d") % patch.layers if l10n else "Layers: %d" % patch.layers],
+	]
+	for label_text in info_data:
+		var label := Label.new()
+		label.text = label_text[0]
+		_info_panel.add_child(label)
+
+	# Highlight selected item
+	if _selected_item:
+		_selected_item.set_custom_color(0, Color.WHITE)
+	_selected_item = _tree.get_selected()
+	if _selected_item:
+		_selected_item.set_custom_color(0, Color(0.7, 0.85, 1.0))
+
+
+func _try_audition() -> void:
 	var item := _tree.get_selected()
 	if item == null or item.get_metadata(0) == null:
 		return
 	var patch: PatchData = item.get_metadata(0)
-	_audition_patch(patch.preset_index)
-
-
-func _update_info_panel(patch: PatchData) -> void:
-	for child in _info_panel.get_children():
-		child.queue_free()
-	if patch == null:
-		return
-	var info := [
-		l10n.t("Range: %s") % patch.format_range(patch.key_range),
-		l10n.t("Velocity: %s") % patch.format_range(patch.vel_range),
-		l10n.t("Sweet spot: %s") % patch.format_range(patch.sweet_spot),
-		l10n.t("Quality: %s") % patch.quality,
-		l10n.t("Layers: %d") % patch.vel_layers,
-	]
-	for text in info:
-		var lbl := Label.new()
-		lbl.text = text
-		lbl.add_theme_color_override("font_color", Color(0.8, 0.8, 0.8))
-		_info_panel.add_child(lbl)
-
-
-func _gui_input(event: InputEvent) -> void:
-	if event is InputEventKey and event.pressed and event.keycode == KEY_ENTER:
-		_audition_selected()
-
-
-func _audition_patch(preset_index: int) -> void:
 	if _audition_bank == null:
 		return
-	var inst_info: ClefInstrumentInfo = _audition_bank.get_instrument(preset_index, 60, 100, 0)
-	if inst_info == null:
-		return
+
+	# Stop previous
+	_stop_audition()
+
+	_audition_player = AudioStreamPlayer.new()
+	add_child(_audition_player)
+
 	var voice := ClefVoice.new()
-	_audition_player.add_child(voice)
-	voice.start_note(inst_info, 0, 60, 100)
-	voice.bus = "Master"
-	# 1.5 秒后自动停止并清理
-	_cleanup_timer = _cleanup_timer if _cleanup_timer != null else Timer.new()
-	if not _cleanup_timer.is_inside_tree():
-		add_child(_cleanup_timer)
-	_cleanup_timer.stop()
+	voice.bank = _audition_bank
+	voice.program = patch.preset_index
+	voice.pitch_scale = patch.audition_note / 60.0  # Middle C = 60
+	voice.volume_db = -6.0
+	voice.ADSR.attack_time = 0.05
+	voice.ADSR.sustain_level = 0.5
+	voice.ADSR.release_time = 0.5
+
+	_audition_player.stream = voice
+	_audition_player.play()
+
+	# Auto stop after 1.5s
+	_cleanup_timer = Timer.new()
 	_cleanup_timer.wait_time = 1.5
 	_cleanup_timer.one_shot = true
-	_cleanup_timer.timeout.connect(func():
-		if is_instance_valid(voice) and not voice.is_idle():
-			voice.stop_note()
-		)
+	_cleanup_timer.timeout.connect(_stop_audition)
+	add_child(_cleanup_timer)
 	_cleanup_timer.start()
 
 
-func _audition_selected() -> void:
-	var item := _tree.get_selected()
-	if item == null or item.get_metadata(0) == null:
-		return
-	var patch: PatchData = item.get_metadata(0)
-	_audition_patch(patch.preset_index)
+func _stop_audition() -> void:
+	if _cleanup_timer and is_instance_valid(_cleanup_timer):
+		_cleanup_timer.queue_free()
+		_cleanup_timer = null
+	if _audition_player and is_instance_valid(_audition_player):
+		_audition_player.stop()
+		_audition_player.queue_free()
+		_audition_player = null
 
 
-func setup_audition(sf2_path: String) -> bool:
-	if sf2_path == "" or not FileAccess.file_exists(sf2_path):
-		return false
-	if _audition_player == null:
-		_audition_player = Node.new()
-		_audition_player.name = "AuditionPlayer"
-		add_child(_audition_player)
-	var result := Sf2Reader.read_file(sf2_path)
-	if not result.ok:
-		return false
-	_audition_bank = ClefBank.new()
-	_audition_bank.load_from_sf2(result.data)
-	return true
+func set_bank(bank: ClefBank) -> void:
+	_audition_bank = bank
+	if bank == null:
+		_show_empty_state()
+	else:
+		set_patches(bank.get_all_patches())
