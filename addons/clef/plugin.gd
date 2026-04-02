@@ -35,6 +35,7 @@ func _enter_tree() -> void:
 	add_context_menu_plugin(EditorContextMenuPlugin.CONTEXT_SLOT_FILESYSTEM, _file_context_menu)
 	_main_screen = ClefStation.new()
 	_main_screen.name = "ClefStation"
+	_main_screen.l10n = _l10n
 	EditorInterface.get_editor_main_screen().add_child(_main_screen)
 	_bridge = load("res://addons/clef/editor/clef_station_editor_bridge.gd").new()
 	_main_screen.set_bridge(_bridge)
