@@ -6,6 +6,7 @@ tools: Read, Write, Glob, Grep
 maxTurns: 5
 skills:
   - theory-structure
+  - theory-orchestration
   - theory-abc
 memory: project
 ---
