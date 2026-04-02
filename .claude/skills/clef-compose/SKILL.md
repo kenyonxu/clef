@@ -3,7 +3,7 @@ name: clef-compose
 description: LLM 辅助 MIDI 作曲 Skill。基于 ABC 记谱法，通过多 Agent 协作（Composer/Harmonist/Rhythmist/Orchestrator/Reviewer + Revision/Leader）生成高质量 MIDI 音乐。支持风格参考（--ref）、交互式打样、music21 自动验证、Leader 驱动迭代和分轨 Solo 诊断。
 hooks:
   PostToolUse:
-    - matcher: "Write.*score\\.abc"
+    - matcher: "Write.*\\.clef-work/score\\.abc"
       hooks:
         - type: command
           command: python .claude/skills/clef-compose/scripts/validate_abc.py .clef-work/score.abc .clef-work/plan.json -o .clef-work/validation_report.json
