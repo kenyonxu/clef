@@ -55,6 +55,7 @@ var _mute_buttons: Array[Button] = []
 var _channel_labels: Array[Label] = []
 var _color_indicators: Array[ColorRect] = []
 var _master_slider: HSlider
+var l10n: ClefL10n
 var _master_label: Label
 
 
@@ -104,7 +105,7 @@ func _build_ui() -> void:
 		ch_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		ch_lbl.add_theme_font_size_override("font_size", 18)
 		ch_lbl.add_theme_color_override("font_color", Color(0.7, 0.7, 0.7))
-		ch_lbl.tooltip_text = "Channel %d" % i
+		ch_lbl.tooltip_text = l10n.t("Channel %d") % (i + 1)
 		strip.add_child(ch_lbl)
 		_channel_labels.append(ch_lbl)
 
@@ -116,7 +117,7 @@ func _build_ui() -> void:
 		slider.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		slider.custom_minimum_size = Vector2i(20, 80)
-		slider.tooltip_text = "Channel %d volume" % i
+		slider.tooltip_text = l10n.t("Channel %d volume") % (i + 1)
 		slider.drag_ended.connect(_on_channel_slider_ended.bind(i))
 		strip.add_child(slider)
 		_channel_sliders.append(slider)
@@ -126,7 +127,7 @@ func _build_ui() -> void:
 		mute_btn.custom_minimum_size = Vector2i(0, 28)
 		mute_btn.toggle_mode = true
 		mute_btn.add_theme_font_size_override("font_size", 18)
-		mute_btn.tooltip_text = "Mute Channel %d" % i
+		mute_btn.tooltip_text = l10n.t("Mute Channel %d") % (i + 1)
 		_set_mute_style(mute_btn, false)
 		mute_btn.toggled.connect(_on_mute_toggled.bind(i, mute_btn))
 		strip.add_child(mute_btn)
@@ -142,7 +143,7 @@ func _build_ui() -> void:
 	master_row.add_theme_constant_override("separation", 8)
 
 	var master_title := Label.new()
-	master_title.text = "Master"
+	master_title.text = l10n.t("Master")
 	master_title.custom_minimum_size = Vector2i(60, 0)
 	master_title.add_theme_font_size_override("font_size", 18)
 	master_title.add_theme_color_override("font_color", Color(0.9, 0.9, 0.7))
@@ -154,7 +155,7 @@ func _build_ui() -> void:
 	_master_slider.step = 1.0
 	_master_slider.value = -12.0
 	_master_slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_master_slider.tooltip_text = "Master volume"
+	_master_slider.tooltip_text = l10n.t("Master volume")
 	_master_slider.value_changed.connect(_on_master_slider_changed)
 	master_row.add_child(_master_slider)
 
@@ -172,7 +173,7 @@ func _build_ui() -> void:
 func clear_instruments() -> void:
 	for i in range(_color_indicators.size()):
 		_color_indicators[i].visible = false
-		_channel_labels[i].tooltip_text = "Channel %d" % i
+		_channel_labels[i].tooltip_text = l10n.t("Channel %d") % (i + 1)
 
 
 ## 更新通道乐器名（由 Bridge.midi_program_change 触发，更新 tooltip + 颜色指示条）
@@ -183,7 +184,7 @@ func set_channel_instrument(channel: int, preset_index: int) -> void:
 	if preset_index >= 0 and preset_index < GM_INSTRUMENT_NAMES.size():
 		name = GM_INSTRUMENT_NAMES[preset_index]
 	var lbl: Label = _channel_labels[channel]
-	lbl.tooltip_text = "Ch%d: %s" % [channel, name]
+	lbl.tooltip_text = l10n.t("Channel %d: %s") % [channel + 1, name]
 	_color_indicators[channel].visible = name != ""
 
 

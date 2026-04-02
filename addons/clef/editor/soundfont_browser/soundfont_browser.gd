@@ -13,6 +13,7 @@ var _audition_player: Node = null
 var _audition_bank: ClefBank = null
 var _cleanup_timer: Timer = null
 var _selected_item: TreeItem = null
+var l10n: ClefL10n
 
 
 func _ready() -> void:
@@ -25,11 +26,11 @@ func _build_ui() -> void:
 	var search_bar := HBoxContainer.new()
 	search_bar.add_theme_constant_override("separation", 4)
 	var search_label := Label.new()
-	search_label.text = "搜索:"
+	search_label.text = l10n.t("Search:")
 	search_label.custom_minimum_size = Vector2i(36, 0)
 	search_bar.add_child(search_label)
 	_search_line = LineEdit.new()
-	_search_line.placeholder_text = "名称或编号..."
+	_search_line.placeholder_text = l10n.t("Name or number...")
 	_search_line.text_changed.connect(_on_search_changed)
 	_search_line.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	search_bar.add_child(_search_line)
@@ -41,7 +42,7 @@ func _build_ui() -> void:
 	_tree.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_tree.hide_root = true
 	_tree.columns = 1
-	_tree.set_column_title(0, "Preset")
+	_tree.set_column_title(0, l10n.t("Preset"))
 	_tree.item_selected.connect(_on_item_selected)
 	_tree.item_activated.connect(_on_item_activated)
 	add_child(_tree)
@@ -111,10 +112,10 @@ func _populate_tree(filter_text: String) -> void:
 		has_items = true
 
 	if not has_items:
-		_show_empty_state("无匹配结果")
+		_show_empty_state(l10n.t("No matching results"))
 
 
-func _show_empty_state(text: String = "未加载音色库") -> void:
+func _show_empty_state(text: String = l10n.t("No soundfont loaded")) -> void:
 	_tree.clear()
 	var root := _tree.create_item()
 	var item := _tree.create_item(root)
@@ -156,11 +157,11 @@ func _update_info_panel(patch: PatchData) -> void:
 	if patch == null:
 		return
 	var info := [
-		"音域: %s" % patch.format_range(patch.key_range),
-		"力度: %s" % patch.format_range(patch.vel_range),
-		"甜区: %s" % patch.format_range(patch.sweet_spot),
-		"品质: %s" % patch.quality,
-	"层次: %d" % patch.vel_layers,
+		l10n.t("Range: %s") % patch.format_range(patch.key_range),
+		l10n.t("Velocity: %s") % patch.format_range(patch.vel_range),
+		l10n.t("Sweet spot: %s") % patch.format_range(patch.sweet_spot),
+		l10n.t("Quality: %s") % patch.quality,
+		l10n.t("Layers: %d") % patch.vel_layers,
 	]
 	for text in info:
 		var lbl := Label.new()

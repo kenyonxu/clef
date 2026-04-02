@@ -10,6 +10,7 @@ var _player: MidiStreamPlayer = null
 var _host_node: Node = null
 var _bridge: RefCounted = null
 var _current_path: String = ""
+var l10n: ClefL10n = null
 
 
 func setup(host_node: Node, bridge: RefCounted) -> void:
@@ -21,7 +22,7 @@ func load_file(path: String) -> bool:
 	_unload()
 
 	if not FileAccess.file_exists(path):
-		load_failed.emit(path, "File not found")
+		load_failed.emit(path, l10n.t("File not found") if l10n else "File not found")
 		return false
 
 	var midi_res: MidiResource = null
@@ -29,12 +30,12 @@ func load_file(path: String) -> bool:
 	if path.ends_with(".tres"):
 		midi_res = load(path) as MidiResource
 		if midi_res == null:
-			load_failed.emit(path, "Failed to load .tres")
+			load_failed.emit(path, l10n.t("Failed to load .tres") if l10n else "Failed to load .tres")
 			return false
 	elif path.ends_with(".mid"):
 		var file := FileAccess.open(path, FileAccess.READ)
 		if file == null:
-			load_failed.emit(path, "Cannot read file")
+			load_failed.emit(path, l10n.t("Cannot read file") if l10n else "Cannot read file")
 			return false
 		var bytes := file.get_buffer(file.get_length())
 		file.close()
@@ -47,7 +48,7 @@ func load_file(path: String) -> bool:
 	elif path.ends_with(".json"):
 		var file := FileAccess.open(path, FileAccess.READ)
 		if file == null:
-			load_failed.emit(path, "Cannot read file")
+			load_failed.emit(path, l10n.t("Cannot read file") if l10n else "Cannot read file")
 			return false
 		var result := MidiComposerConverter.from_json_string(file.get_as_text())
 		file.close()
@@ -57,7 +58,7 @@ func load_file(path: String) -> bool:
 		midi_res = MidiResource.new()
 		midi_res.from_midi_data(result.midi_data)
 	else:
-		load_failed.emit(path, "Unsupported format")
+		load_failed.emit(path, l10n.t("Unsupported format") if l10n else "Unsupported format")
 		return false
 
 	_player = MidiStreamPlayer.new()

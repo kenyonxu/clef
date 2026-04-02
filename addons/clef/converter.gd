@@ -5,6 +5,14 @@
 class_name MidiComposerConverter
 extends RefCounted
 
+## Set by the editor plugin during init. Null at runtime or when plugin is not active.
+static var l10n: ClefL10n = null
+
+static func _t(message: String) -> String:
+	if l10n:
+		return l10n.t(message)
+	return message
+
 const _TIMEBASE: int = 480
 
 ## 转换结果
@@ -25,12 +33,12 @@ static func from_json_string(json_text: String) -> ConvertResult:
 	if data == null:
 		return ConvertResult.new(
 			false, null,
-			"JSON 解析失败：无效的 JSON 格式"
+			_t("JSON parse failed: invalid JSON format")
 		)
 	if not data is Dictionary:
 		return ConvertResult.new(
 			false, null,
-			"JSON 解析失败：根元素必须是对象"
+			_t("JSON parse failed: root element must be an object")
 		)
 
 	var version_error: String = _validate_root(data)
@@ -132,24 +140,24 @@ static func _ticks_to_beats(ticks: int, timebase: int) -> float:
 static func _validate_root(data: Dictionary) -> String:
 	if data.has("format_version"):
 		if not data["format_version"] is String:
-			return "format_version 必须是字符串"
+			return _t("format_version must be a string")
 		if data["format_version"] != "1.0" and data["format_version"] != "1.1" and data["format_version"] != "2.0":
-			return "不支持的 format_version：'%s'，当前支持 '1.0'、'1.1' 和 '2.0'" % str(data["format_version"])
+			return _t("Unsupported format_version: '%s', currently supporting '1.0', '1.1' and '2.0'") % str(data["format_version"])
 
 	if not data.has("tempo"):
-		return "缺少必填字段：tempo"
+		return _t("Missing required field: tempo")
 	if not data["tempo"] is int and not data["tempo"] is float:
-		return "tempo 必须是整数"
+		return _t("tempo must be an integer")
 	var tempo: int = int(data["tempo"])
 	if tempo <= 0:
-		return "tempo 必须大于 0，当前值：%d" % tempo
+		return _t("tempo must be greater than 0, current value: %d") % tempo
 
 	if not data.has("tracks"):
-		return "缺少必填字段：tracks"
+		return _t("Missing required field: tracks")
 	if not data["tracks"] is Array:
-		return "tracks 必须是数组"
+		return _t("tracks must be an array")
 	if data["tracks"].is_empty():
-		return "tracks 不能为空数组"
+		return _t("tracks must not be empty")
 
 	return ""
 
@@ -209,7 +217,7 @@ static func _convert(data: Dictionary) -> ConvertResult:
 	for track_index in range(tracks_array.size()):
 		var track_entry = tracks_array[track_index]
 		if not track_entry is Dictionary:
-			push_error("音轨 %d：必须是对象，已跳过" % track_index)
+			push_error("Track %d: must be an object, skipped" % track_index)
 			continue
 
 		var track_data: TrackData = _convert_track(
@@ -222,7 +230,7 @@ static func _convert(data: Dictionary) -> ConvertResult:
 	if midi_data.tracks.is_empty():
 		return ConvertResult.new(
 			false, null,
-			"转换失败：没有有效的音轨数据"
+			_t("Conversion failed: no valid track data")
 		)
 
 	midi_data.program_events = program_events
@@ -235,35 +243,35 @@ static func _convert_track(track_dict: Dictionary, track_index: int, tempo: int,
 	var track_name: String = ""
 	if track_dict.has("name"):
 		if not track_dict["name"] is String:
-			push_error("音轨 %d：name 必须是字符串，已忽略" % track_index)
+			push_error("Track %d: name must be a string, ignored" % track_index)
 		else:
 			track_name = track_dict["name"]
 
 	var channel: int = 0
 	if track_dict.has("channel"):
 		if not track_dict["channel"] is int and not track_dict["channel"] is float:
-			push_error("音轨 %d：channel 必须是整数，已跳过该音轨" % track_index)
+			push_error("Track %d: channel must be an integer, skipped" % track_index)
 			return null
 		channel = int(track_dict["channel"])
 		if channel < 0 or channel > 15:
-			push_error("音轨 %d：channel 必须在 0-15 范围内，当前值：%d，已跳过该音轨" % [track_index, channel])
+			push_error("Track %d: channel must be in range 0-15, got %d" % [track_index, channel])
 			return null
 
 	var instrument: int = 0
 	if track_dict.has("instrument"):
 		if not track_dict["instrument"] is int and not track_dict["instrument"] is float:
-			push_error("音轨 %d：instrument 必须是整数，已跳过该音轨" % track_index)
+			push_error("Track %d: instrument must be an integer, skipped" % track_index)
 			return null
 		instrument = int(track_dict["instrument"])
 		if instrument < 0 or instrument > 127:
-			push_error("音轨 %d：instrument 必须在 0-127 范围内，当前值：%d，已跳过该音轨" % [track_index, instrument])
+			push_error("Track %d: instrument must be in range 0-127, got %d" % [track_index, instrument])
 			return null
 
 	if not track_dict.has("notes"):
-		push_error("音轨 %d：缺少必填字段 notes，已跳过该音轨" % track_index)
+		push_error("Track %d: missing required field: notes" % track_index)
 		return null
 	if not track_dict["notes"] is Array:
-		push_error("音轨 %d：notes 必须是数组，已跳过该音轨" % track_index)
+		push_error("Track %d: notes must be an array" % track_index)
 		return null
 
 	var notes_array: Array = track_dict["notes"]
@@ -271,7 +279,7 @@ static func _convert_track(track_dict: Dictionary, track_index: int, tempo: int,
 	for note_index in range(notes_array.size()):
 		var note_entry = notes_array[note_index]
 		if not note_entry is Dictionary:
-			push_error("音轨 %d 音符 %d：必须是对象，已跳过" % [track_index, note_index])
+			push_error("Track %d note %d: must be an object, skipped" % [track_index, note_index])
 			continue
 		var note_data: NoteData = _convert_note(
 			note_entry as Dictionary, track_index, note_index, tempo, timebase, is_v2
@@ -337,36 +345,36 @@ static func _parse_pitch_bend_events(track_dict: Dictionary, tempo: int, timebas
 ## 转换单个音符，将拍(v2.0)或秒(v1.1)转换为 tick
 static func _convert_note(note_dict: Dictionary, track_index: int, note_index: int, tempo: int, timebase: int = -1, is_v2: bool = false) -> NoteData:
 	if not note_dict.has("pitch"):
-		push_error("音轨 %d 音符 %d：缺少必填字段 pitch，已跳过" % [track_index, note_index])
+		push_error("Track %d note %d: missing required field: pitch" % [track_index, note_index])
 		return null
 	if not note_dict["pitch"] is int and not note_dict["pitch"] is float:
-		push_error("音轨 %d 音符 %d：pitch 必须是整数，已跳过" % [track_index, note_index])
+		push_error("Track %d note %d: pitch must be an integer" % [track_index, note_index])
 		return null
 	var pitch: int = int(note_dict["pitch"])
 	if pitch < 0 or pitch > 127:
-		push_error("音轨 %d 音符 %d：pitch 必须在 0-127 范围内，当前值：%d，已跳过" % [track_index, note_index, pitch])
+		push_error("Track %d note %d: pitch must be in range 0-127, got %d" % [track_index, note_index, pitch])
 		return null
 
 	if not note_dict.has("start"):
-		push_error("音轨 %d 音符 %d：缺少必填字段 start，已跳过" % [track_index, note_index])
+		push_error("Track %d note %d: missing required field: start" % [track_index, note_index])
 		return null
 	if not note_dict["start"] is int and not note_dict["start"] is float:
-		push_error("音轨 %d 音符 %d：start 必须是数值，已跳过" % [track_index, note_index])
+		push_error("Track %d note %d: start must be a number" % [track_index, note_index])
 		return null
 	var start_seconds: float = float(note_dict["start"])
 	if start_seconds < 0.0:
-		push_error("音轨 %d 音符 %d：start 不能为负数，当前值：%.3f，已跳过" % [track_index, note_index, start_seconds])
+		push_error("Track %d note %d: start cannot be negative, got %.3f" % [track_index, note_index, start_seconds])
 		return null
 
 	if not note_dict.has("duration"):
-		push_error("音轨 %d 音符 %d：缺少必填字段 duration，已跳过" % [track_index, note_index])
+		push_error("Track %d note %d: missing required field: duration" % [track_index, note_index])
 		return null
 	if not note_dict["duration"] is int and not note_dict["duration"] is float:
-		push_error("音轨 %d 音符 %d：duration 必须是数值，已跳过" % [track_index, note_index])
+		push_error("Track %d note %d: duration must be a number" % [track_index, note_index])
 		return null
 	var duration_seconds: float = float(note_dict["duration"])
 	if duration_seconds <= 0.0:
-		push_error("音轨 %d 音符 %d：duration 必须大于 0，当前值：%.3f，已跳过" % [track_index, note_index, duration_seconds])
+		push_error("Track %d note %d: duration must be greater than 0, got %.3f" % [track_index, note_index, duration_seconds])
 		return null
 
 	var tb: int = timebase if timebase > 0 else _TIMEBASE
@@ -383,11 +391,11 @@ static func _convert_note(note_dict: Dictionary, track_index: int, note_index: i
 	var velocity: int = 100
 	if note_dict.has("velocity"):
 		if not note_dict["velocity"] is int and not note_dict["velocity"] is float:
-			push_error("音轨 %d 音符 %d：velocity 必须是整数，已跳过" % [track_index, note_index])
+			push_error("Track %d note %d: velocity must be an integer" % [track_index, note_index])
 			return null
 		velocity = int(note_dict["velocity"])
 		if velocity < 0 or velocity > 127:
-			push_error("音轨 %d 音符 %d：velocity 必须在 0-127 范围内，当前值：%d，已跳过" % [track_index, note_index, velocity])
+			push_error("Track %d note %d: velocity must be in range 0-127, got %d" % [track_index, note_index, velocity])
 			return null
 
 	if duration_ticks < 1:

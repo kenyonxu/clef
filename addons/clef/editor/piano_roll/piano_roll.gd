@@ -77,6 +77,7 @@ var _pixels_per_note: float = 10.0
 var _active_channels: Array[int] = []
 var _channel_instruments: Dictionary = {}  ## channel -> preset_index
 var _muted_channels: Dictionary = {}      ## channel -> bool
+var l10n: ClefL10n
 
 
 func _ready() -> void:
@@ -221,7 +222,7 @@ func _draw() -> void:
 		draw_string(
 			ThemeDB.fallback_font,
 			Vector2(16, size.y / 2.0 + 8),
-			"Load a MIDI file to view piano roll",
+			l10n.t("Load a MIDI file to view piano roll"),
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 14,
 			Color(0.4, 0.4, 0.45)
 		)

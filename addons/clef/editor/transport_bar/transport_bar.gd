@@ -18,6 +18,7 @@ var _loop_btn: Button
 var _loop: bool = false
 var _seeking: bool = false
 
+var l10n: ClefL10n
 
 func _ready() -> void:
 	custom_minimum_size = Vector2i(0, 32)
@@ -27,38 +28,38 @@ func _ready() -> void:
 
 func _build_ui() -> void:
 	_file_label = Label.new()
-	_file_label.text = "No file loaded"
+	_file_label.text = l10n.t("No file loaded")
 	_file_label.custom_minimum_size = Vector2i(120, 0)
 	_file_label.clip_text = true
 	_file_label.add_theme_color_override("font_color", Color(0.8, 0.8, 0.8))
 	add_child(_file_label)
 
 	_btn_play = Button.new()
-	_btn_play.text = "Play"
+	_btn_play.text = l10n.t("Play")
 	_btn_play.custom_minimum_size = Vector2i(40, 0)
-	_btn_play.tooltip_text = "Play"
+	_btn_play.tooltip_text = l10n.t("Play")
 	_btn_play.pressed.connect(play_pressed.emit)
 	add_child(_btn_play)
 
 	_btn_pause = Button.new()
-	_btn_pause.text = "Pause"
+	_btn_pause.text = l10n.t("Pause")
 	_btn_pause.custom_minimum_size = Vector2i(40, 0)
-	_btn_pause.tooltip_text = "Pause"
+	_btn_pause.tooltip_text = l10n.t("Pause")
 	_btn_pause.pressed.connect(pause_pressed.emit)
 	add_child(_btn_pause)
 
 	_btn_stop = Button.new()
-	_btn_stop.text = "Stop"
+	_btn_stop.text = l10n.t("Stop")
 	_btn_stop.custom_minimum_size = Vector2i(40, 0)
-	_btn_stop.tooltip_text = "Stop"
+	_btn_stop.tooltip_text = l10n.t("Stop")
 	_btn_stop.pressed.connect(stop_pressed.emit)
 	add_child(_btn_stop)
 
 	_loop_btn = Button.new()
-	_loop_btn.text = "Loop"
+	_loop_btn.text = l10n.t("Loop")
 	_loop_btn.custom_minimum_size = Vector2i(36, 0)
 	_loop_btn.toggle_mode = true
-	_loop_btn.tooltip_text = "Loop"
+	_loop_btn.tooltip_text = l10n.t("Loop")
 	_set_loop_style(false)
 	_loop_btn.toggled.connect(func(pressed: bool):
 		_set_loop_style(pressed)

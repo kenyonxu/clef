@@ -36,6 +36,7 @@ var _left_visible: bool = true
 var _right_visible: bool = true
 var _saved_split_main_offset: int = 220
 var _saved_split_right_offset: int = -200
+var l10n: ClefL10n
 
 
 func _init() -> void:
@@ -74,18 +75,18 @@ func _build_layout() -> void:
 	root.add_child(toolbar)
 
 	_btn_left = Button.new()
-	_btn_left.text = "SF2 Browser"
+	_btn_left.text = l10n.t("SF2 Browser")
 	_btn_left.toggle_mode = true
 	_btn_left.button_pressed = _left_visible
-	_btn_left.tooltip_text = "Toggle Soundfont Browser panel"
+	_btn_left.tooltip_text = l10n.t("Toggle Soundfont Browser panel")
 	_btn_left.toggled.connect(set_left_panel_visible)
 	toolbar.add_child(_btn_left)
 
 	_btn_right = Button.new()
-	_btn_right.text = "MIDI Monitor"
+	_btn_right.text = l10n.t("MIDI Monitor")
 	_btn_right.toggle_mode = true
 	_btn_right.button_pressed = _right_visible
-	_btn_right.tooltip_text = "Toggle MIDI Monitor panel"
+	_btn_right.tooltip_text = l10n.t("Toggle MIDI Monitor panel")
 	_btn_right.toggled.connect(set_right_panel_visible)
 	toolbar.add_child(_btn_right)
 
@@ -109,6 +110,7 @@ func _build_layout() -> void:
 	_left_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_style_panel(_left_panel, Color(0.12, 0.12, 0.16))
 	_soundfont_browser = SoundfontBrowser.new()
+	_soundfont_browser.l10n = l10n
 	_soundfont_browser.patch_selected.connect(_on_patch_selected)
 	_left_panel.add_child(_soundfont_browser)
 	_split_main.add_child(_left_panel)
@@ -134,22 +136,23 @@ func _build_layout() -> void:
 	center_vbox.add_theme_constant_override("separation", 4)
 
 	_transport_bar = TransportBar.new()
+	_transport_bar.l10n = l10n
 
 	# 加载按钮行
 	var load_row := HBoxContainer.new()
 	load_row.add_theme_constant_override("separation", 6)
 	var load_btn := Button.new()
-	load_btn.text = "Load MIDI"
-	load_btn.tooltip_text = "Load .mid / .tres / .json file"
+	load_btn.text = l10n.t("Load MIDI")
+	load_btn.tooltip_text = l10n.t("Load .mid / .tres / .json file")
 	load_btn.pressed.connect(_on_load_pressed)
 	load_row.add_child(load_btn)
 
 	var auto_load_btn := Button.new()
-	auto_load_btn.text = "Auto"
+	auto_load_btn.text = l10n.t("Auto")
 	auto_load_btn.custom_minimum_size = Vector2i(36, 0)
 	auto_load_btn.toggle_mode = true
 	auto_load_btn.button_pressed = _auto_load
-	auto_load_btn.tooltip_text = "Auto-load last file on startup"
+	auto_load_btn.tooltip_text = l10n.t("Auto-load last file on startup")
 	_set_toggle_style(auto_load_btn, _auto_load, Color(0.5, 0.8, 0.5))
 	auto_load_btn.toggled.connect(func(pressed: bool):
 		_auto_load = pressed
@@ -163,12 +166,14 @@ func _build_layout() -> void:
 	center_vbox.add_child(_transport_bar)
 
 	_piano_roll = PianoRoll.new()
+	_piano_roll.l10n = l10n
 	_piano_roll.seek_requested.connect(func(pos: float):
 		_editor_player.seek(pos)
 	)
 	center_vbox.add_child(_piano_roll)
 
 	_mini_mixer = MiniMixer.new()
+	_mini_mixer.l10n = l10n
 	_mini_mixer.channel_mute_changed.connect(_piano_roll.set_channel_muted)
 	center_vbox.add_child(_mini_mixer)
 
@@ -182,6 +187,7 @@ func _build_layout() -> void:
 	_right_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_style_panel(_right_panel, Color(0.14, 0.10, 0.10))
 	_midi_monitor = MidiMonitor.new()
+	_midi_monitor.l10n = l10n
 	_right_panel.add_child(_midi_monitor)
 	_split_right.add_child(_right_panel)
 
@@ -243,6 +249,7 @@ func set_bridge(bridge: RefCounted) -> void:
 
 func _init_editor_player() -> void:
 	_editor_player = EditorPlayer.new()
+	_editor_player.l10n = l10n
 	_editor_player.setup(self, _bridge)
 	_editor_player.file_loaded.connect(func(_path: String, _dur: float):
 		_update_piano_roll()
@@ -292,7 +299,7 @@ func _on_load_pressed() -> void:
 	var dialog := EditorFileDialog.new()
 	dialog.file_mode = EditorFileDialog.FILE_MODE_OPEN_FILE
 	dialog.access = EditorFileDialog.ACCESS_RESOURCES
-	dialog.title = "Load MIDI"
+	dialog.title = l10n.t("Load MIDI")
 	dialog.filters = PackedStringArray(["*.mid ; MIDI", "*.tres ; MidiResource", "*.json ; JSON"])
 	if _last_midi_dir != "":
 		dialog.current_dir = _last_midi_dir

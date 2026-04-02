@@ -13,6 +13,7 @@ var _export_button: Button = null
 var _progress_timer: Timer = null
 var _container: HBoxContainer = null
 var _export_container: HBoxContainer = null
+var l10n: ClefL10n
 
 
 func _can_handle(object: Object) -> bool:
@@ -20,7 +21,7 @@ func _can_handle(object: Object) -> bool:
 
 
 func _parse_end(object: Object) -> void:
-	# 释放旧的 UI 容器，防止节点泄漏
+	# Release old UI containers to prevent node leaks
 	if _container:
 		_container.queue_free()
 		_container = null
@@ -46,16 +47,16 @@ func _parse_end(object: Object) -> void:
 
 	# Play button
 	_play_button = Button.new()
-	_play_button.text = "▶ Play"
-	_play_button.tooltip_text = "预览播放 MIDI"
+	_play_button.text = "▶ " + l10n.t("Play")
+	_play_button.tooltip_text = l10n.t("Preview MIDI playback")
 	_play_button.disabled = sf2_path == ""
 	_play_button.pressed.connect(_on_play_pressed)
 	_container.add_child(_play_button)
 
 	# Stop button
 	_stop_button = Button.new()
-	_stop_button.text = "⏹ Stop"
-	_stop_button.tooltip_text = "停止播放"
+	_stop_button.text = "⏹ " + l10n.t("Stop")
+	_stop_button.tooltip_text = l10n.t("Stop")
 	_stop_button.disabled = true
 	_stop_button.pressed.connect(_on_stop_pressed)
 	_container.add_child(_stop_button)
@@ -63,12 +64,12 @@ func _parse_end(object: Object) -> void:
 	# Pause button
 	_pause_button = Button.new()
 	_pause_button.text = "⏸"
-	_pause_button.tooltip_text = "暂停/继续"
+	_pause_button.tooltip_text = l10n.t("Pause")
 	_pause_button.disabled = true
 	_pause_button.pressed.connect(_on_pause_pressed)
 	_container.add_child(_pause_button)
 
-	# Progress slider (支持 seek)
+	# Progress slider (supports seek)
 	_progress_slider = HSlider.new()
 	_progress_slider.custom_minimum_size.x = 150
 	_progress_slider.max_value = 1.0
@@ -87,7 +88,7 @@ func _parse_end(object: Object) -> void:
 
 	if sf2_path == "":
 		var label := Label.new()
-		label.text = "请配置默认 Soundfont"
+		label.text = l10n.t("Please configure default Soundfont")
 		label.add_theme_color_override("font_color", Color(1.0, 0.6, 0.3, 1.0))
 		_container.add_child(label)
 
@@ -97,8 +98,8 @@ func _parse_end(object: Object) -> void:
 	_export_container = HBoxContainer.new()
 
 	_export_button = Button.new()
-	_export_button.text = "Export JSON"
-	_export_button.tooltip_text = "将 MIDI 资源导出为 Clef JSON v2.0 格式（供 LLM 编曲使用）"
+	_export_button.text = l10n.t("Export JSON")
+	_export_button.tooltip_text = l10n.t("Export MIDI resource to Clef JSON v2.0 format (for LLM composition)")
 	_export_button.pressed.connect(_on_export_json_pressed)
 	_export_container.add_child(_export_button)
 
@@ -121,7 +122,7 @@ func _on_play_pressed() -> void:
 	EditorInterface.get_base_control().add_child(_player)
 	_player.start_playback()
 
-	# 进度条轮询
+	# Progress polling
 	_progress_timer = Timer.new()
 	_progress_timer.wait_time = 0.1
 	_progress_timer.timeout.connect(_update_progress)
@@ -207,7 +208,7 @@ func _on_export_json_pressed() -> void:
 
 	var res: MidiResource = _current_object
 
-	# 从 @export 属性直接构建 MidiData，避免 placeholder 上调用脚本方法
+	# Build MidiData directly from @export properties to avoid calling script methods on placeholders
 	var track_list: Array[TrackData] = []
 	for track_res in res.tracks:
 		var note_list: Array[NoteData] = []
@@ -224,7 +225,7 @@ func _on_export_json_pressed() -> void:
 		))
 
 	if track_list.is_empty():
-		push_warning("Clef: 没有可导出的 MIDI 数据")
+		push_warning("Clef: No MIDI data to export")
 		return
 
 	var midi_data := MidiData.new(
@@ -240,14 +241,14 @@ func _on_export_json_pressed() -> void:
 	var dialog := EditorFileDialog.new()
 	dialog.file_mode = EditorFileDialog.FILE_MODE_SAVE_FILE
 	dialog.access = EditorFileDialog.ACCESS_RESOURCES
-	dialog.title = "导出 JSON"
-	dialog.filters = PackedStringArray(["*.json ; JSON 文件"])
+	dialog.title = l10n.t("Export JSON")
+	dialog.filters = PackedStringArray([l10n.t("*.json ; JSON Files")])
 	dialog.current_dir = _current_object.resource_path.get_base_dir()
 	dialog.current_file = _current_object.resource_path.get_file().get_basename() + ".json"
 	dialog.file_selected.connect(func(path: String) -> void:
 		var file := FileAccess.open(path, FileAccess.WRITE)
 		if file == null:
-			push_error("Clef: 无法写入文件 %s" % path)
+			push_error("Clef: Cannot write file %s" % path)
 			return
 		file.store_string(json_text)
 		file.close()

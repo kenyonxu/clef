@@ -63,6 +63,7 @@ var _rate_count: int = 0
 var _current_rate: int = 0
 var _filter_btns: Dictionary = {}
 var _scroll_btn: Button = null
+var l10n: ClefL10n
 
 
 func _ready() -> void:
@@ -83,15 +84,15 @@ func _build_ui() -> void:
 	toolbar.custom_minimum_size = Vector2i(0, 28)
 
 	var ch_label := Label.new()
-	ch_label.text = "Ch:"
+	ch_label.text = l10n.t("Ch:")
 	toolbar.add_child(ch_label)
 
 	var ch_btn := Button.new()
-	ch_btn.text = "All"
+	ch_btn.text = l10n.t("All")
 	ch_btn.custom_minimum_size = Vector2i(36, 0)
 	ch_btn.toggle_mode = true
 	ch_btn.button_pressed = true
-	ch_btn.tooltip_text = "Channel filter: All"
+	ch_btn.tooltip_text = l10n.t("Channel filter: All")
 	toolbar.add_child(ch_btn)
 
 	for type_key in [EventType.NOTE_ON, EventType.CC, EventType.PITCH_BEND, EventType.PROGRAM_CHANGE]:
@@ -101,18 +102,18 @@ func _build_ui() -> void:
 		btn.toggle_mode = true
 		var active: bool = bool(_filter_types & (1 << type_key))
 		btn.button_pressed = active
-		btn.tooltip_text = "Toggle %s filter" % _EVENT_NAMES[type_key]
+		btn.tooltip_text = l10n.t("Toggle %s filter") % _EVENT_NAMES[type_key]
 		_set_toggle_style(btn, active, _EVENT_COLORS.get(type_key, Color(1, 1, 1)))
 		btn.toggled.connect(_on_type_filter_toggled.bind(type_key, btn))
 		toolbar.add_child(btn)
 		_filter_btns[type_key] = btn
 
 	_scroll_btn = Button.new()
-	_scroll_btn.text = "Auto"
+	_scroll_btn.text = l10n.t("Auto")
 	_scroll_btn.custom_minimum_size = Vector2i(36, 0)
 	_scroll_btn.toggle_mode = true
 	_scroll_btn.button_pressed = _auto_scroll
-	_scroll_btn.tooltip_text = "Toggle auto-scroll"
+	_scroll_btn.tooltip_text = l10n.t("Toggle auto-scroll")
 	_set_toggle_style(_scroll_btn, _auto_scroll, Color(0.5, 0.5, 0.6))
 	_scroll_btn.toggled.connect(func(pressed: bool):
 		_auto_scroll = pressed
@@ -122,16 +123,16 @@ func _build_ui() -> void:
 	toolbar.add_child(_scroll_btn)
 
 	var clear_btn := Button.new()
-	clear_btn.text = "Clear"
+	clear_btn.text = l10n.t("Clear")
 	clear_btn.custom_minimum_size = Vector2i(36, 0)
-	clear_btn.tooltip_text = "Clear event log"
+	clear_btn.tooltip_text = l10n.t("Clear event log")
 	clear_btn.pressed.connect(_clear_log)
 	toolbar.add_child(clear_btn)
 
 	var copy_btn := Button.new()
-	copy_btn.text = "Copy"
+	copy_btn.text = l10n.t("Copy")
 	copy_btn.custom_minimum_size = Vector2i(36, 0)
-	copy_btn.tooltip_text = "Copy event log to clipboard"
+	copy_btn.tooltip_text = l10n.t("Copy event log to clipboard")
 	copy_btn.pressed.connect(_copy_log)
 	toolbar.add_child(copy_btn)
 
@@ -323,7 +324,7 @@ func _on_type_filter_toggled(pressed: bool, type_val: int, btn: Button) -> void:
 func _update_rate() -> void:
 	_current_rate = _rate_count
 	_rate_count = 0
-	_stats_label.text = "Events: %d | Notes: %d | %d/s" % [_event_count, _active_notes, _current_rate]
+	_stats_label.text = l10n.t("Events: %d | Notes: %d | %d/s") % [_event_count, _active_notes, _current_rate]
 
 
 func _clear_log() -> void:
@@ -344,7 +345,7 @@ func _copy_log() -> void:
 		if _passes_filter(evt):
 			text += _format_event(evt) + "\n"
 	if text == "":
-		text = "(empty)"
+		text = l10n.t("(empty)")
 	DisplayServer.clipboard_set(text)
 
 
