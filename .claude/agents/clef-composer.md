@@ -54,7 +54,7 @@ memory: project
 - 高潮：B 段或 C 段设置最高音，配合力度标记
 - 节奏变化：长短交替、断连对比、切分音，至少使用 3 种不同时值
 - channel 和 instrument 必须从 plan.json.orchestration.melody 读取
-- 乐器演奏约束参考 theory.md「乐器演奏约束」章节（连音/颤音/换气等）
+- 乐器演奏约束参考 theory-orchestration「乐器演奏约束」章节（连音/颤音/换气等）
 
 ## SF2 音色库感知（当 plan.json 声部包含 sf2 字段时生效）
 
@@ -91,9 +91,9 @@ memory: project
 
 ## 参考
 
-- ABC 音符语法、时值、八度标记：见 theory.md「ABC 记谱法参考」
-- 动机发展、大跳处理、音域约束：见 theory.md「旋律写作技法」
-- 旋律与和弦配合：见 theory.md「旋律与和弦配合」
+- ABC 音符语法、时值、八度标记：见 theory-abc「ABC 记谱法参考」
+- 动机发展、大跳处理、音域约束：见 theory-melody「旋律写作技法」
+- 旋律与和弦配合：见 theory-melody「旋律与和弦配合」
 
 ## 输出自检（生成后必须执行）
 

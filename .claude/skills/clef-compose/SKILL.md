@@ -29,7 +29,7 @@ hooks:
 
 在开始作曲前，读取以下文件：
 
-1. **`.claude/skills/clef-compose/theory.md`** — 核心乐理知识（音阶、和弦进行、GM 乐器、配器方案、ABC 格式规范）
+1. **theory.md 已拆分为 6 个子技能**（theory-abc / theory-melody / theory-harmony / theory-rhythm / theory-orchestration / theory-structure），由各 Agent 通过 `skills:` frontmatter 预加载。完整版仍保留在 theory.md 供参考。
 2. **`addons/clef/knowledge/`** — 用户自定义扩展知识（扫描目录中所有 JSON 文件，若不存在则跳过）
 
 ## 工具链
@@ -169,7 +169,7 @@ python scripts/snapshot.py --step 0 --note "需求确认：boss battle, D大调,
 
 **1a. 生成 plan.json**
 
-根据需求参数和 theory.md 中的乐理知识，生成音乐规划：
+根据需求参数和各子技能中的乐理知识，生成音乐规划：
 
 ```json
 {
@@ -215,7 +215,7 @@ python scripts/snapshot.py --step 0 --note "需求确认：boss battle, D大调,
 - 相邻声部 register 重叠不超过 1 个八度（12 半音）
 - melody register 通常在最高频段，bass 在最低频段
 - harmony register 居中，与 melody 保持至少 3-5 半音间距
-- 参考 theory.md「频率范围与复音限制」确定合理频段
+- 参考 theory-harmony「频率范围与复音限制」确定合理频段
 
 **段落平衡意图（balance_intent）：**
 - `start_beat` = 前面所有 section measures 之和 × beats_per_measure（4/4 拍 = 4 beats/measure）
