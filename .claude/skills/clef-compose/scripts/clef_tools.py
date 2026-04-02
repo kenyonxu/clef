@@ -3,6 +3,8 @@ import argparse
 import json
 import logging
 import os
+import shutil
+import subprocess
 import sys
 
 logger = logging.getLogger("clef_tools")
@@ -144,6 +146,84 @@ def cmd_archive(args):
     return 0
 
 
+def cmd_midi_to_audio(args):
+    """用 FluidSynth 将 MIDI 转为音频文件（WAV/OGG）。"""
+    fluidsynth = shutil.which('fluidsynth')
+    if not fluidsynth:
+        print(
+            "Error: fluidsynth not found in PATH.\n"
+            "  Install: https://github.com/FluidSynth/fluidsynth/wiki/Download",
+            file=sys.stderr,
+        )
+        return 1
+
+    sf2 = args.sf2
+    if not sf2 or not os.path.isfile(sf2):
+        print(f"Error: SoundFont not found: {sf2}", file=sys.stderr)
+        return 1
+
+    # 收集输入文件
+    inputs = []
+    if args.batch:
+        if not os.path.isdir(args.input):
+            print(f"Error: not a directory: {args.input}", file=sys.stderr)
+            return 1
+        for fname in sorted(os.listdir(args.input)):
+            if fname.lower().endswith('.mid') or fname.lower().endswith('.midi'):
+                inputs.append(os.path.join(args.input, fname))
+    else:
+        if not os.path.isfile(args.input):
+            print(f"Error: file not found: {args.input}", file=sys.stderr)
+            return 1
+        inputs.append(args.input)
+
+    if not inputs:
+        print("No MIDI files found.", file=sys.stderr)
+        return 1
+
+    out_dir = args.output_dir
+    if out_dir:
+        os.makedirs(out_dir, exist_ok=True)
+    else:
+        out_dir = os.path.dirname(os.path.abspath(inputs[0]))
+
+    fmt = args.format
+    ffmpeg = shutil.which('ffmpeg') if fmt != 'wav' else None
+    if fmt != 'wav' and not ffmpeg:
+        print("Error: ffmpeg not found in PATH. Required for non-WAV output.", file=sys.stderr)
+        return 1
+
+    errors = 0
+    for midi_path in inputs:
+        base = os.path.splitext(os.path.basename(midi_path))[0]
+        wav_path = os.path.join(out_dir, f"{base}.wav")
+        final_path = os.path.join(out_dir, f"{base}.{fmt}")
+
+        # Step 1: FluidSynth MIDI → WAV
+        cmd = [fluidsynth, '-ni', sf2, midi_path, '-F', wav_path, '-r', str(args.sample_rate)]
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+        if result.returncode != 0 or not os.path.isfile(wav_path):
+            print(f"FAIL: {midi_path} -> {result.stderr.strip()}", file=sys.stderr)
+            errors += 1
+            continue
+
+        # Step 2: WAV → 目标格式（如果不是 WAV）
+        if fmt != 'wav':
+            cmd2 = [ffmpeg, '-y', '-i', wav_path, final_path]
+            result2 = subprocess.run(cmd2, capture_output=True, text=True, timeout=120)
+            if os.path.isfile(final_path):
+                os.remove(wav_path)
+                print(f"OK: {midi_path} -> {final_path}")
+            else:
+                print(f"FAIL: {wav_path} -> {final_path} ({result2.stderr.strip()})", file=sys.stderr)
+                errors += 1
+        else:
+            print(f"OK: {midi_path} -> {wav_path}")
+
+    print(f"Done: {len(inputs) - errors}/{len(inputs)} converted.")
+    return 1 if errors else 0
+
+
 def cmd_snapshot(args):
     from snapshot import snapshot
     return snapshot(args.step, args.status, args.output, args.note, args.workdir)
@@ -207,6 +287,15 @@ def main():
     p = sub.add_parser('archive', help='归档最终产出到 output/{title}/ 目录')
     p.add_argument('--workdir', default='.clef-work', help='工作目录')
 
+    # midi-to-audio
+    p = sub.add_parser('midi-to-audio', help='用 FluidSynth 将 MIDI 转为音频（WAV/OGG）')
+    p.add_argument('input', help='MIDI 文件或目录（配合 --batch）')
+    p.add_argument('--sf2', required=True, help='SoundFont (.sf2) 文件路径')
+    p.add_argument('--output-dir', '-o', default='', help='输出目录（默认和输入同目录）')
+    p.add_argument('--format', '-f', choices=['wav', 'ogg', 'mp3'], default='wav', help='输出格式')
+    p.add_argument('--sample-rate', '-r', type=int, default=44100, help='采样率（默认 44100）')
+    p.add_argument('--batch', action='store_true', help='批量模式：input 为目录，转换其中所有 .mid 文件')
+
     args = parser.parse_args()
 
     commands = {
@@ -219,6 +308,7 @@ def main():
         'analyze': cmd_analyze,
         'snapshot': cmd_snapshot,
         'archive': cmd_archive,
+        'midi-to-audio': cmd_midi_to_audio,
     }
 
     func = commands.get(args.command)

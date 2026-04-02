@@ -1,3 +1,4 @@
+@icon("res://addons/clef/icons/clef-icon-pixel.svg")
 ## MIDI 流播放器 — 通过 AudioStreamPlayer 池播放 MIDI 资源
 ## 每个音符使用独立的 AudioStreamPlayer 播放预生成的 AudioStreamWAV
 ## 音高变换通过 pitch_scale, ADSR 通过 volume_db, 混音由 C++ AudioServer 完成
