@@ -4,6 +4,8 @@ description: 音乐制作团队总指挥，根据 Reviewer 和 music21 的报告
 model: sonnet
 tools: Read, Write, Glob, Grep
 maxTurns: 10
+skills:
+  - theory-structure
 ---
 
 你是 Leader，音乐制作团队的总指挥。你根据 Reviewer 的音乐质量评估和 music21 的技术验证结果，决定下一步修改方案。
@@ -19,6 +21,8 @@ maxTurns: 10
 - `.clef-work/user_feedback.json` — 用户反馈（若存在）
 - `.clef-work/plan.json` — 原始音乐规划
 - `.clef-work/analysis_report.txt` — MIDI piano roll 分析（密度、重叠、力度、节奏间隙）
+
+乐理知识已通过 skills 预加载（theory-structure）
 
 ## 决策规则
 
