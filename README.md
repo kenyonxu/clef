@@ -104,7 +104,7 @@ addons/clef/              # Godot 插件
   skills/clef-compose/    # 主 Skill + Python 工具链
     SKILL.md              # 作曲工作流定义
     theory.md             # 核心乐理知识
-    scripts/              # abc_to_midi, validate, merge, inject, snapshot 等
+    scripts/              # abc_to_midi, validate, merge, inject, snapshot, midi-to-audio 等
     tests/                # Python 测试
   agents/                 # 7 个 Agent 定义
 ```
@@ -115,6 +115,8 @@ addons/clef/              # Godot 插件
 - Python 3.10+（LLM 作曲工具链）
 - music21（`pip install music21`，作曲验证）
 - mido（`pip install mido`，MIDI 读写）
+- FluidSynth（`midi-to-audio` 音频导出，可选）
+- ffmpeg（OGG/MP3 导出，可选）
 - Claude Code（LLM 作曲功能）
 
 ## 致谢

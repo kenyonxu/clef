@@ -1,0 +1,14 @@
+[remap]
+
+importer="clef"
+type="MidiResource"
+uid="uid://be5vwhrf6wx4g"
+path="res://.godot/imported/SpaceBattle_8bit_sample.mid-a8996264c447c5cfa0b3d6bbfb3f11aa.tres"
+
+[deps]
+
+source_file="res://addons/clef/output/SpaceBattle_8bit_sample.mid"
+dest_files=["res://.godot/imported/SpaceBattle_8bit_sample.mid-a8996264c447c5cfa0b3d6bbfb3f11aa.tres"]
+
+[params]
+

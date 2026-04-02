@@ -111,6 +111,7 @@ var position: float = player.get_playback_position()
 - 不同通道以颜色区分，力度映射为亮度
 - 播放时白色竖线跟随播放位置移动
 - 点击卷帘任意位置可跳转播放
+- 可操作编辑（规划中）— 选中、移动、删除音符，标注问题，生成 Agent 反馈，详见 [设计文档](../../docs/plans/2026-04-02-piano-roll-interactive-design.md)
 
 **迷你混音台：**
 - 16 通道独立音量滑块 + 静音按钮
