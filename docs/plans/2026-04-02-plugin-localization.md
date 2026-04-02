@@ -10,6 +10,24 @@
 
 **Reference:** `docs/plugin-localization.md` — design document with API details
 
+## Implementation Record
+
+**Status:** Completed and verified (2026-04-02)
+
+**Commits:**
+- `5ab0fba` — feat: initial implementation (18 files, +1450/-145)
+- `973f12b` — fix: code review findings (H1 default param, H2/H3 cleanup order)
+- `3960976` — fix: missing `_main_screen.l10n` assignment in plugin.gd
+- `56e421c` — fix: restore lost methods in soundfont_browser.gd after H1 fix rewrite
+
+**Post-implementation fixes discovered during editor testing:**
+1. `_main_screen.l10n = _l10n` was missing from plugin.gd — caused null-reference cascade throughout clef_station.gd (all child panels failed to initialize)
+2. H1 fix for `_show_empty_state` default parameter was implemented via full file rewrite (`Write` tool), which accidentally dropped 6 methods (`load_profile`, `setup_audition`, `_audition_patch`, `_audition_selected`, `_gui_input`, and category-grouped `_populate_tree`). Restored from original and reapplied H1 fix only.
+
+**Lesson learned:** For H1-type fixes (default parameter), use `Edit` tool to make surgical changes rather than `Write` to rewrite entire files. Full rewrites risk losing methods, especially in files with many responsibilities.
+
+**Final stats:** 111 `l10n.t()`/`_l10n.t()`/`_t()` calls across 11 files, 102 unique translation keys in CSV
+
 ---
 
 ## String inventory
