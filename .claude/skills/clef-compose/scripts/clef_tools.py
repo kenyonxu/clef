@@ -135,6 +135,9 @@ def cmd_analyze(args):
 
 
 def cmd_archive(args):
+    if not os.path.isdir(args.workdir):
+        print(f"Error: workdir not found: {args.workdir}", file=sys.stderr)
+        return 1
     from archive import archive
     dest = archive(args.workdir)
     print(f"Archived to: {dest}")
