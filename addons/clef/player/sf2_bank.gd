@@ -197,6 +197,21 @@ func get_sample(preset_index: int, key: int, velocity: int, channel: int = 0) ->
 	info.has_loop = (sample_modes & 0x01) != 0 and actual_loop_end > actual_loop_start + 1
 	info.loop_during_release = (sample_modes & 0x02) != 0
 
+	# 滤波器: 乐器局部区域 > 乐器全局区域 > 默认值 (-1.0 = 未设置, 全开)
+	info.filter_fc = _resolve_envelope(
+		best_inst_zone.filter_fc,
+		inst_global_zone.filter_fc if inst_global_zone != null else -1.0,
+		-1.0,
+	)
+	info.filter_q = _resolve_envelope(
+		best_inst_zone.filter_q,
+		inst_global_zone.filter_q if inst_global_zone != null else -1.0,
+		-1.0,
+	)
+	var local_mod_env: int = best_inst_zone.mod_env_to_filter_fc
+	var global_mod_env: int = inst_global_zone.mod_env_to_filter_fc if inst_global_zone != null else 0
+	info.mod_env_to_filter_fc = local_mod_env if local_mod_env != 0 else global_mod_env
+
 	# 5. 立体声检测: 检查 sample_type 是否为 left/right/linked
 	var st: int = sample_header.sample_type
 	if st == 2 or st == 4 or st == 8 or st == 0x8002 or st == 0x8004 or st == 0x8008:

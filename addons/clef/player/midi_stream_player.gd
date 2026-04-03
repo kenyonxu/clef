@@ -14,6 +14,12 @@ extends Node
 @export_range(-80.0, 24.0, 0.1) var volume_db: float = -20.0 : set = set_volume_db
 @export_range(0.01, 4.0, 0.01) var pitch_scale: float = 1.0 : set = set_pitch_scale
 @export_range(1, 128, 1) var max_polyphony: int = 32
+# --- Audio effects ---
+@export var reverb_enabled: bool = true : set = set_reverb_enabled
+@export_range(0.0, 1.0, 0.01) var reverb_room_size: float = 0.29 : set = set_reverb_room_size
+@export_range(0.0, 1.0, 0.01) var reverb_wet: float = 0.15 : set = set_reverb_wet
+@export var chorus_enabled: bool = true : set = set_chorus_enabled
+@export_range(0.0, 1.0, 0.01) var chorus_wet: float = 0.2 : set = set_chorus_wet
 var bus: String = "Master" : set = set_bus
 
 signal note_triggered(channel: int, pitch: int, velocity: int)
@@ -146,6 +152,65 @@ func set_bus(value: String) -> void:
 
 
 ## 设置音频总线 (ClefMaster + 16 个通道总线)
+
+# --- Reverb setter ---
+func _get_reverb_effect(bus_idx: int) -> AudioEffectReverb:
+	for i in range(AudioServer.get_bus_effect_count(bus_idx)):
+		var effect = AudioServer.get_bus_effect(bus_idx, i)
+		if effect is AudioEffectReverb:
+			return effect
+	return null
+
+func set_reverb_enabled(value: bool) -> void:
+	reverb_enabled = value
+	if _clef_master_bus_idx >= 0:
+		var eff := _get_reverb_effect(_clef_master_bus_idx)
+		if eff != null:
+			AudioServer.set_bus_effect_enabled(_clef_master_bus_idx, _get_effect_index(_clef_master_bus_idx, eff), value)
+
+func set_reverb_room_size(value: float) -> void:
+	reverb_room_size = value
+	if _clef_master_bus_idx >= 0:
+		var eff := _get_reverb_effect(_clef_master_bus_idx)
+		if eff != null:
+			eff.room_size = value
+
+func set_reverb_wet(value: float) -> void:
+	reverb_wet = value
+	if _clef_master_bus_idx >= 0:
+		var eff := _get_reverb_effect(_clef_master_bus_idx)
+		if eff != null:
+			eff.wet = value
+
+# --- Chorus setter ---
+func _get_chorus_effect(bus_idx: int) -> AudioEffectChorus:
+	for i in range(AudioServer.get_bus_effect_count(bus_idx)):
+		var effect = AudioServer.get_bus_effect(bus_idx, i)
+		if effect is AudioEffectChorus:
+			return effect
+	return null
+
+func set_chorus_enabled(value: bool) -> void:
+	chorus_enabled = value
+	if _clef_master_bus_idx >= 0:
+		var eff := _get_chorus_effect(_clef_master_bus_idx)
+		if eff != null:
+			AudioServer.set_bus_effect_enabled(_clef_master_bus_idx, _get_effect_index(_clef_master_bus_idx, eff), value)
+
+func set_chorus_wet(value: float) -> void:
+	chorus_wet = value
+	if _clef_master_bus_idx >= 0:
+		var eff := _get_chorus_effect(_clef_master_bus_idx)
+		if eff != null:
+			eff.wet = value
+
+# --- Helper ---
+func _get_effect_index(bus_idx: int, effect: AudioEffect) -> int:
+	for i in range(AudioServer.get_bus_effect_count(bus_idx)):
+		if AudioServer.get_bus_effect(bus_idx, i) == effect:
+			return i
+	return -1
+
 func _setup_audio_buses() -> void:
 	# 检查主总线是否已存在
 	var existing_idx := AudioServer.get_bus_index("ClefMaster")
@@ -157,6 +222,29 @@ func _setup_audio_buses() -> void:
 		AudioServer.set_bus_name(_clef_master_bus_idx, "ClefMaster")
 		AudioServer.set_bus_send(_clef_master_bus_idx, bus)
 		AudioServer.set_bus_volume_db(_clef_master_bus_idx, volume_db)
+	# --- Reverb/Chorus (ensure existence on ClefMaster) ---
+	var has_reverb := false
+	for k in range(AudioServer.get_bus_effect_count(_clef_master_bus_idx)):
+		if AudioServer.get_bus_effect(_clef_master_bus_idx, k) is AudioEffectReverb:
+			has_reverb = true
+			break
+	if not has_reverb:
+		var reverb := AudioEffectReverb.new()
+		reverb.predelay_msec = 15.0
+		reverb.room_size = reverb_room_size
+		reverb.damping = 0.3
+		reverb.hipass = 0.05
+		reverb.wet = reverb_wet
+		AudioServer.add_bus_effect(_clef_master_bus_idx, reverb)
+	var has_chorus := false
+	for k in range(AudioServer.get_bus_effect_count(_clef_master_bus_idx)):
+		if AudioServer.get_bus_effect(_clef_master_bus_idx, k) is AudioEffectChorus:
+			has_chorus = true
+			break
+	if not has_chorus:
+		var chorus := AudioEffectChorus.new()
+		chorus.wet = chorus_wet
+		AudioServer.add_bus_effect(_clef_master_bus_idx, chorus)
 	# 为每个通道创建子总线（如已存在则跳过）
 	for i in range(16):
 		var ch_name := "clef_ch_%d" % i
@@ -170,9 +258,6 @@ func _setup_audio_buses() -> void:
 			var panner := AudioEffectPanner.new()
 			panner.pan = 0.0
 			AudioServer.add_bus_effect(ch_idx, panner)
-
-
-## 开始播放
 func start_playback(from_position: float = 0.0) -> void:
 	if midi_resource == null:
 		push_warning("MidiStreamPlayer: midi_resource 为空")
@@ -602,6 +687,24 @@ func is_channel_muted(channel: int) -> bool:
 
 
 ## 应用通道声相到音频总线
+
+func _update_channel_filter(ch: int, filter_fc: float, filter_q: float, velocity: int) -> void:
+	var bus_idx: int = AudioServer.get_bus_index("clef_ch_%d" % ch)
+	if bus_idx < 0:
+		return
+	for i in range(AudioServer.get_bus_effect_count(bus_idx)):
+		var effect = AudioServer.get_bus_effect(bus_idx, i)
+		if effect is AudioEffectLowPassFilter:
+			if filter_fc < 0.0:
+				AudioServer.set_bus_effect_enabled(bus_idx, i, false)
+				return
+			var vel_factor: float = 0.3 + 0.7 * float(velocity) / 127.0
+			var cutoff_hz: float = clampf(filter_fc * vel_factor, 2000.0, 20000.0)
+			var resonance: float = clampf(filter_q, 0.0, 1.0)
+			effect.cutoff_hz = cutoff_hz
+			effect.resonance = resonance
+			AudioServer.set_bus_effect_enabled(bus_idx, i, true)
+			return
 func _apply_channel_pan(ch: int) -> void:
 	var state: MidiChannelState = _channel_states[ch]
 	var bus_idx: int = AudioServer.get_bus_index("clef_ch_%d" % ch)

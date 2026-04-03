@@ -1,5 +1,15 @@
 [gd_resource type="AudioBusLayout" format=3 uid="uid://f6g3gfor8k6"]
 
+[sub_resource type="AudioEffectReverb" id="AudioEffectReverb_j3pel"]
+predelay_msec = 15.0
+room_size = 0.29
+damping = 0.3
+hipass = 0.05
+wet = 0.15
+
+[sub_resource type="AudioEffectChorus" id="AudioEffectChorus_g28q7"]
+wet = 0.2
+
 [sub_resource type="AudioEffectPanner" id="AudioEffectPanner_j3pel"]
 
 [sub_resource type="AudioEffectPanner" id="AudioEffectPanner_g28q7"]
@@ -43,6 +53,10 @@ bus/1/mute = false
 bus/1/bypass_fx = false
 bus/1/volume_db = 1.0
 bus/1/send = &"Master"
+bus/1/effect/0/effect = SubResource("AudioEffectReverb_j3pel")
+bus/1/effect/0/enabled = true
+bus/1/effect/1/effect = SubResource("AudioEffectChorus_g28q7")
+bus/1/effect/1/enabled = true
 bus/2/name = &"clef_ch_0"
 bus/2/solo = false
 bus/2/mute = false

@@ -18,3 +18,9 @@ var release: float = 0.3
 var volume_db: float = 0.0
 ## 是否为立体声采样 (L/R 交错)
 var is_stereo: bool = false
+## 初始滤波器截止频率 (Hz, -1.0 表示未设置)
+var filter_fc: float = -1.0
+## 初始滤波器共振 (0.0-1.0, -1.0 表示未设置)
+var filter_q: float = -1.0
+## 调制包络到滤波器截止频率 (absolute cents, 预留)
+var mod_env_to_filter_fc: int = 0

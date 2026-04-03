@@ -35,3 +35,9 @@ var sample_type: int = 1
 var link_index: int = 0
 ## 关联声道的 PCM 数据 (16-bit signed, little-endian, 与 sample_data 等长)
 var linked_sample_data: PackedByteArray = []
+## 初始滤波器截止频率 (Hz, -1.0 表示未设置)
+var filter_fc: float = -1.0
+## 初始滤波器共振 (0.0-1.0, -1.0 表示未设置)
+var filter_q: float = -1.0
+## 调制包络到滤波器截止频率 (absolute cents, 预留)
+var mod_env_to_filter_fc: int = 0

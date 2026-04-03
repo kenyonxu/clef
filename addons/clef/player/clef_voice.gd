@@ -36,6 +36,10 @@ var _paused: bool = false
 var _master_pitch_scale: float = 1.0
 # 自动释放模式（鼓组等）
 var _auto_release: bool = false
+# 滤波器参数 (来自 SF2)
+var _has_filter: bool = false
+var _filter_fc: float = 20000.0
+var _filter_q: float = 0.0
 # 音频服务器 mix 延迟补偿 (1024/44100 ≈ 23.2ms)
 const _GAP_SECOND: float = 1024.0 / 44100.0
 const _HEAD_SILENT_SECOND: float = 1.0 / 8.0
@@ -103,6 +107,11 @@ func start_note(inst_info: ClefInstrumentInfo, p_channel: int, p_key: int,
 
 	# 力度
 	_velocity_db = linear_to_db(float(velocity) / 127.0)
+
+	# 滤波器参数
+	_has_filter = inst_info.filter_fc >= 0.0
+	_filter_fc = inst_info.filter_fc if _has_filter else 20000.0
+	_filter_q = inst_info.filter_q if inst_info.filter_q >= 0.0 else 0.0
 
 	# 重置状态
 	_adsr_timer = 0.0
@@ -186,6 +195,15 @@ func is_idle() -> bool:
 
 func is_releasing() -> bool:
 	return state == State.RELEASE
+
+
+## 获取滤波器参数 (用于通道总线滤波器)
+func get_filter_params() -> Dictionary:
+	return {
+		"has_filter": _has_filter,
+		"filter_fc": _filter_fc,
+		"filter_q": _filter_q,
+	}
 
 
 ## 进入释放阶段（从当前实际音量开始，避免 click/pop）

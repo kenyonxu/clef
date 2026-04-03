@@ -105,6 +105,9 @@ func get_instrument(preset_index: int, key: int, velocity: int, channel: int) ->
 	info.decay = sample.decay
 	info.sustain_db = linear_to_db(sample.sustain)
 	info.release = sample.release
+	info.filter_fc = sample.filter_fc
+	info.filter_q = sample.filter_q
+	info.mod_env_to_filter_fc = sample.mod_env_to_filter_fc
 
 	_cache[cache_key] = info
 	return info

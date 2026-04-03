@@ -539,6 +539,16 @@ func _parse_instruments(
 						zone.loop_end_offset += gen_svalue * 32768
 					GEN_SAMPLE_MODES:
 						zone.sample_modes = gen_value & 0x03
+					GEN_INITIAL_FILTER_FC:
+						if gen_svalue != -32768:
+							zone.filter_fc = 8.176 * pow(2.0, float(gen_svalue) / 1200.0)
+					GEN_INITIAL_FILTER_Q:
+						if gen_svalue != -32768:
+							zone.filter_q = clampf(float(gen_svalue) / 2400.0, 0.0, 1.0)
+					GEN_MOD_LFO_TO_FILTER_FC:
+						zone.mod_lfo_to_filter_fc = gen_svalue
+					GEN_MOD_ENV_TO_FILTER_FC:
+						zone.mod_env_to_filter_fc = gen_svalue
 
 			zone.is_global = not has_sample
 			instrument.zones.append(zone)

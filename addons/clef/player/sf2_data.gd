@@ -89,6 +89,14 @@ class Sf2InstrumentZone extends RefCounted:
 	var loop_end_offset: int = 0
 	## 采样循环模式 (位标志: 0=无循环, 1=持续循环, 2=持续期间循环, 3=保留)
 	var sample_modes: int = 0
+	## 初始滤波器截止频率 (Hz, -1.0 表示未设置)
+	var filter_fc: float = -1.0
+	## 初始滤波器共振 (0.0-1.0, -1.0 表示未设置)
+	var filter_q: float = -1.0
+	## 调制 LFO 到滤波器截止频率 (absolute cents, 预留)
+	var mod_lfo_to_filter_fc: int = 0
+	## 调制包络到滤波器截止频率 (absolute cents, 预留)
+	var mod_env_to_filter_fc: int = 0
 	## 是否为全局区域 (无采样链接的区域)
 	var is_global: bool = false
 
