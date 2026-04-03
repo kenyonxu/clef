@@ -92,14 +92,63 @@ class ValidationReport:
 # Helper functions
 # ---------------------------------------------------------------------------
 
-def _abc_midi(pitch_obj) -> int:
+def _abc_midi(pitch_obj, bass_clef: bool = False) -> int:
     """Convert music21 pitch to abc_to_midi compatible MIDI number.
 
     music21 ABC parser maps 'a' to A5(81), but abc_to_midi.py maps
     'a' to A4(69). This -12 offset aligns validate_abc.py with the
     conversion tool's octave convention.
+
+    For bass clef voices, music21 applies an additional octave-down
+    transposition that abc_to_midi.py does not. The +12 compensates.
     """
-    return pitch_obj.midi - 12
+    midi = pitch_obj.midi - 12
+    if bass_clef:
+        midi += 12
+    return midi
+
+
+_NOTE_TO_MIDI: dict[str, int] = {
+    "C": 0, "D": 2, "E": 4, "F": 5, "G": 7, "A": 9, "B": 11,
+}
+
+
+def _parse_range_string(range_str: str) -> tuple[int, int]:
+    """Parse a plan.json range string like 'C2-G5' to (lo, hi) MIDI numbers."""
+    try:
+        parts = range_str.split("-")
+        if len(parts) != 2:
+            return (0, 127)
+        lo = _parse_note_name(parts[0].strip())
+        hi = _parse_note_name(parts[1].strip())
+        return (lo, hi) if lo < hi else (hi, lo)
+    except Exception:
+        return (0, 127)
+
+
+def _parse_note_name(name: str) -> int:
+    """Parse a note name like 'C4' or 'Bb2' to MIDI number."""
+    if not name:
+        return 60
+    s = name.strip()
+    accidental = 0
+    idx = 0
+    while idx < len(s) and s[idx] in ('#', 'b'):
+        if s[idx] == '#':
+            accidental += 1
+        else:
+            accidental -= 1
+        idx += 1
+    note_char = s[idx].upper() if idx < len(s) else "C"
+    idx += 1
+    octave = 4
+    if idx < len(s):
+        try:
+            octave = int(s[idx:])
+        except ValueError:
+            pass
+    base = _NOTE_TO_MIDI.get(note_char, 0)
+    return base + accidental + (octave + 1) * 12
 
 
 def _load_plan(plan_path: str) -> dict:
@@ -208,13 +257,26 @@ def check_pitch_range(score: music21.stream.Score, plan: dict, abc_path: str = "
 
     voice_names = _parse_voice_names(abc_path) if abc_path else {}
 
-    # Build voice→GM instrument mapping from plan.json
+    # Detect bass/perc clef voices for octave offset correction
+    bass_clef_voices: set[int] = set()
+    if abc_path:
+        with open(abc_path, "r", encoding="utf-8") as f:
+            for line in f:
+                if re.match(r'V:\d+.*clef=(bass|perc)', line):
+                    m = re.match(r'V:(\d+)', line)
+                    if m:
+                        bass_clef_voices.add(int(m.group(1)))
+
+    # Build voice→GM instrument mapping and voice→plan range from plan.json
     orchestration = plan.get("orchestration", {})
     voice_gm_map: dict[int, int | None] = {}
+    voice_plan_range: dict[int, tuple[int, int]] = {}
     for part_key, part_info in orchestration.items():
         voice_idx = {"melody": 1, "harmony": 2, "bass": 3, "drums": 4}.get(part_key)
         if voice_idx:
             voice_gm_map[voice_idx] = part_info.get("instrument")
+            if "range" in part_info and isinstance(part_info["range"], str):
+                voice_plan_range[voice_idx] = _parse_range_string(part_info["range"])
 
     for idx, part in enumerate(score.parts):
         voice_label = _voice_label(idx)
@@ -230,15 +292,20 @@ def check_pitch_range(score: music21.stream.Score, plan: dict, abc_path: str = "
             part_name = part.partName or ""
 
         gm_inst = voice_gm_map.get(voice_id)
-        lo, hi = _get_instrument_range(part_name, gm_inst)
+        # Prefer plan.json range (authoritative) over SF2/hardcoded ranges
+        if voice_id in voice_plan_range:
+            lo, hi = voice_plan_range[voice_id]
+        else:
+            lo, hi = _get_instrument_range(part_name, gm_inst)
 
         for note in part.recurse().notes:
+            is_bass = (voice_id in bass_clef_voices)
             # Handle both Note (.pitch) and Chord (.pitches) objects
             if hasattr(note, 'pitches'):
-                midi_notes = [_abc_midi(p) for p in note.pitches]
+                midi_notes = [_abc_midi(p, bass_clef=is_bass) for p in note.pitches]
                 pitch_names = [p.nameWithOctave for p in note.pitches]
             else:
-                midi_notes = [_abc_midi(note.pitch)]
+                midi_notes = [_abc_midi(note.pitch, bass_clef=is_bass)]
                 pitch_names = [note.pitch.nameWithOctave]
 
             for midi, pitch_name in zip(midi_notes, pitch_names):
@@ -702,6 +769,29 @@ def check_sweet_spot(score: music21.stream.Score, plan: dict, abc_path: str = ""
 # Main validate function
 # ---------------------------------------------------------------------------
 
+def check_channel_uniqueness(score: music21.stream.Score, plan: dict, **kwargs) -> list[ValidationIssue]:
+    """Check that all MIDI channels in plan.json orchestration are unique."""
+    issues: list[ValidationIssue] = []
+    orchestration = plan.get("orchestration", {})
+    seen: dict[int, str] = {}
+    for part_key, part_info in orchestration.items():
+        channel = part_info.get("channel")
+        if channel is not None:
+            if channel in seen:
+                issues.append(ValidationIssue(
+                    category="channel_uniqueness",
+                    severity="fail",
+                    voice="global",
+                    message=(
+                        f"MIDI channel {channel} used by both '{seen[channel]}' "
+                        f"and '{part_info.get('name', part_key)}'"
+                    ),
+                ))
+            else:
+                seen[channel] = part_info.get("name", part_key)
+    return issues
+
+
 CHECK_FUNCTIONS = [
     ("key_consistency", check_key_consistency),
     ("pitch_range", check_pitch_range),
@@ -710,6 +800,7 @@ CHECK_FUNCTIONS = [
     ("measure_duration", check_measure_duration),
     ("voice_alignment", check_voice_alignment),
     ("sweet_spot", check_sweet_spot),
+    ("channel_uniqueness", check_channel_uniqueness),
 ]
 
 

@@ -934,6 +934,7 @@ class _VoiceTrackBuilder:
                 gt += inner[gn]
                 gn += 1
             else:
+                gn += 1
                 continue
             while gn < gn_len and inner[gn] in ('\u0307', '\u0323'):
                 gt += inner[gn]
@@ -1012,6 +1013,7 @@ class _VoiceTrackBuilder:
                 nt += inner[j]
                 j += 1
             else:
+                j += 1
                 continue
             while j < ilen and inner[j] in ('\u0307', '\u0323'):
                 nt += inner[j]
