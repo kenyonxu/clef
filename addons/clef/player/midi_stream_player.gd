@@ -13,7 +13,7 @@ extends Node
 @export var autoplay: bool = false
 @export_range(-80.0, 24.0, 0.1) var volume_db: float = -20.0 : set = set_volume_db
 @export_range(0.01, 4.0, 0.01) var pitch_scale: float = 1.0 : set = set_pitch_scale
-@export_range(1, 128, 1) var max_polyphony: int = 32
+@export_range(1, 128, 1) var max_polyphony: int = 64
 # --- Audio effects ---
 @export var reverb_enabled: bool = true : set = set_reverb_enabled
 @export_range(0.0, 1.0, 0.01) var reverb_room_size: float = 0.29 : set = set_reverb_room_size
@@ -687,24 +687,6 @@ func is_channel_muted(channel: int) -> bool:
 
 
 ## 应用通道声相到音频总线
-
-func _update_channel_filter(ch: int, filter_fc: float, filter_q: float, velocity: int) -> void:
-	var bus_idx: int = AudioServer.get_bus_index("clef_ch_%d" % ch)
-	if bus_idx < 0:
-		return
-	for i in range(AudioServer.get_bus_effect_count(bus_idx)):
-		var effect = AudioServer.get_bus_effect(bus_idx, i)
-		if effect is AudioEffectLowPassFilter:
-			if filter_fc < 0.0:
-				AudioServer.set_bus_effect_enabled(bus_idx, i, false)
-				return
-			var vel_factor: float = 0.3 + 0.7 * float(velocity) / 127.0
-			var cutoff_hz: float = clampf(filter_fc * vel_factor, 2000.0, 20000.0)
-			var resonance: float = clampf(filter_q, 0.0, 1.0)
-			effect.cutoff_hz = cutoff_hz
-			effect.resonance = resonance
-			AudioServer.set_bus_effect_enabled(bus_idx, i, true)
-			return
 func _apply_channel_pan(ch: int) -> void:
 	var state: MidiChannelState = _channel_states[ch]
 	var bus_idx: int = AudioServer.get_bus_index("clef_ch_%d" % ch)
