@@ -673,13 +673,15 @@ def _parse_voice_section(abc_text: str) -> list[dict]:
             else:
                 continue
 
-        # MIDI directives apply to current voice if one exists, else stored for next voice
+        # MIDI directives between voices apply to the NEXT voice, not the current one.
+        # Only update the current voice if it hasn't received music lines yet
+        # (i.e., the directive appears right after V: but before any notes).
         if stripped.startswith('%%MIDI channel'):
             match = _RE_MIDI_CHANNEL.search(stripped)
             if match:
                 ch = int(match.group(1))
                 current_midi_channel = ch
-                if current_voice is not None:
+                if current_voice is not None and not current_voice['music_lines']:
                     current_voice['channel'] = ch
             continue
 
@@ -688,7 +690,7 @@ def _parse_voice_section(abc_text: str) -> list[dict]:
             if match:
                 prog = int(match.group(1))
                 current_midi_program = prog
-                if current_voice is not None:
+                if current_voice is not None and not current_voice['music_lines']:
                     current_voice['program'] = prog
             continue
 
@@ -696,7 +698,7 @@ def _parse_voice_section(abc_text: str) -> list[dict]:
             match = _RE_MIDI_TRANSPOSE.search(stripped)
             if match:
                 current_midi_transpose = int(match.group(1))
-                if current_voice is not None:
+                if current_voice is not None and not current_voice['music_lines']:
                     current_voice['transpose'] = current_midi_transpose
             continue
 
