@@ -6,6 +6,7 @@ import os
 import shutil
 import subprocess
 import sys
+import threading
 
 logger = logging.getLogger("clef_tools")
 
@@ -199,13 +200,27 @@ def cmd_midi_to_audio(args):
         wav_path = os.path.join(out_dir, f"{base}.wav")
         final_path = os.path.join(out_dir, f"{base}.{fmt}")
 
-        # Step 1: FluidSynth MIDI → WAV
-        cmd = [fluidsynth, '-ni', sf2, midi_path, '-F', wav_path, '-r', str(args.sample_rate)]
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
-        if result.returncode != 0 or not os.path.isfile(wav_path):
-            print(f"FAIL: {midi_path} -> {result.stderr.strip()}", file=sys.stderr)
+        # Step 1: FluidSynth MIDI → WAV (fast render 模式)
+        # 所有选项必须在文件路径之前，否则 FluidSynth 遇到位置参数后停止解析选项
+        cmd = [fluidsynth, '-n', '-i', '-q', '-F', wav_path, '-T', 'wav', '-r', str(args.sample_rate), '-g', str(args.gain), sf2, midi_path]
+        print(f"Converting: {os.path.basename(midi_path)} ...", flush=True)
+        proc = subprocess.Popen(
+            cmd, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
+        )
+        # 在后台线程中实时打印 FluidSynth 输出
+        def _stream_output():
+            for line in proc.stdout:
+                print(line, end='', flush=True)
+        t = threading.Thread(target=_stream_output, daemon=True)
+        t.start()
+        proc.wait(timeout=1800)
+        t.join(timeout=1)
+        if proc.returncode != 0 or not os.path.isfile(wav_path):
+            print(f"FAIL: {midi_path} (exit code {proc.returncode})", file=sys.stderr)
             errors += 1
             continue
+        size_mb = os.path.getsize(wav_path) / (1024 * 1024)
+        print(f"OK: {midi_path} -> {wav_path} ({size_mb:.1f} MB)", flush=True)
 
         # Step 2: WAV → 目标格式（如果不是 WAV）
         if fmt != 'wav':
@@ -294,6 +309,7 @@ def main():
     p.add_argument('--output-dir', '-o', default='', help='输出目录（默认和输入同目录）')
     p.add_argument('--format', '-f', choices=['wav', 'ogg', 'mp3'], default='wav', help='输出格式')
     p.add_argument('--sample-rate', '-r', type=int, default=44100, help='采样率（默认 44100）')
+    p.add_argument('--gain', '-g', type=float, default=1.0, help='音量增益（默认 1.0，FluidSynth 原始默认 0.2）')
     p.add_argument('--batch', action='store_true', help='批量模式：input 为目录，转换其中所有 .mid 文件')
 
     args = parser.parse_args()
