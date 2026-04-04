@@ -54,7 +54,9 @@ func get_sample(preset_index: int, key: int, velocity: int, channel: int = 0) ->
 			local_zones.append(zone)
 
 	# 在局部区域中查找键位和力度匹配的
-	# SF2 标准: 多个匹配时, 最后一个匹配的区域优先 (后定义的覆盖先定义的)
+	# 匹配策略: 最具体优先 (key_range 窄 > vel_range 窄 > 后定义优先)
+	# 这比简单的 "last match wins" 更正确, 尤其对鼓组预设
+	# (鼓组的宽范围 zone 不应覆盖精确 key 的 zone)
 	var best_zone: Sf2Data.Sf2PresetZone = null
 
 	for zone in local_zones:
@@ -62,7 +64,20 @@ func get_sample(preset_index: int, key: int, velocity: int, channel: int = 0) ->
 			continue
 		if velocity < zone.vel_range.x or velocity > zone.vel_range.y:
 			continue
-		best_zone = zone
+		if best_zone == null:
+			best_zone = zone
+			continue
+		var key_span: int = zone.key_range.y - zone.key_range.x
+		var best_key_span: int = best_zone.key_range.y - best_zone.key_range.x
+		if key_span < best_key_span:
+			best_zone = zone
+		elif key_span == best_key_span:
+			var vel_span: int = zone.vel_range.y - zone.vel_range.x
+			var best_vel_span: int = best_zone.vel_range.y - best_zone.vel_range.x
+			if vel_span < best_vel_span:
+				best_zone = zone
+			elif vel_span == best_vel_span:
+				best_zone = zone  # 同等具体度: 后定义优先
 
 	if best_zone == null:
 		return default_info
@@ -85,7 +100,7 @@ func get_sample(preset_index: int, key: int, velocity: int, channel: int = 0) ->
 		else:
 			inst_local_zones.append(zone)
 
-	# 在局部区域中查找匹配的 (SF2 标准: 最后一个匹配优先)
+	# 在局部区域中查找匹配的 (最具体优先, 同预设区域逻辑)
 	var best_inst_zone: Sf2Data.Sf2InstrumentZone = null
 
 	for zone in inst_local_zones:
@@ -93,7 +108,20 @@ func get_sample(preset_index: int, key: int, velocity: int, channel: int = 0) ->
 			continue
 		if velocity < zone.vel_range.x or velocity > zone.vel_range.y:
 			continue
-		best_inst_zone = zone
+		if best_inst_zone == null:
+			best_inst_zone = zone
+			continue
+		var key_span: int = zone.key_range.y - zone.key_range.x
+		var best_key_span: int = best_inst_zone.key_range.y - best_inst_zone.key_range.x
+		if key_span < best_key_span:
+			best_inst_zone = zone
+		elif key_span == best_key_span:
+			var vel_span: int = zone.vel_range.y - zone.vel_range.x
+			var best_vel_span: int = best_inst_zone.vel_range.y - best_inst_zone.vel_range.x
+			if vel_span < best_vel_span:
+				best_inst_zone = zone
+			elif vel_span == best_vel_span:
+				best_inst_zone = zone  # 同等具体度: 后定义优先
 
 	if best_inst_zone == null:
 		return default_info

@@ -181,7 +181,9 @@ func set_channel_instrument(channel: int, preset_index: int) -> void:
 	if channel < 0 or channel >= _channel_labels.size():
 		return
 	var name: String = ""
-	if preset_index >= 0 and preset_index < GM_INSTRUMENT_NAMES.size():
+	if channel == 9:
+		name = "Standard Drum Kit"
+	elif preset_index >= 0 and preset_index < GM_INSTRUMENT_NAMES.size():
 		name = GM_INSTRUMENT_NAMES[preset_index]
 	var lbl: Label = _channel_labels[channel]
 	lbl.tooltip_text = l10n.t("Channel %d: %s") % [channel + 1, name]

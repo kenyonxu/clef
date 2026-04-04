@@ -255,7 +255,9 @@ func _draw_legend() -> void:
 		x += 24.0
 		# "ChN InstrumentName"
 		var label := "Ch%d" % ch
-		if _channel_instruments.has(ch):
+		if ch == 9:
+			label += " Standard Drum Kit"
+		elif _channel_instruments.has(ch):
 			var preset: int = _channel_instruments[ch]
 			if preset >= 0 and preset < _GM_NAMES.size():
 				label += " " + _GM_NAMES[preset]
