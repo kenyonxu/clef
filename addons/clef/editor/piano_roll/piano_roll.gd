@@ -543,7 +543,7 @@ func _draw_notes() -> void:
 				if sel_set.has(i):
 					draw_rect(Rect2(x - 1, y - 1, w + 2, h + 2), Color(1, 1, 1, 0.5), false, 2.0)
 				continue
-		draw_rect(Rect2(x, y, w, h), color)
+			draw_rect(Rect2(x, y, w, h), color)
 
 		# 选中高亮边框
 		if sel_set.has(i):
@@ -641,6 +641,7 @@ func _get_agent_feedback() -> Dictionary:
 func _toggle_mute_selected() -> void:
 	if _selection.is_empty():
 		return
+	var before_state := _muted_indices.duplicate()
 	var newly_muted := []
 	var newly_unmuted := []
 	for idx in _selection:
@@ -653,8 +654,8 @@ func _toggle_mute_selected() -> void:
 			newly_muted.append(idx)
 	if not newly_muted.is_empty() or not newly_unmuted.is_empty():
 		var cmd := begin_command("mute", "屏蔽 %d / 恢复 %d" % [newly_muted.size(), newly_unmuted.size()])
-		cmd.before = {"muted_indices": newly_unmuted.duplicate()}
-		cmd.after = {"muted_indices": newly_muted.duplicate()}
+		cmd.before = {"muted_indices": before_state}
+		cmd.after = {"muted_indices": _muted_indices.duplicate()}
 		commit_command(cmd)
 	queue_redraw()
 
@@ -820,12 +821,13 @@ func _add_annotation_from_popup(sev_index: int, text: String) -> void:
 	if text.is_empty():
 		return
 	var severity := ["info", "warning", "error"][sev_index] if sev_index < 3 else "info"
+	var before_count := _annotations.size()
 	for idx in _selection:
 		var ann := Annotation.new(idx, text, severity)
 		_annotations.append(ann)
 		annotation_added.emit(idx, text, severity)
 	var cmd := begin_command("annotation", "添加标注: %s" % text)
-	cmd.before = {}
+	cmd.before = {"annotation_count": before_count}
 	cmd.after = {"annotation_count": _annotations.size()}
 	commit_command(cmd)
 	queue_redraw()
@@ -922,9 +924,10 @@ func _apply_snapshot(snapshot: Dictionary) -> void:
 			if idx >= 0 and idx < _notes.size():
 				_notes[idx].velocity = item["velocity"]
 	elif snapshot.has("muted_indices"):
-		for idx in snapshot["muted_indices"]:
-			if _muted_indices.find(idx) < 0:
-				_muted_indices.append(idx)
+		_muted_indices = snapshot["muted_indices"].duplicate()
+	elif snapshot.has("annotation_count"):
+		var count: int = snapshot["annotation_count"]
+		_annotations.resize(count)
 	elif snapshot.has("added_index"):
 		_notes.remove_at(snapshot["added_index"])
 	elif snapshot.has("index") and snapshot.has("note_data"):
