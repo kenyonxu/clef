@@ -177,11 +177,13 @@ var _editing: bool = false
 var _zoom_level: float = 1.0
 var _view_offset: float = 0.0
 var _h_scroll: HScrollBar = null
+var _v_scroll: VScrollBar = null
 const _ZOOM_MIN: float = 0.1
 const _ZOOM_MAX: float = 10.0
 const _SCROLL_BAR_HEIGHT: float = 16.0
+const _V_SCROLL_BAR_WIDTH: float = 16.0
 
-## 垂直缩放（仅 Shift+Wheel，无可见滚动条）
+## 垂直缩放（Shift+Wheel + VScrollBar）
 var _vertical_zoom: float = 1.0
 var _pitch_offset: int = 0
 const _VERT_ZOOM_MIN: float = 0.3
@@ -212,6 +214,7 @@ func _ready() -> void:
 	_actions = PianoRollActions.new(self)
 	_actions.create_context_menu()
 	_create_h_scroll()
+	_create_v_scroll()
 
 
 # ─── 公共 API ─────────────────────────────────────────────
@@ -274,12 +277,12 @@ func set_playback_position(position: float) -> void:
 		var margin := _visible_time_range() * 0.1
 		if position < _view_offset + margin:
 			_view_offset = maxf(0.0, position - margin)
-			_update_scroll_bar()
+			_update_scroll_bars()
 			_notify_view_changed()
 		elif position > _view_offset + _visible_time_range() - margin:
 			var max_off := maxf(0.0, _duration - _visible_time_range())
 			_view_offset = minf(max_off, position - _visible_time_range() + margin)
-			_update_scroll_bar()
+			_update_scroll_bars()
 			_notify_view_changed()
 	queue_redraw()
 
@@ -370,7 +373,7 @@ func _recalc_layout() -> void:
 	if _notes.is_empty():
 		_clamp_view_offset()
 		_clamp_pitch_offset()
-		_update_scroll_bar()
+		_update_scroll_bars()
 		_notify_view_changed()
 		return
 	# 计算音域范围
@@ -393,7 +396,7 @@ func _recalc_layout() -> void:
 		_pixels_per_note = h / float(note_range)
 	_clamp_view_offset()
 	_clamp_pitch_offset()
-	_update_scroll_bar()
+	_update_scroll_bars()
 	_notify_view_changed()
 
 
@@ -496,6 +499,7 @@ func _handle_mouse_button(mb: InputEventMouseButton) -> void:
 		if old_ppn > 0.0 and new_ppn > 0.0:
 			_pitch_offset = int(float(_pitch_offset) + (mouse_y - _LEGEND_HEIGHT) * (1.0 / new_ppn - 1.0 / old_ppn))
 		_clamp_pitch_offset()
+		_update_scroll_bars()
 		queue_redraw()
 		get_viewport().set_input_as_handled()
 		return
@@ -785,6 +789,7 @@ func _draw_legend() -> void:
 
 func _draw_pitch_grid() -> void:
 	var bottom_y := size.y - _SCROLL_BAR_HEIGHT
+	var right_x := size.x - _V_SCROLL_BAR_WIDTH
 	# 水平音高线
 	for pitch in range(_min_pitch, _max_pitch + 1):
 		var y := _pitch_to_y(pitch)
@@ -814,7 +819,7 @@ func _draw_notes() -> void:
 
 	var visible_start := _view_offset
 	var visible_end := _view_offset + _visible_time_range()
-	var right_x := size.x
+	var right_x := size.x - _V_SCROLL_BAR_WIDTH
 	var bottom_y := size.y - _SCROLL_BAR_HEIGHT
 	var eppn := _effective_ppn()
 
@@ -1031,7 +1036,7 @@ func _get_time_interval() -> float:
 func _apply_view_change() -> void:
 	_clamp_view_offset()
 	_clamp_pitch_offset()
-	_update_scroll_bar()
+	_update_scroll_bars()
 	_notify_view_changed()
 	queue_redraw()
 
@@ -1047,24 +1052,49 @@ func _create_h_scroll() -> void:
 	add_child(_h_scroll)
 
 
+
+func _create_v_scroll() -> void:
+	_v_scroll = VScrollBar.new()
+	_v_scroll.anchor_right = 1.0
+	_v_scroll.anchor_bottom = 1.0
+	_v_scroll.custom_minimum_size = Vector2i(int(_V_SCROLL_BAR_WIDTH), 0)
+	# 透明背景，避免遮挡音符内容
+	_v_scroll.add_theme_stylebox_override("scroll", StyleBoxEmpty.new())
+	_v_scroll.value_changed.connect(_on_v_scroll_changed)
+	add_child(_v_scroll)
 func _reposition_scroll_bars() -> void:
 	if _h_scroll:
 		_h_scroll.offset_top = size.y - _SCROLL_BAR_HEIGHT
+		_h_scroll.offset_right = -_V_SCROLL_BAR_WIDTH
+	if _v_scroll:
+		_v_scroll.offset_left = size.x - _V_SCROLL_BAR_WIDTH
+		_v_scroll.offset_right = 0.0
+		_v_scroll.offset_top = _LEGEND_HEIGHT
+		_v_scroll.offset_bottom = -_SCROLL_BAR_HEIGHT
 
-
-func _update_scroll_bar() -> void:
-	if _h_scroll == null or _duration <= 0.0: return
-	_h_scroll.max_value = _duration
-	_h_scroll.page = _visible_time_range()
-	_h_scroll.step = 0.01
-	_h_scroll.value = _view_offset
-
+func _update_scroll_bars() -> void:
+	if _h_scroll and _duration > 0.0:
+		_h_scroll.max_value = _duration
+		_h_scroll.page = _visible_time_range()
+		_h_scroll.step = 0.01
+		_h_scroll.value = _view_offset
+	var note_range := _max_pitch - _min_pitch + 1
+	if _v_scroll and note_range > 0:
+		_v_scroll.max_value = float(note_range)
+		_v_scroll.page = float(_visible_pitch_count())
+		_v_scroll.step = 1.0
+		_v_scroll.value = float(_pitch_offset)
 
 func _on_h_scroll_changed(value: float) -> void:
 	_view_offset = value
 	_notify_view_changed()
 	queue_redraw()
 
+
+func _on_v_scroll_changed(value: float) -> void:
+	_pitch_offset = int(value)
+	_notify_view_changed()
+	queue_redraw()
 
 func _notify_view_changed() -> void:
 	view_offset_changed.emit(_view_offset, _zoom_level, _pixels_per_second, _duration)
