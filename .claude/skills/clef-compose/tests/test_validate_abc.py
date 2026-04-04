@@ -415,6 +415,48 @@ class TestChordDuration:
 # Exit code: warns-only should exit 0 (Fix: was exiting 2)
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# Orchestration layers (V:5+ voice_id mapping)
+# ---------------------------------------------------------------------------
+
+class TestOrchestrationLayers:
+    def test_plan_with_layers_maps_voices_beyond_4(self):
+        """Plan with orchestration.layers using voice_id should map V:5+ to layer instruments."""
+        abc = (
+            "X:1\nT:Test\nM:4/4\nL:1/8\nK:C\n"
+            'V:1 name="Flute"\nc2 d2 e2 f2 |\n'
+            'V:2 name="Strings"\nC2 E2 G2 C2 |\n'
+            'V:3 name="Bass" clef=bass\nC,2 C,2 C,2 C,2 |\n'
+            'V:4 name="Drums" clef=perc\nz4 z4 |\n'
+            'V:5 name="Oboe"\nc2 d2 e2 f2 |\n'
+        )
+        plan = {
+            "orchestration": {
+                "melody": {"instrument": 73, "range": "C4-C7"},
+                "harmony": {"instrument": 48, "range": "C3-C6"},
+                "bass": {"instrument": 32, "range": "E2-E4"},
+                "drums": {"instrument": 0},
+                "layers": {
+                    "counter_melody": {"instrument": 68, "range": "A4-G6", "voice_id": 5},
+                }
+            }
+        }
+        abc_path = _write_abc(abc)
+        plan_path = _write_plan(plan)
+        try:
+            report = validate(abc_path, plan_path)
+            fail_msgs = [i.message for i in report.fails]
+            v5_range_fails = [m for m in fail_msgs if "V:5" in m and "range" in m.lower()]
+            assert len(v5_range_fails) == 0, f"V:5 range fails: {v5_range_fails}"
+        finally:
+            os.unlink(abc_path)
+            os.unlink(plan_path)
+
+
+# ---------------------------------------------------------------------------
+# Exit code: warns-only should exit 0 (Fix: was exiting 2)
+# ---------------------------------------------------------------------------
+
 class TestExitCode:
     def test_warns_only_exits_zero(self):
         """WARN-level issues should not cause non-zero exit code."""

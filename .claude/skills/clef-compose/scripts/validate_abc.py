@@ -286,8 +286,17 @@ def check_pitch_range(score: music21.stream.Score, plan: dict, abc_path: str = "
     orchestration = plan.get("orchestration", {})
     voice_gm_map: dict[int, int | None] = {}
     voice_plan_range: dict[int, tuple[int, int]] = {}
+    CORE_VOICE_MAP = {"melody": 1, "harmony": 2, "bass": 3, "drums": 4}
     for part_key, part_info in orchestration.items():
-        voice_idx = {"melody": 1, "harmony": 2, "bass": 3, "drums": 4}.get(part_key)
+        if part_key == "layers":
+            for _layer_name, layer_info in part_info.items():
+                vid = layer_info.get("voice_id")
+                if isinstance(vid, int) and vid >= 1:
+                    voice_gm_map[vid] = layer_info.get("instrument")
+                    if "range" in layer_info and isinstance(layer_info["range"], str):
+                        voice_plan_range[vid] = _parse_range_string(layer_info["range"])
+            continue
+        voice_idx = CORE_VOICE_MAP.get(part_key)
         if voice_idx:
             voice_gm_map[voice_idx] = part_info.get("instrument")
             if "range" in part_info and isinstance(part_info["range"], str):
