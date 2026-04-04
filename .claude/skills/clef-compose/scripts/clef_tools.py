@@ -56,7 +56,7 @@ def cmd_validate(args):
         print(f"WARN: {len(report.warns)} warning(s)")
         for issue in report.warns:
             print(f"  [{issue.severity}] {issue.category}: {issue.message}")
-    return 0
+    return 1 if report.fails else 0
 
 
 def cmd_merge(args):

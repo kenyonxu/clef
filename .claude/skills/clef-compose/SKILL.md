@@ -202,6 +202,8 @@ python scripts/snapshot.py --step 0 --note "需求确认：boss battle, D大调,
 - Step 1b 方向小样和 Step 2a 首轮创作均按此顺序执行
 - 选择"先和声"时旋律可更好地配合和弦进行；选择"先旋律"时和声为旋律服务
 - Leader 迭代中的依赖任务也遵循此顺序（但可被 tasks.json 的 `depends_on` 覆盖）
+- Rhythmist（V:3+V:4）始终在旋律/和声之后生成，不受 generation_order 影响
+- 并行执行协议中，Rhythmist 任务只能与无依赖的旋律/和声任务并行（因为需要读取 V:1/V:2 数据）
 
 **配器频段分配规则：**
 - `range` = 乐器物理音域极限（validate_abc 用于检查音符是否可演奏）
@@ -223,8 +225,6 @@ python scripts/snapshot.py --step 0 --note "需求确认：boss battle, D大调,
 | `rhythmic_drive` | 节奏驱动 | 低音+鼓突出，旋律适中 |
 
 允许自定义标签，Orchestrator 按语义理解处理。
-
-**⛔ 用户确认点 1（必须停住）：** 展示 plan.json 的关键参数（调性、BPM、段落结构、配器方案、频段分配），**必须等待用户明确回复后才能进入 Step 1b。**
 
 **方向小样长度计算（demo_length_bars）：**
 
@@ -262,6 +262,7 @@ python scripts/snapshot.py --step 0 --note "需求确认：boss battle, D大调,
    - 若 `demo_mode == "melody_only"`：仅派发 Composer 生成 V:1
 3. **旋律专项审核（门控）**：Composer 完成后、合并前，派 Agent: Reviewer (clef-reviewer) 对旋律进行专项审核（仅执行 M1/M3/M4/M5 四项），输出 `.clef-work/melody_review_report.json`
    - 若 `verdict == "revise"`：将报告中的建议反馈给 Composer 修改旋律，修改后重新审核（最多 3 轮，超过后跳过门控继续流程并记录警告）
+      若 3 轮后 verdict 仍为 "revise"：跳过门控继续流程，在 `.clef-work/melody_gate_skipped.json` 写入 `{"reason": "旋律专项审核3轮未通过", "last_verdict": "revise"}`，Step 2a 首轮创作时 Leader 应关注旋律质量。
    - 若 `verdict == "pass"`：继续下一步
    - 若 `demo_mode == "chords_only"`：跳过此步骤
 4. 使用 `merge_abc.py` 合并声部
@@ -294,6 +295,7 @@ python scripts/snapshot.py --step 0 --note "需求确认：boss battle, D大调,
    - 若 `["harmony", "melody"]`：先 Harmonist 生成完整版 V:2，再 Composer 生成完整版 V:1
    - 若 `["melody", "harmony"]`：先 Composer 生成完整版 V:1（复用 Step 1 确认的动机方向），再 Harmonist 生成完整版 V:2（参考 V:1）
 2. Agent: Rhythmist — V:3 低音 + V:4 鼓组（始终在旋律/和声之后）
+3. **Agent 输出检查**：读取各 Agent 输出的 ABC 片段，检查是否包含 `% NOTE:` 失败信号。如果某 Agent 输出了 `% NOTE:`，记录原因，不将该片段合并到 score.abc。
 4. 运行 `merge_abc.py` 合并所有声部 → `.clef-work/score.abc`
 5. 运行 `python scripts/snapshot.py --step 2a --output "score.abc" --note "首轮创作完成"`
 6. 运行 `validate_abc.py` 技术验证 → `.clef-work/validation_report.json`
@@ -393,6 +395,14 @@ python scripts/inject_expression.py .clef-work/base.mid .clef-work/expression_pl
 ```bash
 python scripts/inject_expression.py .clef-work/base.mid --balance .clef-work/plan.json
 ```
+
+**3b.5. 验证注入结果**
+
+注入完成后，验证输出 MIDI 文件的基本完整性：
+```bash
+python .claude/skills/clef-compose/scripts/clef_tools.py analyze addons/clef/output/<name>_final.mid
+```
+检查输出是否包含所有预期声部的音符数据。如果分析报告显示某声部音符数为 0，说明注入过程可能损坏了 MIDI，需要检查 expression_plan.json 并修正。
 
 **3c. 生成评审报告**
 

@@ -224,6 +224,7 @@ def extract_solo(
 
     os.makedirs(output_dir, exist_ok=True)
     created_files: list[str] = []
+    name_counter: dict[str, int] = {}
 
     for i, track in enumerate(midi.tracks):
         # Skip tempo/meta tracks
@@ -237,6 +238,11 @@ def extract_solo(
             continue
 
         track_name = _sanitize_filename(_get_track_name(track, i))
+        if track_name in name_counter:
+            name_counter[track_name] += 1
+            track_name = f"{track_name}_{name_counter[track_name]}"
+        else:
+            name_counter[track_name] = 0
         filename = f'{track_name}_{start_sec}-{end_sec}.mid'
         filepath = os.path.join(output_dir, filename)
         solo_midi.save(filepath)

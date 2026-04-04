@@ -79,7 +79,7 @@ skills:
 在生成 expression_plan.json 之前，先运行分段分析获取客观数据：
 
 ```bash
-python scripts/inject_expression.py .clef-work/base.mid --balance-sections .clef-work/plan.json
+python .claude/skills/clef-compose/scripts/inject_expression.py .clef-work/base.mid --balance-sections .clef-work/plan.json
 ```
 
 分析结果提供每个段落的：

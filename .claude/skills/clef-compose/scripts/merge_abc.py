@@ -28,9 +28,18 @@ def count_measures(content: str) -> int:
 
 
 def _parse_time_signature(time_signature: str) -> tuple[int, int]:
-    """Parse '4/4' into (4, 4)."""
-    parts = time_signature.split('/')
-    return (int(parts[0]), int(parts[1]))
+    """Parse '4/4' into (4, 4). Returns (4, 4) on malformed input."""
+    try:
+        parts = time_signature.split('/')
+        if len(parts) != 2:
+            return (4, 4)
+        num = int(parts[0])
+        den = int(parts[1])
+        if num <= 0 or den <= 0:
+            return (4, 4)
+        return (num, den)
+    except (ValueError, TypeError):
+        return (4, 4)
 
 
 def _rest_duration_for_measure(time_signature: str) -> str:

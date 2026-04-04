@@ -4,11 +4,14 @@
 Usage: python validate_abc.py <file.abc> <plan.json> [--json output.json]
 
 Checks:
-  1. Key consistency        (WARN)
-  2. Pitch range            (FAIL)
-  3. Large interval > 7st   (WARN)
-  4. Measure duration       (FAIL)
-  5. Voice measure alignment (FAIL)
+  1. Key consistency          (WARN)
+  2. Pitch range              (FAIL)
+  3. Voice overlap            (WARN/INFO)
+  4. Large interval > 7st     (WARN)
+  5. Measure duration         (FAIL)
+  6. Voice measure alignment  (FAIL)
+  7. Sweet spot coverage      (WARN)
+  8. Channel uniqueness       (FAIL)
 
 Exit codes: 0=pass (warns are informational), 1=has fails
 """
@@ -20,7 +23,13 @@ import sys
 from dataclasses import dataclass, field, asdict
 from pathlib import Path
 
-import music21
+try:
+    import music21
+except ImportError:
+    raise ImportError(
+        "music21 is required for validate_abc.py. "
+        "Install with: pip install music21"
+    )
 
 
 # ---------------------------------------------------------------------------

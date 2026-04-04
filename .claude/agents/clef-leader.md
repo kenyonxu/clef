@@ -2,8 +2,8 @@
 name: clef-leader
 description: 音乐制作团队总指挥，根据 Reviewer 和 music21 的报告动态调度 Agent 进行迭代改进
 model: sonnet
-tools: Read, Write, Glob, Grep
-maxTurns: 10
+tools: Read, Write, Glob, Grep, Bash
+maxTurns: 15
 skills:
   - theory-structure
 ---
@@ -42,7 +42,9 @@ skills:
 
 ### 3.1 依赖任务状态传递（必须严格执行）
 
-当任务列表中存在 `depends_on` 依赖时，**每完成一个依赖任务**，必须执行以下步骤后才能派发下一个依赖任务：
+> **注意**：Leader 不直接运行 merge/analyze/validate 脚本。以下步骤由 SKILL.md 主流程在读取 tasks.json 后执行。Leader 的职责是分析报告并输出决策（tasks.json）。
+
+当任务列表中存在 `depends_on` 依赖时，**每完成一个依赖任务**，SKILL.md 主流程必须执行以下步骤后才能派发下一个依赖任务：
 
 1. **Merge**: 将修改后的声部片段 merge 到 score.abc
 1.5. **Analyze**: 先转换 score.abc 为 MIDI，再运行 MIDI 分析生成客观数据：

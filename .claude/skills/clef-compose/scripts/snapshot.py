@@ -4,6 +4,7 @@ import json
 import os
 import re
 import shutil
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -27,7 +28,9 @@ def _task_name(workdir: str) -> str:
         try:
             with open(plan_path, "r", encoding="utf-8") as f:
                 plan = json.load(f)
-            return plan.get("title", "untitled")
+            name = plan.get("title", "untitled")
+            safe = re.sub(r'[<>:"/\\|?*]', '_', name)
+            return safe.strip() or "untitled"
         except (json.JSONDecodeError, OSError):
             pass
     return "untitled"
@@ -45,6 +48,11 @@ def _log_dir(workdir: str) -> str:
 
 def snapshot(step: str, status: str = "成功", output: str = "", note: str = "", workdir: str = ".clef-work") -> int:
     """备份 score.abc + 写入步骤日志。"""
+    # 防路径穿越：step 只允许字母、数字、连字符、下划线、点
+    safe_step = re.sub(r"[^a-zA-Z0-9_\-\.]", "", step)
+    if not safe_step:
+        print(f"Error: invalid step identifier: {step!r}", file=sys.stderr)
+        return 1
     # 1. 版本备份
     score_path = os.path.join(workdir, "score.abc")
     history_dir = os.path.join(workdir, "history")
@@ -58,10 +66,10 @@ def snapshot(step: str, status: str = "成功", output: str = "", note: str = ""
 
     # 2. 写入步骤日志
     log_base = _log_dir(workdir)
-    log_path = os.path.join(log_base, f"step_{step}.md")
+    log_path = os.path.join(log_base, f"step_{safe_step}.md")
 
-    title = note if note else f"Step {step}"
-    log_content = f"## Step {step}: {title}\n"
+    title = note if note else f"Step {safe_step}"
+    log_content = f"## Step {safe_step}: {title}\n"
     log_content += f"- 状态: {status}\n"
     if output:
         log_content += f"- 输出: {output}"

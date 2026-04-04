@@ -6,6 +6,7 @@ import json
 import os
 import re
 import shutil
+import sys
 from pathlib import Path
 
 
@@ -65,5 +66,4 @@ def main():
 
 
 if __name__ == "__main__":
-    import sys
     main()

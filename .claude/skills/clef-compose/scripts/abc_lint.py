@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import json
 import re
+import shutil
 import sys
 from pathlib import Path
 
@@ -524,10 +525,12 @@ if __name__ == "__main__":
         original = content
         content = sanitize(content)
         if content != original:
+            backup_path = filepath + ".bak"
+            shutil.copy2(filepath, backup_path)
             with open(filepath, 'w', encoding='utf-8') as f:
                 f.write(content)
             if not do_json:
-                print(f"Fixed: {filepath}")
+                print(f"Fixed: {filepath} (backup: {backup_path})")
 
     result = lint(content, plan=plan)
 

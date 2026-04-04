@@ -8,6 +8,7 @@ while preserving all existing events and correct delta-time ordering.
 import json
 import os
 import sys
+import tempfile
 
 import mido
 
@@ -70,16 +71,17 @@ def _create_plan_event(
 	event_type = event['type']
 
 	if event_type == 'cc':
+		value = max(0, min(127, event['value']))
 		msg = mido.Message(
 			'control_change',
 			channel=channel,
 			control=event['control'],
-			value=event['value'],
+			value=value,
 			time=0,  # Will be set by _absolute_to_track
 		)
 	elif event_type == 'pitch_bend':
 		# Plan uses unsigned 0-16383; mido uses signed -8192..8191
-		unsigned_pitch = event['value']
+		unsigned_pitch = max(0, min(16383, event['value']))
 		signed_pitch = unsigned_pitch - 8192
 		msg = mido.Message(
 			'pitchwheel',
@@ -282,6 +284,11 @@ def inject(base_midi_path: str, plan_path: str, output_path: str) -> None:
 		channel = track_plan['channel']
 		track_idx = _find_track_for_channel(midi, channel)
 		if track_idx is None:
+			print(
+				f"Warning: channel {channel} not found in MIDI file, "
+				f"skipping {len(track_plan.get('events', []))} events",
+				file=sys.stderr,
+			)
 			continue
 
 		# Convert existing track to absolute time
@@ -303,7 +310,17 @@ def inject(base_midi_path: str, plan_path: str, output_path: str) -> None:
 		# Rebuild track with correct delta times
 		midi.tracks[track_idx] = _absolute_to_track(abs_events)
 
-	midi.save(output_path)
+	import tempfile as _tf
+	dir_name = os.path.dirname(os.path.abspath(output_path))
+	_fd, tmp_path = _tf.mkstemp(suffix=".mid", dir=dir_name)
+	try:
+		os.close(_fd)
+		midi.save(tmp_path)
+		os.replace(tmp_path, output_path)
+	except Exception:
+		if os.path.exists(tmp_path):
+			os.unlink(tmp_path)
+		raise
 
 
 def analyze_balance(midi_path: str, plan_path: str) -> dict:

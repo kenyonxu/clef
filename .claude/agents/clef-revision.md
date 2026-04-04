@@ -48,4 +48,4 @@ skills:
 3. 逐项检查修正范围内的格式问题
 4. 仅修正格式，不触碰任何创作内容
 5. 写回修正后的 score.abc
-6. **修正完成后必须重新验证**：检查 validation_report.json 中所有 severity="fail" 项是否已清除。若仍有 fail，继续修正。maxTurns 内无法清除所有 fail 时，在输出末尾添加注释 `% REVISION_INCOMPLETE: <remaining fail descriptions>`
+6. **修正完成后必须重新验证**：检查 validation_report.json 中所有 severity="fail" 项是否已清除。若仍有 fail，继续修正。**自验证循环最多 2 次**（maxTurns=3 扣除初始读取 1 次），超过后在输出末尾添加注释 `% REVISION_INCOMPLETE: <remaining fail descriptions>` 并终止。
