@@ -32,3 +32,7 @@ Desktop.ini
 # Re-ignore user-specific and local files
 .claude/settings.local.json
 .claude/worktrees/
+
+# Python dependencies (vendored)
+music21/
+pytest-of-kenyo/
