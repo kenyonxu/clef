@@ -97,6 +97,12 @@ var _selection: Array[int] = []
 ## 鼠标悬停音符索引（-1 表示无）
 var _hovered_note: int = -1
 
+## 拖拽状态
+var _dragging: bool = false
+var _drag_type: int = 0  ## 0=NONE, 1=MOVE, 2=RESIZE_LEFT, 3=RESIZE_RIGHT
+var _drag_start_pos: Vector2 = Vector2.ZERO
+var _drag_original_notes: Array[Dictionary] = []  ## 拖拽前快照 [{index, pitch, start_time, duration}]
+
 var _duration: float = 0.0
 var _playback_position: float = -1.0
 var _min_pitch: int = 0
@@ -269,6 +275,24 @@ func _gui_input(event: InputEvent) -> void:
 				else:
 					_selection.clear()
 					_selection.append(hit["index"])
+				# 开始拖拽
+				_dragging = true
+				_drag_start_pos = mb.position
+				_drag_original_notes.clear()
+				if hit["edge"] == "left":
+					_drag_type = 2
+				elif hit["edge"] == "right":
+					_drag_type = 3
+				else:
+					_drag_type = 1  # MOVE
+				for idx in _selection:
+					var n := _notes[idx]
+					_drag_original_notes.append({
+						"index": idx,
+						"pitch": n.pitch,
+						"start_time": n.start_time,
+						"duration": n.duration,
+					})
 				queue_redraw()
 			else:
 				_selection.clear()
@@ -276,17 +300,72 @@ func _gui_input(event: InputEvent) -> void:
 				var t := _pixel_to_time(mb.position.x)
 				if _duration > 0.0 and t >= 0.0 and t <= _duration:
 					seek_requested.emit(t)
-		elif mb.button_index == MOUSE_BUTTON_LEFT and not mb.pressed:
-			pass  # Phase 2: drag end
-		elif mb.button_index == MOUSE_BUTTON_RIGHT:
-			pass  # Phase 3: context menu
+			elif mb.button_index == MOUSE_BUTTON_LEFT and not mb.pressed and _dragging:
+				_dragging = false
+				var changed := false
+				for orig in _drag_original_notes:
+					var idx: int = orig["index"]
+					if idx >= 0 and idx < _notes.size():
+						var n := _notes[idx]
+						if n.pitch != orig["pitch"] or n.start_time != orig["start_time"] or n.duration != orig["duration"]:
+							changed = true
+							break
+				if changed:
+					var cmd_type := "move" if _drag_type == 1 else "resize"
+					var cmd := begin_command(cmd_type, "拖拽编辑音符")
+					cmd.before = {"indices": _drag_original_notes.duplicate(true)}
+					var after_snap := []
+					for orig in _drag_original_notes:
+						var idx: int = orig["index"]
+						if idx >= 0 and idx < _notes.size():
+							after_snap.append({
+								"index": idx,
+								"pitch": _notes[idx].pitch,
+								"start_time": _notes[idx].start_time,
+								"duration": _notes[idx].duration,
+							})
+					cmd.after = {"indices": after_snap}
+					commit_command(cmd)
+				_drag_type = 0
+				_drag_original_notes.clear()
+			elif mb.button_index == MOUSE_BUTTON_LEFT and not mb.pressed:
+				pass
+			elif mb.button_index == MOUSE_BUTTON_RIGHT:
+				pass  # Phase 3: context menu
 
 	if event is InputEventMouseMotion:
-		var hit := _hit_test(event.position)
-		if hit["index"] != _hovered_note:
-			_hovered_note = hit["index"]
-			queue_redraw()
-
+		if _dragging:
+			var delta := event.position - _drag_start_pos
+			match _drag_type:
+				1:  # MOVE
+					var pitch_delta := int(delta.y / _pixels_per_note)
+					var time_delta := delta.x / _pixels_per_second
+					for orig in _drag_original_notes:
+						var idx: int = orig["index"]
+						if idx >= 0 and idx < _notes.size():
+							_notes[idx].pitch = orig["pitch"] - pitch_delta
+							_notes[idx].start_time = orig["start_time"] + time_delta
+					queue_redraw()
+				2:  # RESIZE_LEFT
+					var time_delta := delta.x / _pixels_per_second
+					for orig in _drag_original_notes:
+						var idx: int = orig["index"]
+						if idx >= 0 and idx < _notes.size():
+							_notes[idx].start_time = orig["start_time"] + time_delta
+							_notes[idx].duration = orig["duration"] - time_delta
+					queue_redraw()
+				3:  # RESIZE_RIGHT
+					var time_delta := delta.x / _pixels_per_second
+					for orig in _drag_original_notes:
+						var idx: int = orig["index"]
+						if idx >= 0 and idx < _notes.size():
+							_notes[idx].duration = orig["duration"] + time_delta
+					queue_redraw()
+		else:
+			var hit := _hit_test(event.position)
+			if hit["index"] != _hovered_note:
+				_hovered_note = hit["index"]
+				queue_redraw()
 
 # ─── 绘制 ─────────────────────────────────────────────────
 
@@ -464,11 +543,19 @@ func _clone_note(n: RollNote) -> RollNote:
 	return RollNote.new(n.channel, n.pitch, n.start_time, n.duration, n.velocity)
 
 func _apply_snapshot(snapshot: Dictionary) -> void:
-	if snapshot.has("deleted_note"):
+		if snapshot.has("indices"):
+			var items: Array = snapshot["indices"]
+			for item in items:
+				var idx: int = item["index"]
+				if idx >= 0 and idx < _notes.size():
+					_notes[idx].pitch = item["pitch"]
+					_notes[idx].start_time = item["start_time"]
+					_notes[idx].duration = item["duration"]
+		elif snapshot.has("deleted_note"):
 		_notes.insert(snapshot["index"], snapshot["deleted_note"])
-	elif snapshot.has("added_index"):
+		elif snapshot.has("added_index"):
 		_notes.remove_at(snapshot["added_index"])
-	elif snapshot.has("index") and snapshot.has("note_data"):
+		elif snapshot.has("index") and snapshot.has("note_data"):
 		var idx: int = snapshot["index"]
 		if idx >= 0 and idx < _notes.size():
 			_notes[idx] = snapshot["note_data"]
