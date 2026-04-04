@@ -70,6 +70,7 @@ func _screen_to_time(sx: float) -> float:
 	return sx / epps + _view_offset
 
 
+## 根据 epps 计算合适的刻度间距（与 piano_roll.gd 保持同步）
 func _get_time_interval() -> float:
 	var epps := _effective_pps()
 	if epps <= 0.0: return 1.0

@@ -1,0 +1,14 @@
+[remap]
+
+importer="clef"
+type="MidiResource"
+uid="uid://kx7wmghq6bv7"
+path="res://.godot/imported/BossBattle.mid-970b0a72b89ed281bfc4f77c0b8e4618.tres"
+
+[deps]
+
+source_file="res://addons/clef/midi_samples/BossBattle.mid"
+dest_files=["res://.godot/imported/BossBattle.mid-970b0a72b89ed281bfc4f77c0b8e4618.tres"]
+
+[params]
+

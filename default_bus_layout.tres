@@ -11,11 +11,13 @@ wet = 0.19
 wet = 0.2
 
 [sub_resource type="AudioEffectPanner" id="AudioEffectPanner_j3pel"]
+pan = 1.0
 
 [sub_resource type="AudioEffectPanner" id="AudioEffectPanner_g28q7"]
 pan = 0.007874016
 
 [sub_resource type="AudioEffectPanner" id="AudioEffectPanner_n8wo2"]
+pan = 1.0
 
 [sub_resource type="AudioEffectPanner" id="AudioEffectPanner_5t1r3"]
 
@@ -31,27 +33,32 @@ pan = 0.007874016
 pan = 0.007874016
 
 [sub_resource type="AudioEffectPanner" id="AudioEffectPanner_y2dp7"]
-pan = -0.30708662
+pan = -0.27559054
 
 [sub_resource type="AudioEffectPanner" id="AudioEffectPanner_dapn3"]
 pan = 0.007874016
 
 [sub_resource type="AudioEffectPanner" id="AudioEffectPanner_e2wrs"]
+pan = 0.007874016
 
 [sub_resource type="AudioEffectPanner" id="AudioEffectPanner_ro4dx"]
+pan = -1.0
 
 [sub_resource type="AudioEffectPanner" id="AudioEffectPanner_51bpa"]
+pan = -1.0
 
 [sub_resource type="AudioEffectPanner" id="AudioEffectPanner_2mq3o"]
+pan = -1.0
 
 [sub_resource type="AudioEffectPanner" id="AudioEffectPanner_5tfch"]
+pan = -1.0
 
 [resource]
 bus/1/name = &"ClefMaster"
 bus/1/solo = false
 bus/1/mute = false
 bus/1/bypass_fx = false
-bus/1/volume_db = -12.0
+bus/1/volume_db = 1.0
 bus/1/send = &"Master"
 bus/1/effect/0/effect = SubResource("AudioEffectReverb_j3pel")
 bus/1/effect/0/enabled = true
@@ -61,7 +68,7 @@ bus/2/name = &"clef_ch_0"
 bus/2/solo = false
 bus/2/mute = false
 bus/2/bypass_fx = false
-bus/2/volume_db = -2.0760744
+bus/2/volume_db = -5.5637703
 bus/2/send = &"ClefMaster"
 bus/2/effect/0/effect = SubResource("AudioEffectPanner_2g6t7")
 bus/2/effect/0/enabled = true
@@ -69,7 +76,7 @@ bus/3/name = &"clef_ch_1"
 bus/3/solo = false
 bus/3/mute = false
 bus/3/bypass_fx = false
-bus/3/volume_db = -2.0760744
+bus/3/volume_db = -9.504273
 bus/3/send = &"ClefMaster"
 bus/3/effect/0/effect = SubResource("AudioEffectPanner_y2dp7")
 bus/3/effect/0/enabled = true
@@ -77,7 +84,7 @@ bus/4/name = &"clef_ch_2"
 bus/4/solo = false
 bus/4/mute = false
 bus/4/bypass_fx = false
-bus/4/volume_db = -2.0760744
+bus/4/volume_db = -7.287493
 bus/4/send = &"ClefMaster"
 bus/4/effect/0/effect = SubResource("AudioEffectPanner_dapn3")
 bus/4/effect/0/enabled = true

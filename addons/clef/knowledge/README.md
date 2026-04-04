@@ -55,4 +55,4 @@
 
 ## 内置知识
 
-核心乐理知识在 Skill 自带文件 `.claude/skills/clef-compose-theory.md` 中，包含音阶、和弦进行、GM 乐器、配器方案等。
+核心乐理已拆分为 6 个子技能（theory-abc / theory-melody / theory-harmony / theory-rhythm / theory-orchestration / theory-structure），由各 Agent 通过 `skills:` frontmatter 预加载。

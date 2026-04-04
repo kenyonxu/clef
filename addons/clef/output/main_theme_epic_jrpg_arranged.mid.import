@@ -1,0 +1,14 @@
+[remap]
+
+importer="clef"
+type="MidiResource"
+uid="uid://dom1pu8qyj5xa"
+path="res://.godot/imported/main_theme_epic_jrpg_arranged.mid-544c37c86fb20115147313ef90948122.tres"
+
+[deps]
+
+source_file="res://addons/clef/output/main_theme_epic_jrpg_arranged.mid"
+dest_files=["res://.godot/imported/main_theme_epic_jrpg_arranged.mid-544c37c86fb20115147313ef90948122.tres"]
+
+[params]
+

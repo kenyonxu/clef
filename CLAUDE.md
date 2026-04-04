@@ -96,7 +96,7 @@ MIDI 播放链路：`MidiResource` → `Converter` → `MidiData` → `MidiStrea
 | Revision | `agents/clef-revision.md` | 最小干预格式修正 | 修正后 score.abc |
 | Leader | `agents/clef-leader.md` | 迭代调度（依赖/合并/终止） | tasks.json |
 
-Skill 定义在 `.claude/skills/clef-compose/SKILL.md`，核心乐理参考在 `theory.md`。
+Skill 定义在 `.claude/skills/clef-compose/SKILL.md`，核心乐理已拆分为 6 个子技能（theory-abc / theory-melody / theory-harmony / theory-rhythm / theory-orchestration / theory-structure），由各 Agent 通过 `skills:` frontmatter 预加载。
 
 **工作流**：Step 0 需求解析 → Step 1a plan.json → Step 1b 方向小样（用户确认） → Step 2a 完整创作 → Step 2b Leader 迭代（最多 3 轮） → Step 3 表现力注入
 

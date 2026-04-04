@@ -1,0 +1,14 @@
+[remap]
+
+importer="clef"
+type="MidiResource"
+uid="uid://4exkbfhh345t"
+path="res://.godot/imported/Titantic.mid-f2b847429af6c8fb288f25a0ea97043d.tres"
+
+[deps]
+
+source_file="res://addons/clef/midi_samples/Titantic.mid"
+dest_files=["res://.godot/imported/Titantic.mid-f2b847429af6c8fb288f25a0ea97043d.tres"]
+
+[params]
+

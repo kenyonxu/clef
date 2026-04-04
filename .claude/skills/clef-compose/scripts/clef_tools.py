@@ -152,17 +152,168 @@ def cmd_midi_to_audio(args):
 
 
 def cmd_midi_to_abc(args):
-    """Convert MIDI file to ABC notation using music21."""
-    from music21 import converter, midi as m21midi
-    mf = m21midi.MidiFile()
-    mf.open(args.input)
-    mf.read()
-    mf.close()
-    score = m21midi.translate.midiFileToStream(mf)
-    abc_str = converter.freezeStr(score, fmt='abc')
+    """Convert MIDI file to ABC notation using mido."""
+    import mido
+
+    NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
+
+    def midi_to_abc_pitch(midi_pitch, key_sig):
+        """Convert MIDI note number to ABC pitch string with octave marks."""
+        name = NOTE_NAMES[midi_pitch % 12]
+        # Adjust sharps/flats for key signature
+        if key_sig < 0:  # flats
+            flat_map = {'B': 'Bb', 'E': 'Eb', 'A': 'Ab', 'D': 'Db', 'G': 'Gb', 'C': 'Cb'}
+            if name in flat_map:
+                name = flat_map[name]
+        elif key_sig > 0:  # sharps
+            sharp_map = {'F': 'F#', 'C': 'C#', 'G': 'G#', 'D': 'D#', 'A': 'A#', 'E': 'E#'}
+            if name in sharp_map:
+                name = sharp_map[name]
+        # ABC octave: C4 = c', C5 = c'', etc. MIDI 60 = C4
+        octave = (midi_pitch // 12) - 5  # -1 for C3, 0 for C4, 1 for C5...
+        if octave >= 0:
+            abc_name = name.lower() + "'" * octave
+        else:
+            abc_name = name.lower() + "," * (-octave)
+        return abc_name
+
+    def duration_to_abc(ticks, ticks_per_beat, unit_len):
+        """Convert tick duration to ABC duration string.
+
+        For L:1/8 (unit_len=0.125), the unit is an eighth note:
+        - 1 unit (eighth note)  -> '' (no suffix)
+        - 2 units (quarter)     -> '2'
+        - 4 units (half)        -> '4'
+        - 0.5 units (16th)      -> '/2'
+        """
+        beats = ticks / ticks_per_beat
+        # How many L units this note spans
+        # unit_len is fraction of whole note (e.g. 1/8), but beats is in quarter notes
+        # So: abc_units = (beats / 4) / unit_len = beats_in_whole_notes / unit_len
+        abc_units = (beats / 4) / unit_len
+        abc_units = round(abc_units)
+        if abc_units <= 0:
+            return None
+        if abc_units == 1:
+            return ''
+        if abc_units in (2, 3, 4, 6, 8):
+            return str(abc_units)
+        # Fractional: /2 = half unit, /4 = quarter unit
+        inv = round(1 / (abc_units)) if abc_units > 0 else 0
+        if inv >= 2:
+            return f'/{inv}'
+        return str(abc_units)
+
+    mid = mido.MidiFile(args.input)
+    tpb = mid.ticks_per_beat
+
+    # Detect key signature and tempo from track 0
+    key_sig = 0  # C major / A minor
+    bpm = 120
+    key_str = 'C'
+    for msg in mid.tracks[0]:
+        if msg.type == 'key_signature':
+            key_str_raw = str(msg.key)
+            # mido returns 'Em', 'Cm', 'F#m', 'Bbm' for minor; 'E', 'C', 'F#' for major
+            is_minor = key_str_raw.endswith('m') and key_str_raw[-2:].isalpha()
+            root = key_str_raw.rstrip('m')
+            key_str = root + ('m' if is_minor else '')
+        elif msg.type == 'set_tempo':
+            bpm = round(60000000 / msg.tempo)
+
+    lines = [
+        'X:1',
+        'T:midi_import',
+        f'M:{mid.time_signature if hasattr(mid, "time_signature") else "4/4"}',
+        'L:1/8',
+        f'Q:1/4={bpm}',
+        f'K:{key_str}',
+    ]
+
+    # Collect note events per track
+    voice_counter = 0
+    for ti, track in enumerate(mid.tracks):
+        if ti == 0:
+            continue  # skip meta track
+        # Skip drum tracks (channel 9)
+        is_drum = False
+        for msg in track:
+            if msg.type == 'program_change' and msg.channel == 9:
+                is_drum = True
+                break
+        if is_drum:
+            continue
+
+        voice_counter += 1
+        vid = voice_counter
+
+        # Extract program and channel
+        channel = None
+        program = 0
+        for msg in track:
+            if msg.type == 'program_change':
+                channel = msg.channel
+                program = msg.program
+                break
+
+        # Collect active notes with delta times
+        active = {}  # {note: (start_tick, velocity)}
+        events = []  # [(abs_tick, type, note, velocity)]
+
+        abs_tick = 0
+        for msg in track:
+            abs_tick += msg.time
+            if msg.type == 'note_on' and msg.velocity > 0:
+                active[msg.note] = (abs_tick, msg.velocity)
+            elif msg.type in ('note_off',) or (msg.type == 'note_on' and msg.velocity == 0):
+                if msg.note in active:
+                    start, vel = active.pop(msg.note)
+                    events.append((start, abs_tick - start, msg.note, vel))
+
+        if not events:
+            continue
+
+        # Add MIDI directives
+        lines.append(f'%%MIDI channel {channel if channel is not None else vid}')
+        lines.append(f'%%MIDI program {program}')
+        voice_name = f'Track{vid}'
+        lines.append(f'V:{vid} clef=treble name="{voice_name}"')
+
+        # Sort events by start time, group into bars
+        events.sort(key=lambda e: e[0])
+        unit_len = 1 / 8  # L:1/8
+        bar_ticks = tpb * 4  # assuming 4/4
+
+        # Build ABC notation per bar
+        current_bar_tick = 0
+        bar_notes = []
+        for start, dur, note, vel in events:
+            bar_idx = start // bar_ticks
+            abc_pitch = midi_to_abc_pitch(note, key_sig)
+            abc_dur = duration_to_abc(dur, tpb, unit_len)
+            if abc_dur is None:
+                continue
+            note_str = abc_pitch + abc_dur
+            # Add rest gap if needed (simplified: just place notes)
+            bar_notes.append((bar_idx, note_str))
+
+        # Group by bar
+        bars = {}
+        for bar_idx, note_str in bar_notes:
+            bars.setdefault(bar_idx, []).append(note_str)
+
+        max_bar = max(bars.keys()) if bars else 0
+        for i in range(max_bar + 1):
+            notes = bars.get(i, [])
+            bar_str = ' '.join(notes) if notes else 'z4'
+            lines.append(bar_str + ' |')
+    else:
+        max_bar = 0
+
     os.makedirs(os.path.dirname(os.path.abspath(args.output)), exist_ok=True)
     with open(args.output, 'w', encoding='utf-8') as f:
-        f.write(abc_str)
+        f.write('\n'.join(lines) + '\n')
+
     print(f"OK: {args.input} -> {args.output}")
     return 0
 

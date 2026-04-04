@@ -103,7 +103,7 @@ addons/clef/              # Godot 插件
 .claude/                  # Claude Code 作曲系统
   skills/clef-compose/    # 主 Skill + Python 工具链
     SKILL.md              # 作曲工作流定义
-    theory.md             # 核心乐理知识
+    references/           # 按需加载的参考文档（toolchain, iteration-protocol, feedback-handling）
     scripts/              # abc_to_midi, validate, merge, inject, snapshot, midi-to-audio 等
     tests/                # Python 测试
   agents/                 # 7 个 Agent 定义

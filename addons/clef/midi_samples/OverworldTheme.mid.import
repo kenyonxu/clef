@@ -1,0 +1,14 @@
+[remap]
+
+importer="clef"
+type="MidiResource"
+uid="uid://b7dst1it8esxx"
+path="res://.godot/imported/OverworldTheme.mid-5e4086692265f56da9a965092f92d5ee.tres"
+
+[deps]
+
+source_file="res://addons/clef/midi_samples/OverworldTheme.mid"
+dest_files=["res://.godot/imported/OverworldTheme.mid-5e4086692265f56da9a965092f92d5ee.tres"]
+
+[params]
+
