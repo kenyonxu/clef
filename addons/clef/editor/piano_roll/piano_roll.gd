@@ -20,6 +20,9 @@ signal annotation_added(note_index: int, text: String, severity: String)
 ## 请求导出 Agent 反馈 JSON
 signal agent_feedback_requested(feedback: Dictionary)
 
+## 请求导出 ABC 记谱法
+signal abc_export_requested()
+
 ## 单条音符数据
 class RollNote:
 	var channel: int
@@ -144,6 +147,12 @@ var _annotation_popup: PanelContainer = null
 ## 屏蔽（逐音符静音）索引
 var _muted_indices: Array[int] = []
 
+## 临时音符（试听用，不写入 MIDI）
+var _temp_notes: Array[RollNote] = []
+
+enum EditMode { SELECT, ANNOTATE, ADD_NOTE }
+var _edit_mode: EditMode = EditMode.SELECT
+
 
 func _ready() -> void:
 	custom_minimum_size = Vector2i(0, 160)
@@ -163,6 +172,7 @@ func set_notes(notes: Array[RollNote], duration: float) -> void:
 	_selection.clear()
 	_annotations.clear()
 	_muted_indices.clear()
+	_temp_notes.clear()
 	_hovered_note = -1
 	_duration = duration
 	_collect_active_channels()
@@ -217,6 +227,7 @@ func clear_notes() -> void:
 	_channel_instruments.clear()
 	_muted_channels.clear()
 	_muted_indices.clear()
+	_temp_notes.clear()
 	queue_redraw()
 
 
@@ -336,11 +347,24 @@ func _gui_input(event: InputEvent) -> void:
 					})
 				queue_redraw()
 			else:
-				_selection.clear()
-				queue_redraw()
-				var t := _pixel_to_time(mb.position.x)
-				if _duration > 0.0 and t >= 0.0 and t <= _duration:
-					seek_requested.emit(t)
+				if _edit_mode == EditMode.ADD_NOTE:
+					var pitch := _y_to_pitch(mb.position.y)
+					var time := _pixel_to_time(mb.position.x)
+					var channel := 0
+					if not _selection.is_empty():
+						var idx: int = _selection[0] as int
+						if idx >= 0 and idx < _notes.size():
+							channel = _notes[idx].channel
+					var new_note := RollNote.new(channel, pitch, time, 0.5, 100)
+					_temp_notes.append(new_note)
+					note_edited.emit()
+					queue_redraw()
+				else:
+					_selection.clear()
+					queue_redraw()
+					var t := _pixel_to_time(mb.position.x)
+					if _duration > 0.0 and t >= 0.0 and t <= _duration:
+						seek_requested.emit(t)
 			elif mb.button_index == MOUSE_BUTTON_LEFT and not mb.pressed and _dragging:
 				_dragging = false
 				var changed := false
@@ -529,6 +553,15 @@ func _draw_notes() -> void:
 		if i == _hovered_note:
 			draw_rect(Rect2(x, y, w, h), Color(1, 1, 1, 0.15))
 
+	# 临时音符（虚线风格）
+	for tn in _temp_notes:
+		var x := _time_to_x(tn.start_time)
+		var w := tn.duration * _pixels_per_second
+		var y := _pitch_to_y(tn.pitch + 1)
+		var h := _pixels_per_note - 1.0
+		draw_rect(Rect2(x, y, w, h), Color(0.3, 1.0, 0.3, 0.4))
+		draw_rect(Rect2(x, y, w, h), Color(0.3, 1.0, 0.3, 0.8), false, 1.0)
+
 
 func _draw_playback_cursor() -> void:
 	if _playback_position < 0.0 or _duration <= 0.0:
@@ -644,6 +677,9 @@ func _create_context_menu() -> void:
 	_context_menu.add_separator()
 	_context_menu.add_item("导出修改后的 MIDI", 10)
 	_context_menu.add_item("生成 Agent 反馈", 11)
+	_context_menu.add_separator()
+	_context_menu.add_item("清除所有临时音符", 12)
+	_context_menu.add_item("导出修改后的 ABC", 13)
 
 
 func _on_context_menu_item(id: int) -> void:
@@ -664,6 +700,11 @@ func _on_context_menu_item(id: int) -> void:
 				_toggle_mute_selected()
 			11:
 				agent_feedback_requested.emit(_get_agent_feedback())
+			12:
+				_temp_notes.clear()
+				queue_redraw()
+			13:
+				abc_export_requested.emit()
 
 
 func _shift_selected_pitch(delta: int) -> void:
