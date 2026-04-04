@@ -149,6 +149,22 @@ def cmd_archive(args):
 
 def cmd_midi_to_audio(args):
     """用 FluidSynth 将 MIDI 转为音频文件（WAV/OGG）。"""
+
+
+def cmd_midi_to_abc(args):
+    """Convert MIDI file to ABC notation using music21."""
+    from music21 import converter, midi as m21midi
+    mf = m21midi.MidiFile()
+    mf.open(args.input)
+    mf.read()
+    mf.close()
+    score = m21midi.translate.midiFileToStream(mf)
+    abc_str = converter.freezeStr(score, fmt='abc')
+    os.makedirs(os.path.dirname(os.path.abspath(args.output)), exist_ok=True)
+    with open(args.output, 'w', encoding='utf-8') as f:
+        f.write(abc_str)
+    print(f"OK: {args.input} -> {args.output}")
+    return 0
     fluidsynth = shutil.which('fluidsynth')
     if not fluidsynth:
         print(
@@ -312,6 +328,11 @@ def main():
     p.add_argument('--gain', '-g', type=float, default=1.0, help='音量增益（默认 1.0，FluidSynth 原始默认 0.2）')
     p.add_argument('--batch', action='store_true', help='批量模式：input 为目录，转换其中所有 .mid 文件')
 
+    # midi-to-abc
+    p = sub.add_parser('midi-to-abc', help='将 MIDI 文件转换为 ABC 记谱法')
+    p.add_argument('input', help='输入 MIDI 文件')
+    p.add_argument('--output', '-o', required=True, help='输出 ABC 文件')
+
     args = parser.parse_args()
 
     commands = {
@@ -325,6 +346,7 @@ def main():
         'snapshot': cmd_snapshot,
         'archive': cmd_archive,
         'midi-to-audio': cmd_midi_to_audio,
+        'midi-to-abc': cmd_midi_to_abc,
     }
 
     func = commands.get(args.command)
