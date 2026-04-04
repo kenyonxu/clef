@@ -11,6 +11,11 @@ description: LLM 辅助 MIDI 作曲 Skill。基于 ABC 记谱法，通过多 Age
 
 当用户输入 `/clef-compose` 或描述需要创作游戏音乐时，使用此 Skill。
 
+**不要触发此 Skill 的情况：**
+- MIDI 文件播放/编辑/格式转换（非创作）
+- Godot Clef 插件开发或调试
+- 音乐理论问答（非创作任务）
+
 ## 工作原则
 
 1. **分步构建，不要一次性生成** — 先规划再生成，和弦→旋律→低音→鼓→表现力
@@ -22,36 +27,12 @@ description: LLM 辅助 MIDI 作曲 Skill。基于 ABC 记谱法，通过多 Age
 
 在开始作曲前，读取以下文件：
 
-1. **theory.md 已拆分为 6 个子技能**（theory-abc / theory-melody / theory-harmony / theory-rhythm / theory-orchestration / theory-structure），由各 Agent 通过 `skills:` frontmatter 预加载。完整版仍保留在 theory.md 供参考。
+1. **乐理参考**：已拆分为 6 个子技能（theory-abc / theory-melody / theory-harmony / theory-rhythm / theory-orchestration / theory-structure），由各 Agent 通过 `skills:` frontmatter 预加载。
 2. **`addons/clef/knowledge/`** — 用户自定义扩展知识（扫描目录中所有 JSON 文件，若不存在则跳过）
 
 ## 工具链
 
-| 工具 | 用途 | 调用方式 |
-|------|------|----------|
-| `abc_to_midi.py` | ABC → MIDI 转换 | `python scripts/abc_to_midi.py` (通过函数调用) |
-| `validate_abc.py` | music21 技术验证（6 项检查，见下） | `python scripts/validate_abc.py <abc> <plan>` |
-| `abc_lint.py` | 确定性 ABC 扫描（5 项：升降号/%%V:/||/时值/音域） | `python scripts/abc_lint.py <abc> [--fix] [--plan plan.json]` |
-| `merge_abc.py` | 合并多声部 ABC（自动 sanitize） | `python scripts/merge_abc.py` (通过函数调用) |
-| `inject_expression.py` | 注入 CC/弯音到 MIDI | `python scripts/inject_expression.py <mid> <plan> <out>` |
-| `extract_solo.py` | 分轨 Solo 提取 | `python scripts/extract_solo.py <mid> <start> <end> <dir>` |
-| `analyze_midi.py` | MIDI piano roll 分析（密度/重叠/力度/间隙） | `python scripts/clef_tools.py analyze <mid>` |
-| `snapshot.py` | 备份 score.abc + 步骤日志 | `python scripts/snapshot.py --step <N> --output <file> --note <desc>` |
-| `sf2_profiler.py` | SF2 → profile JSON | `python scripts/sf2_profiler.py <sf2> -o <output.json>` |
-
-所有脚本位于 `.claude/skills/clef-compose/scripts/`。
-
-**validate_abc.py 检查项：**
-
-| 检查项 | 类别 | 严重级 | 说明 |
-|--------|------|--------|------|
-| `key_consistency` | 调性一致性 | WARN | ABC 头部 K: 与 plan.json key 是否一致 |
-| `pitch_range` | 音域检查 | FAIL | 音符是否超出乐器物理音域（plan.json range） |
-| `large_interval` | 大跳检测 | WARN | 旋律相邻音程 > 7 半音（约纯五度） |
-| `measure_duration` | 小节时值 | FAIL | 每小节拍数是否匹配拍号 |
-| `voice_alignment` | 声部对齐 | FAIL | 所有声部小节数是否一致 |
-| `voice_overlap` | 声部重叠 | FAIL/WARN | 声部间频段重叠（>12 半音=FAIL, >7 半音=WARN）；实际音域是否超出目标 register |
-| `sweet_spot` | 甜区覆盖 | WARN | >30% 音符落在 SF2 sweet_spot 外（仅 --sf2 指定时生效） |
+工具列表和 validate_abc.py 检查项详见 [references/toolchain.md](references/toolchain.md)，执行具体步骤时按需读取。所有脚本位于 `.claude/skills/clef-compose/scripts/`。
 
 ## Agent 总览
 
@@ -64,6 +45,7 @@ description: LLM 辅助 MIDI 作曲 Skill。基于 ABC 记谱法，通过多 Age
 | Reviewer | clef-reviewer | 音乐质量评审 | review_report.json |
 | Revision | clef-revision | 格式修正 | 修正后的 score.abc |
 | Leader | clef-leader | 迭代调度 | tasks.json |
+| Arranger | clef-arranger | 编曲层（对位旋律/分解和弦） | V:5+ ABC 片段 |
 
 ### Agent 数据契约
 
@@ -76,6 +58,7 @@ description: LLM 辅助 MIDI 作曲 Skill。基于 ABC 记谱法，通过多 Age
 | clef-reviewer | score.abc, plan.json, validation_report.json, analysis_report.txt | review_report.json | SKILL.md / Leader |
 | clef-revision | score.abc, validation_report.json | score.abc（格式修正） | Leader |
 | clef-leader | review_report.json, validation_report.json, user_feedback.json, plan.json | tasks.json | SKILL.md |
+| clef-arranger | plan.json, score.abc | ABC 片段（V:5+ 编曲层） | SKILL.md |
 | validate_abc.py | score.abc, plan.json | validation_report.json | SKILL.md / Leader |
 | merge_abc.py | 多个 ABC 片段 | score.abc（合并后） | SKILL.md |
 | abc_to_midi.py | score.abc | *.mid | SKILL.md |
@@ -189,13 +172,21 @@ python scripts/snapshot.py --step 0 --note "需求确认：boss battle, D大调,
     "melody": {"name": "Flute", "channel": 0, "instrument": 73, "range": "C4-C7", "register": "C5-G6"},
     "harmony": {"name": "Strings", "channel": 1, "instrument": 48, "range": "C3-C6", "register": "G3-E4"},
     "bass": {"name": "Bass", "channel": 2, "instrument": 32, "range": "E2-E4", "register": "E2-B2"},
-    "drums": {"name": "Drums", "channel": 9, "instrument": 0, "range": "", "register": ""}
+    "drums": {"name": "Drums", "channel": 9, "instrument": 0, "range": "", "register": ""},
+    "layers": {
+      "counter_melody": {"name": "Oboe", "channel": 3, "voice_id": 5, "instrument": 68, "range": "A4-G6", "register": "D5-B5", "sections": ["B"]},
+      "arpeggio_pad": {"name": "Harp", "channel": 4, "voice_id": 6, "instrument": 46, "range": "C3-C6", "register": "C4-E5", "sections": ["A", "B"]}
+    }
   },
   "generation_order": ["harmony", "melody"],
   "demo_length_bars": 8,
   "demo_mode": "full"
 }
 ```
+
+**编曲层配置（layers，可选）：** `orchestration.layers` 定义编曲层，由 Step 2.5 使用。Step 1a 规划时仅列出可选层类型和默认乐器（含 `voice_id`），`sections` 和 `channel` 在 Step 2.5 由主流程根据 energy_level 自动填充。若所有 section energy_level < 3，省略此字段。
+
+`voice_id` 是确定性的声部编号（如 5, 6），必须与 Arranger 输出的 V:N 一致。不依赖 dict 迭代顺序。
 
 保存到 `.clef-work/plan.json`。
 
@@ -338,37 +329,7 @@ Step 1a 生成 plan.json 时必须为每个 section 指定 `melody_strategy`。C
 7. Agent: Reviewer — 音乐质量评审 → `.clef-work/review_report.json`
 8. Agent: Leader — 分析两份报告，生成 `.clef-work/tasks.json`
 9. 如果 `iteration_complete == true`，进入 Step 3
-10. 否则，使用 Agent Teams 并行执行 tasks.json 中的任务：
-
-**并行执行协议：**
-
-a. 解析 tasks.json，将任务分为两批：
-   - **独立任务批**：`depends_on` 为 null 的任务
-   - **依赖任务批**：`depends_on` 不为 null 的任务
-
-b. 如果独立任务批有 **2+ 个任务**，使用 Agent Teams 并行执行：
-   1. `TeamCreate(team_name="clef-iter-{round}", description="第{round}轮迭代")`
-   2. 在**一条消息中同时**派发所有独立任务（每个任务一个 Agent 调用，携带 `team_name` 和 `name` 参数）：
-      ```
-      Agent(subagent_type=task.agent, team_name="clef-iter-{round}", name="{agent}-{index}", prompt=定向修改指令)
-      ```
-      > **⚠ 并行 Agent 禁止直接编辑 score.abc**。每个 Agent 将输出写入独立文件：
-      > `.clef-work/parallel_<agent>_<index>.abc`
-      > 在 prompt 中明确告知 Agent 写入路径。
-   3. 等待所有 teammate 返回结果，收集 ABC 片段
-   4. 向所有 teammate 发送 `shutdown_request`，等待确认后 `TeamDelete`
-   5. 使用 `merge_abc.py` 合并所有并行任务输出到 score.abc（按 generation_order 排列）
-   6. `abc_to_midi.py` → `clef_tools.py analyze` → `validate_abc.py`
-      > 注：写入 score.abc 后 Leader 必须手动运行 validate_abc.py 生成验证报告。
-   7. 如果 validate 报告 FAIL → 派 Revision Agent 修正
-
-c. 如果独立任务批只有 **0-1 个任务**，按原有串行方式逐个派发。
-
-d. 执行依赖任务批（按 `depends_on` 顺序串行）：
-   - 每个依赖任务完成后：merge → abc_to_midi → analyze → validate
-   - 如果 validate FAIL → 派 Revision Agent 修正
-
-e. 全部任务完成后：派 Reviewer → Leader → 判断是否继续迭代
+10. 否则，使用 Agent Teams 并行执行 tasks.json 中的任务。**并行执行协议详见 [references/iteration-protocol.md](references/iteration-protocol.md)，进入 Step 2b 时必须读取。**
 
 - 每轮迭代完成后运行 `python scripts/snapshot.py --step 2b-iter<N> --output "score.abc" --note "第N轮迭代完成"`
 - 最多 3 轮迭代
@@ -393,7 +354,65 @@ python scripts/abc_to_midi.py .clef-work/score.abc
 cp addons/clef/output/<name>.mid .clef-work/base.mid
 ```
 
-**⛔ 用户确认点 3（必须停住）：** 展示试听文件 + 审核报告摘要。**必须等待用户明确回复后才能进入 Step 3。** 不允许自动跳过此确认点。用户可能要求迭代修改（回到 Step 2b）或确认进入下一步。
+**⛔ 用户确认点 2.5（必须停住）：** 展示试听文件 + 审核报告摘要。**必须等待用户明确回复后才能进入 Step 2.5。** 不允许自动跳过此确认点。用户可能要求迭代修改（回到 Step 2b）或确认进入下一步。如果 plan.json 无 layers 配置或所有 section energy < 3，此确认后直接进入 Step 3。
+
+---
+
+### Step 2.5: 编曲扩展（条件执行）
+
+根据 plan.json 各段 energy_level 和 layers 配置，添加编曲层丰富织体。
+
+**跳过条件**：如果 plan.json 无 `orchestration.layers` 或所有 section energy_level < 3，跳过此步骤。
+
+**2.5.1 编曲层决策**
+
+扫描所有 section 的 energy_level，按规则分配编曲层：
+
+| energy_level | 编曲动作 |
+|-------------|---------|
+| 1-2 | 无编曲层 |
+| 3 | 加 arpeggio_pad（1 层） |
+| 4-5 | 加 counter_melody + arpeggio_pad（2 层） |
+
+自动填充 plan.json `orchestration.layers` 中每个层的 `sections` 字段：
+```
+for section in plan.sections:
+    if section.energy_level >= 4: counter_melody.sections += section.id
+    if section.energy_level >= 3: arpeggio_pad.sections += section.id
+移除 sections 为空的层
+```
+
+通道自动分配：基础 4 轨占用 ch0/ch1/ch2/ch9，编曲层从 ch3 起递增。更新后的 plan.json 写回 `.clef-work/plan.json`。
+
+**2.5.2 派发 Arranger**
+
+Agent: Arranger (clef-arranger) — 读取 score.abc + plan.json，生成编曲层 ABC 片段。
+
+Prompt 模板：
+```
+读取 .clef-work/score.abc 和 .clef-work/plan.json。
+根据 plan.json orchestration.layers 配置，为每个编曲层生成 ABC 片段。
+每个层写入独立文件：.clef-work/layer_<layer_name>.abc
+V:N 的 voice_id 必须与 plan.json 中对应层的 voice_id 一致。
+仅在 sections 指定的段落生成音乐，其余段落用休止填充。
+严格对齐已有声部的小节数。
+```
+
+**2.5.3 合并（append 策略）**
+
+> **注意：** Step 2.5 不使用 merge_abc.py（merge_abc 从零创建完整 score，会覆盖已有 V:1-V:4）。改用 **直接 append** 策略。
+
+1. 运行 `python scripts/snapshot.py --step 2.5 --output "score.abc" --note "编曲扩展完成"`
+2. 读取 Arranger 生成的各 layer 文件（`.clef-work/layer_*.abc`），逐个 **append 到 score.abc 末尾**：
+   ```bash
+   cat .clef-work/layer_counter_melody.abc >> .clef-work/score.abc
+   cat .clef-work/layer_arpeggio_pad.abc >> .clef-work/score.abc
+   ```
+3. 运行 `validate_abc.py` 技术验证（编曲层仅检查：音域越界 FAIL、小节不完整 FAIL、格式错误 FAIL。旋律性检查对 V:5+ 跳过）
+4. 如果 validate FAIL → 修正 layer 文件后重新 append（注意不要重复 append）
+5. 运行 `abc_to_midi.py` 转换，供用户试听
+
+**⛔ 用户确认点 3（必须停住）：** 展示编曲后的试听文件 + validate 报告摘要。**必须等待用户明确回复后才能进入 Step 3。** 用户可能要求调整编曲层或确认继续。
 
 ---
 
@@ -457,39 +476,7 @@ python scripts/archive.py --workdir .clef-work
 
 ## 用户反馈处理
 
-### 迭代反馈入口
-
-用户可以在 Step 2c（完整初版试听后）和 Step 3b（最终版试听后）给出反馈要求迭代。
-
-### 反馈处理流程
-
-1. **明确反馈**（用户指定了声部/小节）→ 直接生成 tasks.json 派发 Agent 修改
-2. **模糊反馈**（"某段听起来不对"）→ 使用 Solo 诊断：
-   - 运行 `extract_solo.py` 提取指定时间段的分轨 MIDI
-   - 用户逐轨试听，定位问题声部
-   - 转化为具体 Agent 任务
-3. **全局反馈**（"整体不够紧张"）→ 回到 Step 1 调整 plan.json
-
-### Solo 诊断工具
-
-当用户描述模糊时：
-```bash
-python scripts/extract_solo.py addons/clef/output/<name>.mid <start_sec> <end_sec> .clef-work/solo/
-```
-生成每个声部的独立 MIDI 文件，用户逐轨试听后精准定位问题。
-
-### 反馈映射
-
-| 用户反馈 | 修改策略 |
-|---------|---------|
-| 更紧张/激烈 | 和声加入不协和和弦，力度上移，节奏密度增加 |
-| 旋律太单调 | 增加动机变化（模进/变奏），扩展音域，添加经过音 |
-| 和弦不够紧张 | Harmonist 修改 V:2，使用更多 D 功能组和弦 |
-| 节奏感再强一点 | Rhythmist 修改 V:3/V:4，增加切分和鼓点密度 |
-| 低音不够明显 | Rhythmist 修改 V:3，力度提升，使用更低音域 |
-| 表现力不够丰富 | Orchestrator 重新生成 expression_plan.json |
-| B段/X段 旋律... | Composer 定向修改指定段落 |
-| 某段听起来不对 | extract_solo 诊断 → 定位声部 → 对应 Agent 修改 |
+反馈处理流程、Solo 诊断工具和反馈映射表详见 [references/feedback-handling.md](references/feedback-handling.md)，收到用户迭代反馈时读取。
 
 ---
 
