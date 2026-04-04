@@ -183,6 +183,39 @@ func _build_layout() -> void:
 		else:
 			push_error("[ClefStation] Failed to export agent feedback: ", abs_path)
 	)
+	_piano_roll.abc_export_requested.connect(func():
+		# Trigger MIDI export first, then convert to ABC
+		_on_piano_roll_export(_piano_roll.get_notes())
+		# Find the most recently exported MIDI file
+		var dir := DirAccess.open("res://addons/clef/output/")
+		if dir:
+			dir.list_dir_begin()
+			var latest_midi := ""
+			var latest_time := 0
+			var file_name := dir.get_next()
+			while file_name != "":
+				if file_name.begins_with("edited_") and file_name.ends_with(".mid"):
+					var full_path := "res://addons/clef/output/" + file_name
+					var modified := FileAccess.get_modified_time(ProjectSettings.globalize_path(full_path))
+					if modified["unix_time"] > latest_time:
+						latest_time = modified["unix_time"]
+						latest_midi = full_path
+				file_name = dir.get_next()
+			dir.list_dir_end()
+			if latest_midi.is_empty():
+				push_warning("[ClefStation] No edited MIDI found for ABC export")
+				return
+			var timestamp := Time.get_datetime_string_from_system().replace(":", "-").replace(" ", "_")
+			var abc_path := "res://addons/clef/output/edited_" + timestamp + ".abc"
+			var abs_midi := ProjectSettings.globalize_path(latest_midi)
+			var abs_abc := ProjectSettings.globalize_path(abc_path)
+			var script_path := ProjectSettings.globalize_path("res://.claude/skills/clef-compose/scripts/clef_tools.py")
+			var output := []
+			OS.execute("python", [script_path, "midi-to-abc", abs_midi, "-o", abs_abc], output)
+			print("[ClefStation] ABC export triggered: ", abs_abc)
+		else:
+			push_warning("[ClefStation] Cannot open output directory for ABC export")
+	)
 	center_vbox.add_child(_piano_roll)
 
 	_mini_mixer = MiniMixer.new()
