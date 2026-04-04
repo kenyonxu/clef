@@ -125,7 +125,7 @@ func _edit_velocity_popup() -> void:
 	var input := LineEdit.new()
 	input.placeholder_text = "100"
 	if not sel.is_empty():
-		var first_note: RollNote = _roll._notes[sel[0]]
+		var first_note := _roll._notes[sel[0]]
 		input.text = str(first_note.velocity)
 	input.alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(input)
@@ -212,14 +212,14 @@ func _add_annotation_from_popup(sev_index: int, text: String) -> void:
 	if text.is_empty():
 		return
 	var severity: String = ["info", "warning", "error"][sev_index] if sev_index < 3 else "info"
-	var before_count := _roll._annotations.size()
+	var before_anns := _roll._annotations.duplicate()
 	for idx in _roll._selection:
-		var ann := Annotation.new(idx, text, severity)
+		var ann := _roll._make_annotation(idx, text, severity)
 		_roll._annotations.append(ann)
 		_roll.annotation_added.emit(idx, text, severity)
 	var cmd := _roll.begin_command("annotation", "添加标注: %s" % text)
-	cmd.before = {"annotation_count": before_count}
-	cmd.after = {"annotation_count": _roll._annotations.size()}
+	cmd.before = {"annotations": before_anns}
+	cmd.after = {"annotations": _roll._annotations.duplicate()}
 	_roll.commit_command(cmd)
 	_roll.queue_redraw()
 

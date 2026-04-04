@@ -433,34 +433,24 @@ func _unhandled_key_input(event: InputEvent) -> void:
 	if key.ctrl_pressed and not key.shift_pressed and key.keycode == KEY_EQUAL:
 		get_viewport().set_input_as_handled()
 		_zoom_level = minf(_ZOOM_MAX, _zoom_level * 1.2)
-		_clamp_view_offset()
-		_update_scroll_bar()
-		_notify_view_changed()
-		queue_redraw()
+		_apply_view_change()
 		return
 	if key.ctrl_pressed and not key.shift_pressed and key.keycode == KEY_MINUS:
 		get_viewport().set_input_as_handled()
 		_zoom_level = maxf(_ZOOM_MIN, _zoom_level / 1.2)
-		_clamp_view_offset()
-		_update_scroll_bar()
-		_notify_view_changed()
-		queue_redraw()
+		_apply_view_change()
 		return
 	# Home / End 滚动
 	if not key.ctrl_pressed and key.keycode == KEY_HOME:
 		get_viewport().set_input_as_handled()
 		_view_offset = 0.0
-		_update_scroll_bar()
-		_notify_view_changed()
-		queue_redraw()
+		_apply_view_change()
 		return
 	if not key.ctrl_pressed and key.keycode == KEY_END:
 		get_viewport().set_input_as_handled()
 		if _duration > 0.0:
 			_view_offset = maxf(0.0, _duration - _visible_time_range())
-		_update_scroll_bar()
-		_notify_view_changed()
-		queue_redraw()
+		_apply_view_change()
 		return
 	# Ctrl+Home 重置缩放
 	if key.ctrl_pressed and key.keycode == KEY_HOME:
@@ -470,239 +460,255 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		_view_offset = 0.0
 		_pitch_offset = 0
 		_recalc_layout()
-		_notify_view_changed()
 		queue_redraw()
 		return
 
-
 func _gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton:
-		var mb := event as InputEventMouseButton
-		# Ctrl+Wheel 水平缩放
-		if mb.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN] and mb.ctrl_pressed:
-			var mouse_time := _pixel_to_time(mb.position.x)
-			if mb.button_index == MOUSE_BUTTON_WHEEL_UP:
-				_zoom_level = minf(_ZOOM_MAX, _zoom_level * 1.15)
+		_handle_mouse_button(event as InputEventMouseButton)
+	elif event is InputEventMouseMotion:
+		_handle_mouse_motion(event as InputEventMouseMotion)
+
+
+func _handle_mouse_button(mb: InputEventMouseButton) -> void:
+	# Ctrl+Wheel 水平缩放
+	if mb.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN] and mb.ctrl_pressed:
+		var mouse_time := _pixel_to_time(mb.position.x)
+		if mb.button_index == MOUSE_BUTTON_WHEEL_UP:
+			_zoom_level = minf(_ZOOM_MAX, _zoom_level * 1.15)
+		else:
+			_zoom_level = maxf(_ZOOM_MIN, _zoom_level / 1.15)
+		var new_epps := _effective_pps()
+		if new_epps > 0.0:
+			_view_offset = mouse_time - mb.position.x / new_epps
+		_apply_view_change()
+		get_viewport().set_input_as_handled()
+		return
+	# Shift+Wheel 垂直缩放（锚定鼠标位置）
+	if mb.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN] and mb.shift_pressed and not mb.ctrl_pressed:
+		var mouse_y := mb.position.y
+		var old_ppn := _effective_ppn()
+		if mb.button_index == MOUSE_BUTTON_WHEEL_UP:
+			_vertical_zoom = minf(_VERT_ZOOM_MAX, _vertical_zoom * 1.15)
+		else:
+			_vertical_zoom = maxf(_VERT_ZOOM_MIN, _vertical_zoom / 1.15)
+		var new_ppn := _effective_ppn()
+		if old_ppn > 0.0 and new_ppn > 0.0:
+			_pitch_offset = int(float(_pitch_offset) + (mouse_y - _LEGEND_HEIGHT) * (1.0 / new_ppn - 1.0 / old_ppn))
+		_clamp_pitch_offset()
+		queue_redraw()
+		get_viewport().set_input_as_handled()
+		return
+	# 中键拖拽平移
+	if mb.button_index == MOUSE_BUTTON_MIDDLE and mb.pressed:
+		_panning = true
+		_pan_start_pos = mb.position
+		_pan_start_offset = _view_offset
+		_pan_start_pitch_offset = _pitch_offset
+		get_viewport().set_input_as_handled()
+		return
+	if mb.button_index == MOUSE_BUTTON_MIDDLE and not mb.pressed and _panning:
+		_panning = false
+		get_viewport().set_input_as_handled()
+		return
+	# 左键
+	if mb.button_index == MOUSE_BUTTON_LEFT:
+		if mb.pressed:
+			_handle_left_press(mb)
+		else:
+			_handle_left_release(mb)
+		return
+	# 右键菜单
+	if mb.button_index == MOUSE_BUTTON_RIGHT and mb.pressed:
+		_handle_right_click(mb)
+
+
+func _handle_left_press(mb: InputEventMouseButton) -> void:
+	if not _editing:
+		_selection.clear()
+		queue_redraw()
+		var t := _pixel_to_time(mb.position.x)
+		if _duration > 0.0 and t >= 0.0 and t <= _duration:
+			seek_requested.emit(t)
+		return
+	var hit := _hit_test(mb.position)
+	if hit["index"] >= 0:
+		if mb.shift_pressed:
+			var idx: int = hit["index"]
+			var found := _selection.find(idx)
+			if found >= 0:
+				_selection.remove_at(found)
 			else:
-				_zoom_level = maxf(_ZOOM_MIN, _zoom_level / 1.15)
-			var new_epps := _effective_pps()
-			if new_epps > 0.0:
-				_view_offset = mouse_time - mb.position.x / new_epps
-			_clamp_view_offset()
-			_update_scroll_bar()
-			_notify_view_changed()
+				_selection.append(idx)
+		else:
+			_selection.clear()
+			_selection.append(hit["index"])
+		# 开始拖拽
+		_dragging = true
+		_drag_start_pos = mb.position
+		_drag_original_notes.clear()
+		if hit["edge"] == "left":
+			_drag_type = 2
+		elif hit["edge"] == "right":
+			_drag_type = 3
+		else:
+			_drag_type = 1  # MOVE
+		for idx in _selection:
+			var n := _notes[idx]
+			_drag_original_notes.append({
+				"index": idx,
+				"pitch": n.pitch,
+				"start_time": n.start_time,
+				"duration": n.duration,
+			})
+		queue_redraw()
+	else:
+		if _edit_mode == EditMode.ADD_NOTE:
+			var pitch := _y_to_pitch(mb.position.y)
+			var time := _pixel_to_time(mb.position.x)
+			if snap_enabled:
+				time = round(time / snap_interval) * snap_interval
+			var channel := 0
+			if not _selection.is_empty():
+				var idx: int = _selection[0] as int
+				if idx >= 0 and idx < _notes.size():
+					channel = _notes[idx].channel
+			var new_note := RollNote.new(channel, pitch, time, 0.5, 100)
+			_temp_notes.append(new_note)
+			note_edited.emit()
 			queue_redraw()
-			get_viewport().set_input_as_handled()
-			return
-		# Shift+Wheel 垂直缩放（锚定鼠标位置）
-		if mb.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN] and mb.shift_pressed and not mb.ctrl_pressed:
-			var mouse_y := mb.position.y
-			var old_ppn := _effective_ppn()
-			if mb.button_index == MOUSE_BUTTON_WHEEL_UP:
-				_vertical_zoom = minf(_VERT_ZOOM_MAX, _vertical_zoom * 1.15)
-			else:
-				_vertical_zoom = maxf(_VERT_ZOOM_MIN, _vertical_zoom / 1.15)
-			var new_ppn := _effective_ppn()
-			if old_ppn > 0.0 and new_ppn > 0.0:
-				_pitch_offset = int(float(_pitch_offset) + (mouse_y - _LEGEND_HEIGHT) * (1.0 / new_ppn - 1.0 / old_ppn))
-			_clamp_pitch_offset()
+		else:
+			_selection.clear()
+			_box_selecting = true
+			_box_select_start = mb.position
+			_box_select_end = mb.position
 			queue_redraw()
-			get_viewport().set_input_as_handled()
-			return
-		# 中键拖拽平移
-		if mb.button_index == MOUSE_BUTTON_MIDDLE and mb.pressed:
-			_panning = true
-			_pan_start_pos = mb.position
-			_pan_start_offset = _view_offset
-			_pan_start_pitch_offset = _pitch_offset
-			get_viewport().set_input_as_handled()
-			return
-		if mb.button_index == MOUSE_BUTTON_MIDDLE and not mb.pressed and _panning:
-			_panning = false
-			get_viewport().set_input_as_handled()
-			return
-		if mb.button_index == MOUSE_BUTTON_LEFT and mb.pressed:
-			if not _editing:
-				_selection.clear()
-				queue_redraw()
-				var t := _pixel_to_time(mb.position.x)
-				if _duration > 0.0 and t >= 0.0 and t <= _duration:
-					seek_requested.emit(t)
-				return
-			var hit := _hit_test(mb.position)
-			if hit["index"] >= 0:
-				if mb.shift_pressed:
-					var idx: int = hit["index"]
-					var found := _selection.find(idx)
-					if found >= 0:
-						_selection.remove_at(found)
-					else:
-						_selection.append(idx)
-				else:
-					_selection.clear()
-					_selection.append(hit["index"])
-				# 开始拖拽
-				_dragging = true
-				_drag_start_pos = mb.position
-				_drag_original_notes.clear()
-				if hit["edge"] == "left":
-					_drag_type = 2
-				elif hit["edge"] == "right":
-					_drag_type = 3
-				else:
-					_drag_type = 1  # MOVE
-				for idx in _selection:
-					var n := _notes[idx]
-					_drag_original_notes.append({
-						"index": idx,
-						"pitch": n.pitch,
-						"start_time": n.start_time,
-						"duration": n.duration,
-					})
-				queue_redraw()
-			else:
-				if _edit_mode == EditMode.ADD_NOTE:
-					var pitch := _y_to_pitch(mb.position.y)
-					var time := _pixel_to_time(mb.position.x)
-					if snap_enabled:
-						time = round(time / snap_interval) * snap_interval
-					var channel := 0
-					if not _selection.is_empty():
-						var idx: int = _selection[0] as int
-						if idx >= 0 and idx < _notes.size():
-							channel = _notes[idx].channel
-					var new_note := RollNote.new(channel, pitch, time, 0.5, 100)
-					_temp_notes.append(new_note)
-					note_edited.emit()
-					queue_redraw()
-				else:
-					_selection.clear()
-					_box_selecting = true
-					_box_select_start = mb.position
-					_box_select_end = mb.position
-					queue_redraw()
-		elif mb.button_index == MOUSE_BUTTON_LEFT and not mb.pressed and _dragging:
-			_dragging = false
-			var changed := false
+
+
+func _handle_left_release(_mb: InputEventMouseButton) -> void:
+	if _dragging:
+		_dragging = false
+		var changed := false
+		for orig in _drag_original_notes:
+			var idx: int = orig["index"]
+			if idx >= 0 and idx < _notes.size():
+				var n := _notes[idx]
+				if n.pitch != orig["pitch"] or n.start_time != orig["start_time"] or n.duration != orig["duration"]:
+					changed = true
+					break
+		if changed:
+			var cmd_type := "move" if _drag_type == 1 else "resize"
+			var cmd := begin_command(cmd_type, "拖拽编辑音符")
+			cmd.before = {"indices": _drag_original_notes.duplicate(true)}
+			var after_snap := []
 			for orig in _drag_original_notes:
 				var idx: int = orig["index"]
 				if idx >= 0 and idx < _notes.size():
-					var n := _notes[idx]
-					if n.pitch != orig["pitch"] or n.start_time != orig["start_time"] or n.duration != orig["duration"]:
-						changed = true
-						break
-			if changed:
-				var cmd_type := "move" if _drag_type == 1 else "resize"
-				var cmd := begin_command(cmd_type, "拖拽编辑音符")
-				cmd.before = {"indices": _drag_original_notes.duplicate(true)}
-				var after_snap := []
-				for orig in _drag_original_notes:
-					var idx: int = orig["index"]
-					if idx >= 0 and idx < _notes.size():
-						after_snap.append({
-							"index": idx,
-							"pitch": _notes[idx].pitch,
-							"start_time": _notes[idx].start_time,
-							"duration": _notes[idx].duration,
-						})
-				cmd.after = {"indices": after_snap}
-				commit_command(cmd)
-			_drag_type = 0
-			_drag_original_notes.clear()
-		elif _box_selecting:
-			_box_selecting = false
-			var sel_rect := Rect2(
-				minf(_box_select_start.x, _box_select_end.x),
-				minf(_box_select_start.y, _box_select_end.y),
-				absf(_box_select_end.x - _box_select_start.x),
-				absf(_box_select_end.y - _box_select_start.y)
-			)
-			if sel_rect.size.x > 2.0 and sel_rect.size.y > 2.0:
-				for i in _notes.size():
-					var n := _notes[i]
-					if _muted_channels.has(n.channel):
-						continue
-					var nx := _time_to_x(n.start_time)
-					var nw := n.duration * _effective_pps()
-					var ny := _pitch_to_y(n.pitch + 1)
-					var nh := _effective_ppn()
-					if sel_rect.intersects(Rect2(nx, ny, nw, nh)):
-						if not _selection.has(i):
-							_selection.append(i)
-			queue_redraw()
-		elif mb.button_index == MOUSE_BUTTON_LEFT and not mb.pressed:
-			pass
-		elif mb.button_index == MOUSE_BUTTON_RIGHT and mb.pressed:
-			if not _editing:
-				return
-			var hit := _hit_test(mb.position)
-			if hit["index"] >= 0:
-				if not _selection.has(hit["index"]):
-					_selection.clear()
-					_selection.append(hit["index"])
-					queue_redraw()
-				var mouse_screen := DisplayServer.mouse_get_position()
-				_context_menu.popup(Rect2i(mouse_screen + Vector2i(2, 2), Vector2i()))
-				get_viewport().set_input_as_handled()
+					after_snap.append({
+						"index": idx,
+						"pitch": _notes[idx].pitch,
+						"start_time": _notes[idx].start_time,
+						"duration": _notes[idx].duration,
+					})
+			cmd.after = {"indices": after_snap}
+			commit_command(cmd)
+		_drag_type = 0
+		_drag_original_notes.clear()
+		return
+	if _box_selecting:
+		_box_selecting = false
+		var sel_rect := Rect2(
+			minf(_box_select_start.x, _box_select_end.x),
+			minf(_box_select_start.y, _box_select_end.y),
+			absf(_box_select_end.x - _box_select_start.x),
+			absf(_box_select_end.y - _box_select_start.y)
+		)
+		if sel_rect.size.x > 2.0 and sel_rect.size.y > 2.0:
+			for i in _notes.size():
+				var n := _notes[i]
+				if _muted_channels.has(n.channel):
+					continue
+				var nx := _time_to_x(n.start_time)
+				var nw := n.duration * _effective_pps()
+				var ny := _pitch_to_y(n.pitch + 1)
+				var nh := _effective_ppn()
+				if sel_rect.intersects(Rect2(nx, ny, nw, nh)):
+					if not _selection.has(i):
+						_selection.append(i)
+		queue_redraw()
 
-	if event is InputEventMouseMotion:
-		if _panning:
-			var delta: Vector2 = event.position - _pan_start_pos
-			var epps := _effective_pps()
-			if epps > 0.0:
-				_view_offset = _pan_start_offset - delta.x / epps
-			var eppn := _effective_ppn()
-			if eppn > 0.0:
-				_pitch_offset = _pan_start_pitch_offset + int(delta.y / eppn)
-			_clamp_view_offset()
-			_clamp_pitch_offset()
-			_update_scroll_bar()
-		
-			_notify_view_changed()
-			queue_redraw()
-		elif _box_selecting:
-			_box_select_end = event.position
-			queue_redraw()
-		elif _dragging:
-			var delta: Vector2 = event.position - _drag_start_pos
-			match _drag_type:
-				1:  # MOVE
-					var pitch_delta := int(delta.y / _effective_ppn())
-					var time_delta: float = delta.x / _effective_pps()
-					if snap_enabled:
-						time_delta = round(time_delta / snap_interval) * snap_interval
-					for orig in _drag_original_notes:
-						var idx: int = orig["index"]
-						if idx >= 0 and idx < _notes.size():
-							_notes[idx].pitch = orig["pitch"] - pitch_delta
-							_notes[idx].start_time = orig["start_time"] + time_delta
-					queue_redraw()
-				2:  # RESIZE_LEFT
-					var time_delta: float = delta.x / _effective_pps()
-					if snap_enabled:
-						time_delta = round(time_delta / snap_interval) * snap_interval
-					for orig in _drag_original_notes:
-						var idx: int = orig["index"]
-						if idx >= 0 and idx < _notes.size():
-							_notes[idx].start_time = orig["start_time"] + time_delta
-							_notes[idx].duration = orig["duration"] - time_delta
-					queue_redraw()
-				3:  # RESIZE_RIGHT
-					var time_delta: float = delta.x / _effective_pps()
-					if snap_enabled:
-						time_delta = round(time_delta / snap_interval) * snap_interval
-					for orig in _drag_original_notes:
-						var idx: int = orig["index"]
-						if idx >= 0 and idx < _notes.size():
-							_notes[idx].duration = orig["duration"] + time_delta
-					queue_redraw()
-		else:
-			var hit := _hit_test(event.position)
-			if hit["index"] != _hovered_note:
-				_hovered_note = hit["index"]
-				queue_redraw()
 
-# ─── 绘制 ─────────────────────────────────────────────────
+func _handle_right_click(mb: InputEventMouseButton) -> void:
+	if not _editing:
+		return
+	var hit := _hit_test(mb.position)
+	if hit["index"] >= 0:
+		if not _selection.has(hit["index"]):
+			_selection.clear()
+			_selection.append(hit["index"])
+			queue_redraw()
+		var mouse_screen := DisplayServer.mouse_get_position()
+		_context_menu.popup(Rect2i(mouse_screen + Vector2i(2, 2), Vector2i()))
+		get_viewport().set_input_as_handled()
+
+
+func _handle_mouse_motion(event: InputEventMouseMotion) -> void:
+	if _panning:
+		var delta: Vector2 = event.position - _pan_start_pos
+		var epps := _effective_pps()
+		if epps > 0.0:
+			_view_offset = _pan_start_offset - delta.x / epps
+		var eppn := _effective_ppn()
+		if eppn > 0.0:
+			_pitch_offset = _pan_start_pitch_offset + int(delta.y / eppn)
+		_apply_view_change()
+	elif _box_selecting:
+		_box_select_end = event.position
+		queue_redraw()
+	elif _dragging:
+		_drag_update(event.position)
+	else:
+		var hit := _hit_test(event.position)
+		if hit["index"] != _hovered_note:
+			_hovered_note = hit["index"]
+			queue_redraw()
+
+
+func _drag_update(pos: Vector2) -> void:
+	var delta: Vector2 = pos - _drag_start_pos
+	match _drag_type:
+		1:  # MOVE
+			var pitch_delta := int(delta.y / _effective_ppn())
+			var time_delta: float = delta.x / _effective_pps()
+			if snap_enabled:
+				time_delta = round(time_delta / snap_interval) * snap_interval
+			for orig in _drag_original_notes:
+				var idx: int = orig["index"]
+				if idx >= 0 and idx < _notes.size():
+					_notes[idx].pitch = orig["pitch"] - pitch_delta
+					_notes[idx].start_time = orig["start_time"] + time_delta
+			queue_redraw()
+		2:  # RESIZE_LEFT
+			var time_delta: float = delta.x / _effective_pps()
+			if snap_enabled:
+				time_delta = round(time_delta / snap_interval) * snap_interval
+			time_delta = clampf(time_delta, 0.0, _drag_original_notes[0]["duration"])
+			for orig in _drag_original_notes:
+				var idx: int = orig["index"]
+				if idx >= 0 and idx < _notes.size():
+					_notes[idx].start_time = orig["start_time"] + time_delta
+					_notes[idx].duration = orig["duration"] - time_delta
+			queue_redraw()
+		3:  # RESIZE_RIGHT
+			var time_delta: float = delta.x / _effective_pps()
+			if snap_enabled:
+				time_delta = round(time_delta / snap_interval) * snap_interval
+			time_delta = maxf(time_delta, -_drag_original_notes[0]["duration"])
+			for orig in _drag_original_notes:
+				var idx: int = orig["index"]
+				if idx >= 0 and idx < _notes.size():
+					_notes[idx].duration = orig["duration"] + time_delta
+			queue_redraw()
 
 func _draw() -> void:
 	var rect := Rect2(Vector2.ZERO, size)
@@ -871,6 +877,12 @@ func _draw_playback_cursor() -> void:
 	draw_line(Vector2(x, 0), Vector2(x, bottom_y), _PLAYBACK_COLOR, 2.0)
 
 
+func _is_note_muted(index: int) -> bool:
+	return _muted_indices.find(index) >= 0
+
+func _make_annotation(idx: int, text: String, severity: String) -> Annotation:
+	return Annotation.new(idx, text, severity)
+
 # ─── 命中检测 ─────────────────────────────────────────────
 
 ## 返回 {index: int, edge: String}，edge: "none" | "left" | "right"
@@ -965,9 +977,8 @@ func _apply_snapshot(snapshot: Dictionary) -> void:
 				_notes[idx].velocity = item["velocity"]
 	elif snapshot.has("muted_indices"):
 		_muted_indices = snapshot["muted_indices"].duplicate()
-	elif snapshot.has("annotation_count"):
-		var count: int = snapshot["annotation_count"]
-		_annotations.resize(count)
+	elif snapshot.has("annotations"):
+		_annotations = snapshot["annotations"].duplicate()
 	elif snapshot.has("added_index"):
 		_notes.remove_at(snapshot["added_index"])
 	elif snapshot.has("index") and snapshot.has("note_data"):
@@ -1016,6 +1027,13 @@ func _get_time_interval() -> float:
 			return n
 	return 120.0
 
+
+func _apply_view_change() -> void:
+	_clamp_view_offset()
+	_clamp_pitch_offset()
+	_update_scroll_bar()
+	_notify_view_changed()
+	queue_redraw()
 
 func _create_h_scroll() -> void:
 	_h_scroll = HScrollBar.new()
