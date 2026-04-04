@@ -91,6 +91,12 @@ var _undo_stack: Array[EditCommand] = []
 var _redo_stack: Array[EditCommand] = []
 const MAX_HISTORY: int = 100
 
+## 选中音符索引集合
+var _selection: Array[int] = []
+
+## 鼠标悬停音符索引（-1 表示无）
+var _hovered_note: int = -1
+
 var _duration: float = 0.0
 var _playback_position: float = -1.0
 var _min_pitch: int = 0
@@ -117,6 +123,8 @@ func set_notes(notes: Array[RollNote], duration: float) -> void:
 	_notes = notes
 	_undo_stack.clear()
 	_redo_stack.clear()
+	_selection.clear()
+	_hovered_note = -1
 	_duration = duration
 	_collect_active_channels()
 	_recalc_layout()
@@ -155,6 +163,8 @@ func clear_notes() -> void:
 	_notes.clear()
 	_undo_stack.clear()
 	_redo_stack.clear()
+	_selection.clear()
+	_hovered_note = -1
 	_duration = 0.0
 	_playback_position = -1.0
 	_min_pitch = 0
@@ -247,9 +257,35 @@ func _gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton:
 		var mb := event as InputEventMouseButton
 		if mb.button_index == MOUSE_BUTTON_LEFT and mb.pressed:
-			var t := _pixel_to_time(mb.position.x)
-			if _duration > 0.0 and t >= 0.0 and t <= _duration:
-				seek_requested.emit(t)
+			var hit := _hit_test(mb.position)
+			if hit["index"] >= 0:
+				if mb.ctrl_pressed:
+					var idx: int = hit["index"]
+					var found := _selection.find(idx)
+					if found >= 0:
+						_selection.remove_at(found)
+					else:
+						_selection.append(idx)
+				else:
+					_selection.clear()
+					_selection.append(hit["index"])
+				queue_redraw()
+			else:
+				_selection.clear()
+				queue_redraw()
+				var t := _pixel_to_time(mb.position.x)
+				if _duration > 0.0 and t >= 0.0 and t <= _duration:
+					seek_requested.emit(t)
+		elif mb.button_index == MOUSE_BUTTON_LEFT and not mb.pressed:
+			pass  # Phase 2: drag end
+		elif mb.button_index == MOUSE_BUTTON_RIGHT:
+			pass  # Phase 3: context menu
+
+	if event is InputEventMouseMotion:
+		var hit := _hit_test(event.position)
+		if hit["index"] != _hovered_note:
+			_hovered_note = hit["index"]
+			queue_redraw()
 
 
 # ─── 绘制 ─────────────────────────────────────────────────
@@ -324,17 +360,20 @@ func _draw_pitch_grid() -> void:
 
 
 func _draw_notes() -> void:
-	for note in _notes:
+	var sel_set: Dictionary = {}
+	for idx in _selection:
+		sel_set[idx] = true
+
+	for i in _notes.size():
+		var note := _notes[i]
 		if _muted_channels.has(note.channel):
 			continue
 		var x := _time_to_x(note.start_time)
 		var w := note.duration * _pixels_per_second
-		# 鼓声（channel 9）最小 2px 宽
 		if note.channel == 9:
 			w = maxf(w, 2.0)
-		var y := _pitch_to_y(note.pitch + 1)  # +1 因为 pitch_to_y 是顶部
+		var y := _pitch_to_y(note.pitch + 1)
 		var h := _pixels_per_note - 1.0
-		# 通道颜色 * 力度亮度
 		var base_color := ChannelColors.COLORS[note.channel % 16]
 		var brightness := 0.5 + (float(note.velocity) / 127.0) * 0.5
 		var color := Color(
@@ -344,6 +383,14 @@ func _draw_notes() -> void:
 		)
 		draw_rect(Rect2(x, y, w, h), color)
 
+		# 选中高亮边框
+		if sel_set.has(i):
+			draw_rect(Rect2(x - 1, y - 1, w + 2, h + 2), Color(1, 1, 1, 0.9), false, 2.0)
+
+		# 悬停高亮
+		if i == _hovered_note:
+			draw_rect(Rect2(x, y, w, h), Color(1, 1, 1, 0.15))
+
 
 func _draw_playback_cursor() -> void:
 	if _playback_position < 0.0 or _duration <= 0.0:
@@ -351,6 +398,33 @@ func _draw_playback_cursor() -> void:
 	var x := _time_to_x(_playback_position)
 	# 图例区域也画线
 	draw_line(Vector2(x, 0), Vector2(x, size.y), _PLAYBACK_COLOR, 2.0)
+
+
+# ─── 命中检测 ─────────────────────────────────────────────
+
+## 返回 {index: int, edge: String}，edge: "none" | "left" | "right"
+func _hit_test(pos: Vector2) -> Dictionary:
+	var time := _pixel_to_time(pos.x)
+	var pitch := _y_to_pitch(pos.y)
+	for i in range(_notes.size() - 1, -1, -1):
+		var n := _notes[i]
+		if n.channel == 9 and _muted_channels.has(n.channel):
+			continue
+		if pitch == n.pitch and time >= n.start_time and time <= n.start_time + n.duration:
+			var edge := _check_edge(pos, n)
+			return {"index": i, "edge": edge}
+	return {"index": -1, "edge": "none"}
+
+
+func _check_edge(pos: Vector2, note: RollNote) -> String:
+	var x_left := _time_to_x(note.start_time)
+	var x_right := _time_to_x(note.start_time + note.duration)
+	var tolerance := 4.0
+	if absf(pos.x - x_left) <= tolerance:
+		return "left"
+	if absf(pos.x - x_right) <= tolerance:
+		return "right"
+	return "none"
 
 
 # ─── 撤销/重做 ─────────────────────────────────────────────
