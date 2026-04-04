@@ -260,6 +260,10 @@ func _gui_input(event: InputEvent) -> void:
 				get_viewport().set_input_as_handled()
 				_redo()
 				return
+			if key.keycode == KEY_DELETE and not _selection.is_empty():
+				get_viewport().set_input_as_handled()
+				_delete_selected()
+				return
 	if event is InputEventMouseButton:
 		var mb := event as InputEventMouseButton
 		if mb.button_index == MOUSE_BUTTON_LEFT and mb.pressed:
@@ -479,6 +483,27 @@ func _draw_playback_cursor() -> void:
 	draw_line(Vector2(x, 0), Vector2(x, size.y), _PLAYBACK_COLOR, 2.0)
 
 
+# ─── 编辑操作 ─────────────────────────────────────────────
+
+func _delete_selected() -> void:
+	if _selection.is_empty():
+		return
+	var sorted := _selection.duplicate()
+	sorted.sort_custom(func(a, b): return a > b)
+
+	var cmd := begin_command("delete", "删除 %d 个音符" % sorted.size())
+	var deleted_items := []
+	for idx in sorted:
+		deleted_items.append({"index": idx, "note_data": _clone_note(_notes[idx])})
+	cmd.before = {"deleted_items": deleted_items}
+
+	for idx in sorted:
+		_notes.remove_at(idx)
+
+	cmd.after = {"deleted_indices": sorted.duplicate()}
+	_selection.clear()
+	commit_command(cmd)
+
 # ─── 命中检测 ─────────────────────────────────────────────
 
 ## 返回 {index: int, edge: String}，edge: "none" | "left" | "right"
@@ -553,6 +578,13 @@ func _apply_snapshot(snapshot: Dictionary) -> void:
 					_notes[idx].duration = item["duration"]
 		elif snapshot.has("deleted_note"):
 		_notes.insert(snapshot["index"], snapshot["deleted_note"])
+	elif snapshot.has("deleted_items"):
+		var items: Array = snapshot["deleted_items"]
+		var sorted_items := items.duplicate()
+		sorted_items.sort_custom(func(a, b): return a["index"] > b["index"])
+		for item in sorted_items:
+			_notes.insert(item["index"], item["note_data"])
+
 		elif snapshot.has("added_index"):
 		_notes.remove_at(snapshot["added_index"])
 		elif snapshot.has("index") and snapshot.has("note_data"):
