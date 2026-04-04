@@ -14,6 +14,9 @@ signal note_edited()
 ## 请求导出 MIDI
 signal export_requested(notes: Array)
 
+## 添加标注
+signal annotation_added(note_index: int, text: String, severity: String)
+
 ## 单条音符数据
 class RollNote:
 	var channel: int
@@ -42,6 +45,18 @@ class EditCommand:
 		description = p_desc
 		before = p_before
 		after = p_after
+
+
+## 审查标注
+class Annotation:
+	var note_index: int
+	var text: String
+	var severity: String  ## "info" | "warning" | "error"
+
+	func _init(p_idx: int = 0, p_text: String = "", p_sev: String = "info") -> void:
+		note_index = p_idx
+		text = p_text
+		severity = p_sev
 
 
 ## GM Level 1 乐器名称（128 个）
@@ -120,6 +135,9 @@ var l10n: ClefL10n
 var _context_menu: PopupMenu = null
 var _velocity_dialog: AcceptDialog = null
 
+var _annotations: Array[Annotation] = []
+var _annotation_popup: PanelContainer = null
+
 
 func _ready() -> void:
 	custom_minimum_size = Vector2i(0, 160)
@@ -137,6 +155,7 @@ func set_notes(notes: Array[RollNote], duration: float) -> void:
 	_undo_stack.clear()
 	_redo_stack.clear()
 	_selection.clear()
+	_annotations.clear()
 	_hovered_note = -1
 	_duration = duration
 	_collect_active_channels()
@@ -179,6 +198,7 @@ func clear_notes() -> void:
 	_undo_stack.clear()
 	_redo_stack.clear()
 	_selection.clear()
+	_annotations.clear()
 	_hovered_note = -1
 	_duration = 0.0
 	_playback_position = -1.0
@@ -414,6 +434,7 @@ func _draw() -> void:
 	_draw_notes()
 	# 播放头
 	_draw_playback_cursor()
+	_draw_annotations()
 
 
 func _draw_legend() -> void:
@@ -522,6 +543,32 @@ func _delete_selected() -> void:
 	commit_command(cmd)
 
 
+func _draw_annotations() -> void:
+	var colors := {
+		"info": Color(0.3, 0.7, 1.0),
+		"warning": Color(1.0, 0.8, 0.2),
+		"error": Color(1.0, 0.3, 0.3),
+	}
+	var drawn_count: Dictionary = {}
+	for ann in _annotations:
+		if ann.note_index < 0 or ann.note_index >= _notes.size():
+			continue
+		var note := _notes[ann.note_index]
+		var x := _time_to_x(note.start_time)
+		var y := _pitch_to_y(note.pitch + 1)
+		var offset := drawn_count.get(ann.note_index, 0)
+		drawn_count[ann.note_index] = offset + 1
+		var color: Color = colors.get(ann.severity, colors["info"])
+		var tri_x := x + offset * 8.0
+		var tri_size := 6.0
+		var points := PackedVector2Array([
+			Vector2(tri_x, y - 2),
+			Vector2(tri_x + tri_size, y - 2),
+			Vector2(tri_x + tri_size / 2, y - tri_size - 2),
+		])
+		draw_colored_polygon(points, color)
+
+
 func _create_context_menu() -> void:
 	_context_menu = PopupMenu.new()
 	_context_menu.id_pressed.connect(_on_context_menu_item)
@@ -533,6 +580,8 @@ func _create_context_menu() -> void:
 	_context_menu.add_item("编辑力度...", 3)
 	_context_menu.add_separator()
 	_context_menu.add_item("导出修改后的 MIDI", 10)
+		_context_menu.add_separator()
+		_context_menu.add_item("添加标注...", 4)
 
 
 func _on_context_menu_item(id: int) -> void:
@@ -547,6 +596,8 @@ func _on_context_menu_item(id: int) -> void:
 			_edit_velocity_popup()
 		10:
 			export_requested.emit(_notes)
+		4:
+			_open_annotation_popup()
 
 
 func _shift_selected_pitch(delta: int) -> void:
@@ -606,6 +657,71 @@ func _set_selected_velocity(vel: int) -> void:
 	cmd.before = {"velocity_changes": before_snap}
 	cmd.after = {"velocity_changes": after_snap}
 	commit_command(cmd)
+
+
+
+func _open_annotation_popup() -> void:
+	if _selection.is_empty():
+		return
+	if _annotation_popup == null:
+		_create_annotation_popup()
+	_annotation_popup.position = get_global_mouse_position() + Vector2(5, 5)
+	_annotation_popup.visible = true
+
+
+func _create_annotation_popup() -> void:
+	_annotation_popup = PanelContainer.new()
+	var vbox := VBoxContainer.new()
+	var sev_hbox := HBoxContainer.new()
+	var sev_label := Label.new()
+	sev_label.text = "严重度:"
+	sev_hbox.add_child(sev_label)
+	var sev_option := OptionButton.new()
+	sev_option.add_item("info")
+	sev_option.add_item("warning")
+	sev_option.add_item("error")
+	sev_hbox.add_child(sev_option)
+	vbox.add_child(sev_hbox)
+	var text_label := Label.new()
+	text_label.text = "备注:"
+	vbox.add_child(text_label)
+	var text_input := TextEdit.new()
+	text_input.custom_minimum_size = Vector2(280, 60)
+	vbox.add_child(text_input)
+	var btn_hbox := HBoxContainer.new()
+	btn_hbox.add_spacer(true)
+	var cancel_btn := Button.new()
+	cancel_btn.text = "取消"
+	var confirm_btn := Button.new()
+	confirm_btn.text = "确认"
+	btn_hbox.add_child(cancel_btn)
+	btn_hbox.add_child(confirm_btn)
+	vbox.add_child(btn_hbox)
+	_annotation_popup.add_child(vbox)
+	add_child(_annotation_popup)
+	_annotation_popup.visible = false
+	cancel_btn.pressed.connect(func():
+		_annotation_popup.visible = false
+	)
+	confirm_btn.pressed.connect(func():
+		_add_annotation_from_popup(sev_option.selected, text_input.text.strip_edges())
+		_annotation_popup.visible = false
+	)
+
+
+func _add_annotation_from_popup(sev_index: int, text: String) -> void:
+	if text.is_empty():
+		return
+	var severity := ["info", "warning", "error"][sev_index] if sev_index < 3 else "info"
+	for idx in _selection:
+		var ann := Annotation.new(idx, text, severity)
+		_annotations.append(ann)
+		annotation_added.emit(idx, text, severity)
+	var cmd := begin_command("annotation", "添加标注: %s" % text)
+	cmd.before = {}
+	cmd.after = {"annotation_count": _annotations.size()}
+	commit_command(cmd)
+	queue_redraw()
 
 
 # ─── 命中检测 ─────────────────────────────────────────────
