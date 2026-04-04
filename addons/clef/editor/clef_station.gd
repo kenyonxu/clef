@@ -10,6 +10,7 @@ const EditorPlayer = preload("res://addons/clef/editor/editor_player/editor_play
 const TransportBar = preload("res://addons/clef/editor/transport_bar/transport_bar.gd")
 const MiniMixer = preload("res://addons/clef/editor/mini_mixer/mini_mixer.gd")
 const PianoRoll = preload("res://addons/clef/editor/piano_roll/piano_roll.gd")
+const PianoTimeRuler = preload("res://addons/clef/editor/piano_roll/piano_time_ruler.gd")
 
 const _CONFIG_PATH = "user://clef_editor.cfg"
 const SUPPORTED_EXTENSIONS: PackedStringArray = [".mid", ".tres", ".json"]
@@ -196,9 +197,9 @@ func _build_layout() -> void:
 			while file_name != "":
 				if file_name.begins_with("edited_") and file_name.ends_with(".mid"):
 					var full_path := "res://addons/clef/output/" + file_name
-					var modified := FileAccess.get_modified_time(ProjectSettings.globalize_path(full_path))
-					if modified["unix_time"] > latest_time:
-						latest_time = modified["unix_time"]
+					var modified: int = FileAccess.get_modified_time(ProjectSettings.globalize_path(full_path))
+					if modified > latest_time:
+						latest_time = modified
 						latest_midi = full_path
 				file_name = dir.get_next()
 			dir.list_dir_end()
@@ -216,6 +217,28 @@ func _build_layout() -> void:
 		else:
 			push_warning("[ClefStation] Cannot open output directory for ABC export")
 	)
+	# 编辑模式切换栏
+	var edit_bar := HBoxContainer.new()
+	edit_bar.add_child(Control.new())
+	var edit_btn := Button.new()
+	edit_btn.text = "编辑模式"
+	edit_btn.toggle_mode = true
+	edit_btn.toggled.connect(func(on: bool):
+		_piano_roll.set_editing(on)
+		edit_btn.text = "退出编辑" if on else "编辑模式"
+	)
+	edit_bar.add_child(edit_btn)
+	edit_bar.add_child(Control.new())
+	center_vbox.add_child(edit_bar)
+
+	# 时间刻度尺
+	var _piano_ruler: PianoTimeRuler = PianoTimeRuler.new()
+	_piano_ruler.time_clicked.connect(func(t: float): _editor_player.seek(t); _piano_roll.set_playback_position(t))
+	_piano_ruler.time_scrubbed.connect(func(t: float): _editor_player.seek(t); _piano_roll.set_playback_position(t))
+	_piano_roll.view_offset_changed.connect(_piano_ruler.setup)
+	_piano_roll.playback_position_changed.connect(_piano_ruler.set_playback_position)
+	center_vbox.add_child(_piano_ruler)
+
 	center_vbox.add_child(_piano_roll)
 
 	_mini_mixer = MiniMixer.new()

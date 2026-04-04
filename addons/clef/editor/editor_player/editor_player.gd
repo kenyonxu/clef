@@ -10,6 +10,7 @@ var _player: MidiStreamPlayer = null
 var _host_node: Node = null
 var _bridge: RefCounted = null
 var _current_path: String = ""
+var _last_seek_position: float = 0.0
 var l10n: ClefL10n = null
 
 
@@ -92,13 +93,14 @@ func play() -> void:
 	if _player.is_paused():
 		_player.resume()
 	else:
-		_player.start_playback()
+		_player.start_playback(_last_seek_position)
 
 
 func stop() -> void:
 	if _player == null:
 		return
 	_player.stop()
+	_last_seek_position = 0.0
 
 
 func pause() -> void:
@@ -110,6 +112,7 @@ func pause() -> void:
 func seek(position: float) -> void:
 	if _player == null:
 		return
+	_last_seek_position = position
 	_player.seek(position)
 
 
