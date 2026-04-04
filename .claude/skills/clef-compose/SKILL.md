@@ -176,16 +176,19 @@ python scripts/snapshot.py --step 0 --note "需求确认：boss battle, D大调,
   "form": "ABA",
   "sections": [
     {"id": "A", "name": "主题引入", "measures": 8, "start_beat": 0,
-     "energy_level": 3, "dynamics": "mp", "balance_intent": "melody_forward"},
+     "energy_level": 3, "dynamics": "mp", "balance_intent": "melody_forward",
+     "density_hint": "normal", "melody_strategy": "new"},
     {"id": "B", "name": "发展高潮", "measures": 6, "start_beat": 32,
-     "energy_level": 8, "dynamics": "ff", "balance_intent": "epic_tutti"},
+     "energy_level": 8, "dynamics": "ff", "balance_intent": "epic_tutti",
+     "density_hint": "dense", "melody_strategy": "development"},
     {"id": "A2", "name": "主题再现", "measures": 8, "start_beat": 56,
-     "energy_level": 4, "dynamics": "mf", "balance_intent": "melody_forward"}
+     "energy_level": 4, "dynamics": "mf", "balance_intent": "melody_forward",
+     "density_hint": "normal", "melody_strategy": "recap"}
   ],
   "orchestration": {
-    "melody": {"name": "Flute", "channel": 0, "instrument": 73, "range": "C4-C7", "register": "C5-C6"},
-    "harmony": {"name": "Strings", "channel": 1, "instrument": 48, "range": "C3-C6", "register": "G3-G4"},
-    "bass": {"name": "Bass", "channel": 2, "instrument": 32, "range": "E2-E4", "register": "E2-E3"},
+    "melody": {"name": "Flute", "channel": 0, "instrument": 73, "range": "C4-C7", "register": "C5-G6"},
+    "harmony": {"name": "Strings", "channel": 1, "instrument": 48, "range": "C3-C6", "register": "G3-E4"},
+    "bass": {"name": "Bass", "channel": 2, "instrument": 32, "range": "E2-E4", "register": "E2-B2"},
     "drums": {"name": "Drums", "channel": 9, "instrument": 0, "range": "", "register": ""}
   },
   "generation_order": ["harmony", "melody"],
@@ -212,6 +215,30 @@ python scripts/snapshot.py --step 0 --note "需求确认：boss battle, D大调,
 - melody register 通常在最高频段，bass 在最低频段
 - harmony register 居中，与 melody 保持至少 3-5 半音间距
 - 参考 theory-harmony「频率范围与复音限制」确定合理频段
+
+**旋律策略分配（melody_strategy）：**
+
+每个 section 新增可选字段 `melody_strategy`，控制该段旋律与之前段落的关系。默认根据歌曲形式自动分配：
+
+| 歌曲形式 | A 段 | B 段 | C 段 | 尾声 |
+|---------|------|------|------|------|
+| ABA | `new` | `development` | `recap` | — |
+| ABCB | `new` | `variation` | `sequence` | `recap` |
+| AB | `new` | `development` | — | — |
+| Through-composed | `new` | 按叙事需要逐段选择 | — | — |
+
+可选值：`"new"` / `"variation"` / `"sequence"` / `"development"` / `"recap"` / `"climax"`
+
+| strategy | 含义 | 听众效果 |
+|----------|------|---------|
+| `new` | 全新动机 | 建立记忆点 |
+| `variation` | 旧动机变节奏/音区/装饰 | 似曾相识但有新意 |
+| `sequence` | 旧动机按音阶级进上移/下移 | 推进感和紧张度 |
+| `development` | 旧动机碎片化+重组+扩展 | 最丰富的段落 |
+| `recap` | 回归 A 段动机+加花 | 回归感和收束感 |
+| `climax` | 多动机汇合+最高音 | 释放全部积累 |
+
+Step 1a 生成 plan.json 时必须为每个 section 指定 `melody_strategy`。Composer 按此指令执行具体的变奏技法。
 
 **段落平衡意图（balance_intent）：**
 - `start_beat` = 前面所有 section measures 之和 × beats_per_measure（4/4 拍 = 4 beats/measure）

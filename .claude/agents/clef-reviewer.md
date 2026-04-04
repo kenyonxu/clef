@@ -26,7 +26,7 @@ memory: project
 
 乐理知识已通过 skills 预加载（theory-structure + theory-abc）
 
-## 评审维度（6 维，每维 0-10 分）
+## 评审维度（7 维，每维 0-10 分）
 
 1. **旋律质量** — 6 项子检查（见下方「旋律专项检查」）
 2. **和声质量** — 和弦进行流畅度、张力释放、旋律与和声配合度
@@ -124,9 +124,24 @@ memory: project
   - 超过 30% 音符在 register 下限附近 → WARN（"低音区停留过多"）
 - **建议方向**：将极端区音符替换为中间音区替代音；高音仅用于高潮点
 
+### M7. 创作执行力 (Composition Execution)
+- **检查内容**：旋律是否遵循 plan.json 的结构指令，以及音乐元素是否足够丰富
+- **判定**（需读取 plan.json 的 melody_strategy 和 density_hint）：
+  - **旋律策略遵循**：检查各段旋律是否符合 plan.json 指定的 `melody_strategy`
+    - `new` 段：有明确的新动机（2-4 音符核心，前 4 小节内出现）
+    - `variation`/`sequence`/`development` 段：能与 A 段动机建立关联（音程轮廓相似度 ≥ 50%），但非原样重复
+    - `recap` 段：A 段动机可辨认地回归（至少前 2 小节）
+    - 非 `new` 段原样重复上一段旋律 → FAIL
+  - **力度多样性**：乐谱中至少出现 2 种不同的动态标记（`!pp!`-`!ff!`），或 analysis_report 中旋律 velocity 标准差 > 10
+  - **音高丰富度**：旋律 Top3 音高占比 < 45%（避免旋律被极少数音主导）
+  - **段落对比**：整曲前半段与后半段使用的独立音高重叠率 < 80%（段落间有足够的新材料）
+  - 以上 4 项中 FAIL 计 2 项，WARN 不计分
+- **数据参考**：analysis_report.txt 中的 pitch distribution 和 velocity statistics 可作为客观数据，但评审仍以实际乐谱内容为主
+- **建议方向**： Composer 未遵循 melody_strategy 时，建议重新生成该段旋律；力度单一时建议在对比段落加入弱奏；音高集中时建议扩展音区
+
 ## 方向小样旋律专项审核（Step 1b 调用）
 
-当 Reviewer 被调用于 Step 1b 方向小样的旋律专项审核时，**仅执行 M1-M6 中的 M1/M3/M4/M5 四项**（M2 需要和声配合、M6 需要完整音域数据，在方向小样阶段意义不大），并输出简化版报告。
+当 Reviewer 被调用于 Step 1b 方向小样的旋律专项审核时，**仅执行 M1-M6 中的 M1/M3/M4/M5 四项**（M2 需要和声配合、M6 需要完整音域数据、M7 需要 plan.json 的 melody_strategy 完整上下文，在方向小样阶段意义不大），并输出简化版报告。
 
 输出保存为 `.clef-work/melody_review_report.json`：
 ```json
@@ -202,7 +217,7 @@ memory: project
 ```
 
 ### 字段说明
-- `overall_score`: 加权平均（melody 0.30, harmony 0.20, rhythm 0.16, structure 0.13, style 0.11, orchestration 0.10）
+- `overall_score`: 加权平均（melody 0.25, harmony 0.18, rhythm 0.15, structure 0.12, style 0.10, orchestration 0.08, execution 0.12）
 - `severity`: "FAIL"（严重问题）或 "WARN"（建议改进）
 - `bar`: 问题所在小节范围，如 "5-8" 或 "全曲"
 - `suggestion`: 具体可操作的改进建议
