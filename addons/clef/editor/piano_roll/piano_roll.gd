@@ -8,6 +8,9 @@ const ChannelColors = preload("res://addons/clef/editor/channel_colors.gd")
 ## 点击卷帘请求跳转到指定时间位置
 signal seek_requested(position: float)
 
+## 音符被修改（触发导出脏标记）
+signal note_edited()
+
 ## 单条音符数据
 class RollNote:
 	var channel: int
@@ -22,6 +25,20 @@ class RollNote:
 		start_time = start
 		duration = dur
 		velocity = vel
+
+
+## 编辑命令（撤销/重做）
+class EditCommand:
+	var type: String          ## "move" | "resize" | "delete" | "add" | "property" | "mute" | "annotation"
+	var description: String   ## 人类可读描述
+	var before: Dictionary    ## 操作前状态快照
+	var after: Dictionary     ## 操作后状态快照
+
+	func _init(p_type: String = "", p_desc: String = "", p_before: Dictionary = {}, p_after: Dictionary = {}) -> void:
+		type = p_type
+		description = p_desc
+		before = p_before
+		after = p_after
 
 
 ## GM Level 1 乐器名称（128 个）
@@ -68,6 +85,12 @@ const _PLAYBACK_COLOR := Color(1.0, 1.0, 1.0, 0.8)
 const _LEGEND_HEIGHT: float = 28.0
 
 var _notes: Array[RollNote] = []
+
+## 撤销/重做栈
+var _undo_stack: Array[EditCommand] = []
+var _redo_stack: Array[EditCommand] = []
+const MAX_HISTORY: int = 100
+
 var _duration: float = 0.0
 var _playback_position: float = -1.0
 var _min_pitch: int = 0
@@ -202,6 +225,21 @@ func _notification(what: int) -> void:
 
 
 func _gui_input(event: InputEvent) -> void:
+	if event is InputEventKey:
+		var key := event as InputEventKey
+		if key.pressed:
+			if key.ctrl_pressed and not key.shift_pressed and key.keycode == KEY_Z:
+				get_viewport().set_input_as_handled()
+				_undo()
+				return
+			if key.ctrl_pressed and key.shift_pressed and key.keycode == KEY_Z:
+				get_viewport().set_input_as_handled()
+				_redo()
+				return
+			if key.ctrl_pressed and key.keycode == KEY_Y:
+				get_viewport().set_input_as_handled()
+				_redo()
+				return
 	if event is InputEventMouseButton:
 		var mb := event as InputEventMouseButton
 		if mb.button_index == MOUSE_BUTTON_LEFT and mb.pressed:
@@ -309,3 +347,46 @@ func _draw_playback_cursor() -> void:
 	var x := _time_to_x(_playback_position)
 	# 图例区域也画线
 	draw_line(Vector2(x, 0), Vector2(x, size.y), _PLAYBACK_COLOR, 2.0)
+
+
+# ─── 撤销/重做 ─────────────────────────────────────────────
+
+func begin_command(type: String, description: String) -> EditCommand:
+	return EditCommand.new(type, description)
+
+func commit_command(cmd: EditCommand) -> void:
+	_undo_stack.append(cmd)
+	if _undo_stack.size() > MAX_HISTORY:
+		_undo_stack.pop_front()
+	_redo_stack.clear()
+	queue_redraw()
+	note_edited.emit()
+
+func _undo() -> void:
+	if _undo_stack.is_empty():
+		return
+	var cmd := _undo_stack.pop_back() as EditCommand
+	_apply_snapshot(cmd.before)
+	_redo_stack.append(cmd)
+	queue_redraw()
+	note_edited.emit()
+
+func _redo() -> void:
+	if _redo_stack.is_empty():
+		return
+	var cmd := _redo_stack.pop_back() as EditCommand
+	_apply_snapshot(cmd.after)
+	_undo_stack.append(cmd)
+	queue_redraw()
+	note_edited.emit()
+
+func _apply_snapshot(snapshot: Dictionary) -> void:
+	# 各操作类型在后续 Phase 实现具体恢复逻辑
+	if snapshot.has("deleted_note"):
+		_notes.insert(snapshot["index"], snapshot["deleted_note"])
+	elif snapshot.has("added_index"):
+		_notes.remove_at(snapshot["added_index"])
+	elif snapshot.has("index") and snapshot.has("note_data"):
+		var idx: int = snapshot["index"]
+		if idx >= 0 and idx < _notes.size():
+			_notes[idx] = snapshot["note_data"]
