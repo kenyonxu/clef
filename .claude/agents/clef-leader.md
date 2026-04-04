@@ -72,6 +72,7 @@ Harmonist 修改 V:2 → merge → validate → (PASS) → Composer 读取 score
 - review_report 总分 ≥ 7.5
 - review_report 所有维度得分 ≥ 6.0
 - review_report 旋律维度得分 ≥ 7.0（旋律单项门槛）
+  > **为什么旋律有更高门槛？** 旋律是对听感影响最大的声部，总分可能被其他高分配器/节奏分数拉高而掩盖旋律缺陷。7.0 的单项门槛确保旋律质量不因整体分数而妥协。
 - 最多迭代 3 轮
 
 ## Agent 白名单

@@ -1,5 +1,6 @@
 {
-  "_comment": "Clef 多 Agent 流水线中间产品格式规范 — Phase 3 使用",
+  "_deprecated": true,
+  "_comment": "Clef 多 Agent 流水线中间产品格式规范 — ABC 记谱法 v2.0（已废弃：当前系统使用 ABC 记谱法作为中间格式，此 JSON schema 仅为 v1 历史参考）",
   "_version": "1.0",
   "format_version": "2.0",
   "time_unit": "beats",
@@ -507,40 +508,5 @@
         }
       ]
     }
-  },
-
-  "jianpu": {
-    "_description": "简谱文本格式 — Composer Agent 输出，Reviewer Agent 审核，jianpu_to_json.py 转换",
-    "_file": "melody.jianpu",
-    "_producer": "Composer Agent (Step 3/4)",
-    "_consumer": "Reviewer Agent → jianpu_to_json.py → melody.json",
-
-    "header_format": "1={调号}  {拍号}  BPM={速度}",
-    "section_format": "[{段落ID}] {段落名称}",
-    "dynamics_format": "({力度标记})",
-
-    "note_elements": {
-      "degree": {"valid": ["0","1","2","3","4","5","6","7"], "description": "音阶度数，0=休止"},
-      "accidental": {"valid": ["","#","b"], "prefix": true, "description": "升降号前缀"},
-      "octave_high": {"char": "̇", "unicode": "U+0307", "description": "高八度"},
-      "octave_low": {"char": "̣", "unicode": "U+0323", "description": "低八度"},
-      "duration_8th": {"char": "̲", "unicode": "U+0332", "value": 0.5, "description": "八分音符"},
-      "duration_16th": {"char": "̲̲", "value": 0.25, "description": "十六分音符（双下划线）"},
-      "dot": {"char": ".", "multiplier": 1.5, "description": "附点"},
-      "tie": {"char": "-", "description": "延音线"},
-      "barline": {"char": "|", "description": "小节线"},
-      "double_barline": {"char": "||", "description": "段落边界"}
-    },
-
-    "constraints": [
-      "头部必须包含调号、拍号、BPM",
-      "每个段落用 [A] [B] 标记",
-      "力度标记单独一行",
-      "音符按拍位对齐",
-      "小节线 | 在每小节末尾",
-      "度数 1-7，升降号 # 和 b 前缀",
-      "八度标记使用 U+0307（高）/ U+0323（低）",
-      "时值下划线使用 U+0332"
-    ]
   }
 }
