@@ -107,17 +107,24 @@ def generate_header(plan: dict) -> str:
 def sanitize_content(content: str) -> str:
     """Sanitize an ABC fragment before merging.
 
-    1. Replace || double barlines with | in music content lines.
-    2. Replace %% V:X comments (not %%MIDI) with % V:X to prevent
+    1. Remove ABC header fields (X:, T:, M:, L:, K:, Q:, etc.) — merge
+       generates its own header via generate_header().
+    2. Keep %%MIDI directives (channel, program, transpose) — they are
+       not ABC headers and carry voice-specific configuration.
+    3. Replace || double barlines with | in music content lines.
+    4. Replace %% V:X comments (not %%MIDI) with % V:X to prevent
        phantom voice declarations.
     """
     lines = content.splitlines()
     fixed = []
     for line in lines:
         stripped = line.strip()
-        # Skip ABC header fields (single letter + colon) and comments
+        # Remove ABC header fields (single letter + colon), but keep
+        # %%MIDI directives and regular comments.
         is_header = bool(re.match(r'^[A-Za-z]\s*:', stripped))
         is_comment = stripped.startswith('%') or stripped.startswith('%%')
+        if is_header and not is_comment:
+            continue  # Skip header line entirely
         if not is_header and not is_comment:
             line = line.replace('||', '|')
         # Fix %% V: comments (not %%MIDI directives)

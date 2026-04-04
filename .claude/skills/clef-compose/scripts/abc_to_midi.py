@@ -47,10 +47,11 @@ DYNAMICS_MAP = {
     'ff': 127,
 }
 
-# Absolute pitch mapping: note name -> MIDI note number (C4 = 60)
+# ABC 2.1 standard pitch mapping: uppercase = C4 octave, lowercase = C5 octave
+# C = C4 = MIDI 60 (middle C), c = C5 = MIDI 72
 NOTE_PITCH = {
-    'c': 60, 'd': 62, 'e': 64, 'f': 65, 'g': 67, 'a': 69, 'b': 71,
-    'C': 48, 'D': 50, 'E': 52, 'F': 53, 'G': 55, 'A': 57, 'B': 59,
+    'C': 60, 'D': 62, 'E': 64, 'F': 65, 'G': 67, 'A': 69, 'B': 71,
+    'c': 72, 'd': 74, 'e': 76, 'f': 77, 'g': 79, 'a': 81, 'b': 83,
 }
 
 # Drum mapping for percussion channel (note name -> GM percussion number)

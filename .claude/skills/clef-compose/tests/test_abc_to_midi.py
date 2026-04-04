@@ -506,37 +506,37 @@ def test_key_signature_d_minor():
 
 def test_key_signature_applies_to_pitch():
     """In D major, F should automatically become F#."""
-    # Without key: F (uppercase) = F4 = 53
-    assert _parse_note_pitch('F', key_accidentals=None) == 53
-    # With D major key: F should be F#4 = 54
+    # Without key: F (uppercase) = F4 = 65
+    assert _parse_note_pitch('F', key_accidentals=None) == 65
+    # With D major key: F should be F#4 = 66
     key_acc, _ = _parse_key_signature('D')
-    assert _parse_note_pitch('F', key_accidentals=key_acc) == 54
-    # Lowercase f = F5 = 65, with D major → F#5 = 66
-    assert _parse_note_pitch('f', key_accidentals=key_acc) == 66
+    assert _parse_note_pitch('F', key_accidentals=key_acc) == 66
+    # Lowercase f = F5 = 77, with D major → F#5 = 78
+    assert _parse_note_pitch('f', key_accidentals=key_acc) == 78
 
 
 def test_explicit_natural_overrides_key():
     """Explicit = (natural) should override key signature."""
     key_acc, _ = _parse_key_signature('D')  # F# and C#
-    # =F should be natural F (53), not F#
-    assert _parse_note_pitch('=F', key_accidentals=key_acc) == 53
+    # =F should be natural F (65), not F#
+    assert _parse_note_pitch('=F', key_accidentals=key_acc) == 65
 
 
 def test_explicit_flat_overrides_key():
     """Explicit _ (flat) should override key signature."""
     key_acc, _ = _parse_key_signature('D')  # F# and C#
-    # _F should be Fb (52)
-    assert _parse_note_pitch('_F', key_accidentals=key_acc) == 52
+    # _F should be Fb (64)
+    assert _parse_note_pitch('_F', key_accidentals=key_acc) == 64
 
 
 def test_double_sharp():
     """^^ (double sharp) should add 2 semitones."""
-    assert _parse_note_pitch('^^C') == 50  # C##4 = D4 = 50
+    assert _parse_note_pitch('^^C') == 62  # C##4 = D4 = 62
 
 
 def test_double_flat():
     """__ (double flat) should subtract 2 semitones."""
-    assert _parse_note_pitch('__D') == 48  # Dbb4 = C4 = 48
+    assert _parse_note_pitch('__D') == 60  # Dbb4 = C4 = 60
 
 
 def test_key_signature_in_midi():
@@ -552,8 +552,8 @@ V:1 name="Flute"
 """
     mid = abc_to_midi(abc)
     notes = [m for m in mid.tracks[1] if m.type == 'note_on' and m.velocity > 0]
-    # In D major, f should auto-sharpen to F# (66 in octave 5 for lowercase f)
-    assert all(n.note == 66 for n in notes), f"Expected F#(66), got {[n.note for n in notes]}"
+    # In D major, f should auto-sharpen to F# (78 in octave 5 for lowercase f)
+    assert all(n.note == 78 for n in notes), f"Expected F#(78), got {[n.note for n in notes]}"
 
 
 # ── Phase 4: Repeats & Slur ──────────────────────────────────────────────
@@ -601,7 +601,7 @@ V:1 name="Flute"
     assert len(notes) == 8
     # Verify pitch sequence
     pitches = [n.note for n in notes]
-    assert pitches == [48, 50, 52, 53, 48, 50, 55, 57], f"Got {pitches}"
+    assert pitches == [60, 62, 64, 65, 60, 62, 67, 69], f"Got {pitches}"
 
 
 def test_repeat_with_volta_bracket():
@@ -619,7 +619,7 @@ V:1 name="Flute"
     notes = [m for m in mid.tracks[1] if m.type == 'note_on']
     assert len(notes) == 8
     pitches = [n.note for n in notes]
-    assert pitches == [48, 50, 52, 53, 48, 50, 55, 57], f"Got {pitches}"
+    assert pitches == [60, 62, 64, 65, 60, 62, 67, 69], f"Got {pitches}"
 
 
 def test_slur_basic():
@@ -671,12 +671,12 @@ V:1 name="Flute"
 """
     mid = abc_to_midi(abc)
     notes_on = [m for m in mid.tracks[1] if m.type == 'note_on']
-    # Uppercase: C=48, D=50. After [K:G], F#→54, G=55
+    # Uppercase: C=60, D=62. After [K:G], F#→66, G=67
     assert len(notes_on) == 4
-    assert notes_on[0].note == 48  # C
-    assert notes_on[1].note == 50  # D
-    assert notes_on[2].note == 54  # F# (key G applied)
-    assert notes_on[3].note == 55  # G
+    assert notes_on[0].note == 60  # C
+    assert notes_on[1].note == 62  # D
+    assert notes_on[2].note == 66  # F# (key G applied)
+    assert notes_on[3].note == 67  # G
 
 
 def test_inline_time_signature():
@@ -712,12 +712,12 @@ V:1 name="Flute"
     assert len(notes_on) == 7
     # Grace notes should have reduced velocity
     assert notes_on[0].velocity <= 100
-    # First three are grace: a(69), g(67), f(65)
-    assert notes_on[0].note == 69  # a
-    assert notes_on[1].note == 67  # g
-    assert notes_on[2].note == 65  # f
-    # Main notes follow after grace: c(60), d(62), e(64), f(65)
-    assert notes_on[3].note == 60  # c
+    # First three are grace: a(81), g(79), f(77)
+    assert notes_on[0].note == 81  # a
+    assert notes_on[1].note == 79  # g
+    assert notes_on[2].note == 77  # f
+    # Main notes follow after grace: c(72), d(74), e(76), f(77)
+    assert notes_on[3].note == 72  # c
 
 
 def test_grace_notes_time_stealing():
@@ -819,9 +819,9 @@ V:1 name="Flute"
     mid = abc_to_midi(abc)
     notes_on = [m for m in mid.tracks[1] if m.type == 'note_on']
     assert len(notes_on) == 4
-    # C(48) + 12 = 60, D(50) + 12 = 62, E(52) + 12 = 64, F(53) + 12 = 65
-    assert notes_on[0].note == 60
-    assert notes_on[1].note == 62
+    # C(60) + 12 = 72, D(62) + 12 = 74, E(64) + 12 = 76, F(65) + 12 = 77
+    assert notes_on[0].note == 72
+    assert notes_on[1].note == 74
 
 
 def test_midi_transpose_negative():
@@ -838,9 +838,9 @@ V:1 name="Flute"
 """
     mid = abc_to_midi(abc)
     notes_on = [m for m in mid.tracks[1] if m.type == 'note_on']
-    # C(48) - 2 = 46, D(50) - 2 = 48
-    assert notes_on[0].note == 46
-    assert notes_on[1].note == 48
+    # C(60) - 2 = 58, D(62) - 2 = 60
+    assert notes_on[0].note == 58
+    assert notes_on[1].note == 60
 
 
 def test_midi_control():
@@ -971,10 +971,10 @@ def test_bar_accidentals_persistence():
     bar_acc: dict[str, int] = {}
     # First F with sharp
     p1 = _parse_note_pitch('^F', key_accidentals=key_acc, bar_accidentals=bar_acc)
-    assert p1 == 54  # F#4
+    assert p1 == 66  # F#4
     # Second F without explicit accidental should inherit bar local sharp
     p2 = _parse_note_pitch('F', key_accidentals=key_acc, bar_accidentals=bar_acc)
-    assert p2 == 54  # Still F#4 due to bar_accidentals
+    assert p2 == 66  # Still F#4 due to bar_accidentals
 
 
 def test_bar_accidentals_reset_on_barline():
@@ -986,7 +986,7 @@ def test_bar_accidentals_reset_on_barline():
     bar_acc.clear()
     # F should now be natural (no bar local, no key sig)
     p = _parse_note_pitch('F', key_accidentals=key_acc, bar_accidentals=bar_acc)
-    assert p == 53  # F natural
+    assert p == 65  # F natural
 
 
 def test_bar_accidentals_with_key_signature():
@@ -995,10 +995,10 @@ def test_bar_accidentals_with_key_signature():
     bar_acc: dict[str, int] = {}
     # =F: explicit natural overrides key sig F#
     p1 = _parse_note_pitch('=F', key_accidentals=key_acc, bar_accidentals=bar_acc)
-    assert p1 == 53  # F natural (overriding D major F#)
+    assert p1 == 65  # F natural (overriding D major F#)
     # Second F in same bar should stay natural
     p2 = _parse_note_pitch('F', key_accidentals=key_acc, bar_accidentals=bar_acc)
-    assert p2 == 53  # Still natural from bar_accidentals
+    assert p2 == 65  # Still natural from bar_accidentals
 
 
 def test_staccato_shortens_note():
@@ -1129,8 +1129,8 @@ V:1 name="Flute"
     notes_on = [m for m in mid.tracks[1] if m.type == 'note_on']
     # 2 grace notes (^f, g) + 4 main notes = 6 note_on
     assert len(notes_on) == 6
-    # ^f in C major = F#4 = 66 (base F4=65 + sharp 1)
-    assert notes_on[0].note == 66
+    # ^f in C major = F#5 = 78 (base f5=77 + sharp 1)
+    assert notes_on[0].note == 78
 
 
 # ── Code Review Fix: Key Signature Meta Event Format ───────────────────────
@@ -1192,9 +1192,9 @@ V:1 name="Piano"
     notes_on = [m for m in mid.tracks[1] if m.type == 'note_on' and m.velocity > 0]
     assert len(notes_on) == 2
     pitches = sorted(n.note for n in notes_on)
-    # A,=45 (bass), ^F should be F#3=54 (base F3=53 + sharp 1)
-    assert 54 in pitches, f"Expected F#(54), got {pitches}"
-    assert 45 in pitches
+    # A,=45 (bass), ^F should be F#3=66 (base F3=65 + sharp 1)
+    assert 66 in pitches, f"Expected F#(66), got {pitches}"
+    assert 57 in pitches
 
 
 def test_chord_flat_in_brackets():
@@ -1212,8 +1212,8 @@ V:1 name="Piano"
     notes_on = [m for m in mid.tracks[1] if m.type == 'note_on' and m.velocity > 0]
     assert len(notes_on) == 3
     pitches = sorted(n.note for n in notes_on)
-    # C=48, _E should be Eb=51 (base E=52 - 1), G=55
-    assert 51 in pitches, f"Expected Eb(51), got {pitches}"
+    # C=60, _E should be Eb=63 (base E=64 - 1), G=67
+    assert 63 in pitches, f"Expected Eb(63), got {pitches}"
 
 
 def test_chord_natural_in_brackets():
@@ -1231,8 +1231,8 @@ V:1 name="Piano"
     notes_on = [m for m in mid.tracks[1] if m.type == 'note_on' and m.velocity > 0]
     assert len(notes_on) == 2
     pitches = sorted(n.note for n in notes_on)
-    # =F overrides D major's F#: natural F3=53, C3=48
-    assert 53 in pitches, f"Expected natural F(53), got {pitches}"
+    # =F overrides D major's F#: natural F3=65, C3=60
+    assert 65 in pitches, f"Expected natural F(65), got {pitches}"
 
 
 def test_chord_with_accidentals_full_conversion():
@@ -1249,9 +1249,9 @@ V:1 name="Strings"
     mid = abc_to_midi(abc)
     notes_on = [m for m in mid.tracks[1] if m.type == 'note_on' and m.velocity > 0]
     assert len(notes_on) == 6  # 2 chords × 3 notes
-    # First chord: G=55, B=59, d=62 (all natural in G major)
-    # Second chord: A=57, ^c=61 (base c=60 + sharp), e=64
-    assert 61 in [n.note for n in notes_on], f"Expected ^c(61), got {[n.note for n in notes_on]}"
+    # First chord: G=67, B=71, d=74 (all natural in G major)
+    # Second chord: A=69, ^c=73 (base c=72 + sharp), e=76
+    assert 73 in [n.note for n in notes_on], f"Expected ^c(73), got {[n.note for n in notes_on]}"
 
 
 # ── argparse CLI Tests (P0-1) ─────────────────────────────────────────────

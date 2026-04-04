@@ -57,10 +57,10 @@ _FLAT_KEYS = {"F", "Bb", "Eb", "Ab", "Db", "Gb", "Cb", "Dm", "Gm", "Cm", "Fm", "
 # Regex for ABC header fields: a single letter followed by ':'
 _ABC_HEADER_RE = re.compile(r'^[A-Za-z]\s*:')
 
-# ABC note → MIDI pitch mapping (matches abc_to_midi.py NOTE_PITCH)
+# ABC note → MIDI pitch mapping (matches abc_to_midi.py NOTE_PITCH — ABC 2.1 standard)
 _NOTE_PITCH = {
-    'c': 60, 'd': 62, 'e': 64, 'f': 65, 'g': 67, 'a': 69, 'b': 71,
-    'C': 48, 'D': 50, 'E': 52, 'F': 53, 'G': 55, 'A': 57, 'B': 59,
+    'C': 60, 'D': 62, 'E': 64, 'F': 65, 'G': 67, 'A': 69, 'B': 71,
+    'c': 72, 'd': 74, 'e': 76, 'f': 77, 'g': 79, 'a': 81, 'b': 83,
 }
 
 # Regex for individual note/rest tokens: prefix + note + octave + duration

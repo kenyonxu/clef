@@ -36,14 +36,14 @@ def cmd_abc_to_midi(args):
 
 
 def cmd_validate(args):
-    if not os.path.isfile(args.abc):
-        print(f"Error: file not found: {args.abc}")
+    if not os.path.isfile(args.input):
+        print(f"Error: file not found: {args.input}")
         return 1
     if not os.path.isfile(args.plan):
         print(f"Error: file not found: {args.plan}")
         return 1
     from validate_abc import validate
-    report = validate(args.abc, args.plan)
+    report = validate(args.input, args.plan)
     if args.output:
         report.to_json(args.output)
     if report.fails:
@@ -63,19 +63,19 @@ def cmd_merge(args):
     if not os.path.isfile(args.plan):
         print(f"Error: file not found: {args.plan}")
         return 1
-    if not os.path.isdir(args.fragments_dir):
-        print(f"Error: directory not found: {args.fragments_dir}")
+    if not os.path.isdir(args.dir):
+        print(f"Error: directory not found: {args.dir}")
         return 1
     from merge_abc import merge
     with open(args.plan, 'r', encoding='utf-8') as f:
         plan = json.load(f)
     # Read fragments from directory
     fragments = {}
-    if os.path.isdir(args.fragments_dir):
-        for fname in sorted(os.listdir(args.fragments_dir)):
+    if os.path.isdir(args.dir):
+        for fname in sorted(os.listdir(args.dir)):
             if not fname.endswith('.abc'):
                 continue
-            with open(os.path.join(args.fragments_dir, fname), 'r', encoding='utf-8') as f:
+            with open(os.path.join(args.dir, fname), 'r', encoding='utf-8') as f:
                 content = f.read()
             # Extract voice ID from content (V: header line)
             voice_id = fname.replace('.abc', '')
@@ -172,6 +172,32 @@ def cmd_snapshot(args):
     return snapshot(args.step, args.status, args.output, args.note, args.workdir)
 
 
+def _compat_normalize(args):
+    """Backward compat: fill named attrs from deprecated positional args.
+
+    Each subcommand defines _pos_* positional fallbacks. If a named attr
+    (e.g. args.input) is None but its _pos_* fallback has a value, copy
+    the fallback. This lets old positional usage coexist with new --flags.
+    """
+    cmd = args.command
+    pos_to_named = {
+        'abc-to-midi': {'_pos_input': 'input', '_pos_output': 'output'},
+        'validate': {'_pos_abc': 'input', '_pos_plan': 'plan'},
+        'merge': {'_pos_plan': 'plan', '_pos_dir': 'dir'},
+        'inject': {'_pos_input': 'input', '_pos_plan': 'plan', '_pos_output': 'output'},
+        'extract-solo': {'_pos_input': 'input', '_pos_start': 'start', '_pos_end': 'end', '_pos_output_dir': 'output_dir'},
+        'analyze': {'_pos_input': 'input'},
+        'midi-to-audio': {'_pos_input': 'input'},
+        'midi-to-abc': {'_pos_input': 'input'},
+    }
+    mapping = pos_to_named.get(cmd, {})
+    for pos_attr, named_attr in mapping.items():
+        named_val = getattr(args, named_attr, None)
+        pos_val = getattr(args, pos_attr, None)
+        if named_val is None and pos_val is not None:
+            setattr(args, named_attr, pos_val)
+
+
 def main():
     parser = argparse.ArgumentParser(
         prog='clef_tools',
@@ -184,38 +210,52 @@ def main():
 
     # abc-to-midi
     p = sub.add_parser('abc-to-midi', help='ABC 转 MIDI')
-    p.add_argument('input', help='输入 ABC 文件')
-    p.add_argument('output', help='输出 MIDI 文件')
+    p.add_argument('_pos_input', nargs='?', help='(deprecated) 输入 ABC 文件')
+    p.add_argument('_pos_output', nargs='?', help='(deprecated) 输出 MIDI 文件')
+    p.add_argument('--input', '-i', dest='input', help='输入 ABC 文件')
+    p.add_argument('--output', '-o', dest='output', help='输出 MIDI 文件')
 
     # validate
     p = sub.add_parser('validate', help='music21 验证 ABC')
-    p.add_argument('abc', help='ABC 文件路径')
-    p.add_argument('plan', help='plan.json 路径')
+    p.add_argument('_pos_abc', nargs='?', help='(deprecated) ABC 文件路径')
+    p.add_argument('_pos_plan', nargs='?', help='(deprecated) plan.json 路径')
+    p.add_argument('--input', '-i', dest='input', help='ABC 文件路径')
+    p.add_argument('--plan', help='plan.json 路径')
     p.add_argument('--output', '-o', default=None, help='输出报告路径')
 
     # merge
     p = sub.add_parser('merge', help='合并声部 ABC 片段')
-    p.add_argument('plan', help='plan.json 路径')
-    p.add_argument('fragments_dir', help='片段目录路径')
+    p.add_argument('_pos_plan', nargs='?', help='(deprecated) plan.json 路径')
+    p.add_argument('_pos_dir', nargs='?', help='(deprecated) 片段目录路径')
+    p.add_argument('--plan', help='plan.json 路径')
+    p.add_argument('--dir', help='片段目录路径')
     p.add_argument('--mode', choices=['full', 'solo'], default='full')
     p.add_argument('--output', '-o', default=None, help='输出 score.abc 路径')
 
     # inject
     p = sub.add_parser('inject', help='注入 CC/弯音到 MIDI')
-    p.add_argument('input', help='基础 MIDI 文件')
-    p.add_argument('plan', help='expression_plan.json 路径')
-    p.add_argument('output', help='输出 MIDI 文件')
+    p.add_argument('_pos_input', nargs='?', help='(deprecated) 基础 MIDI 文件')
+    p.add_argument('_pos_plan', nargs='?', help='(deprecated) expression_plan.json 路径')
+    p.add_argument('_pos_output', nargs='?', help='(deprecated) 输出 MIDI 文件')
+    p.add_argument('--input', '-i', dest='input', help='基础 MIDI 文件')
+    p.add_argument('--plan', required=True, help='expression_plan.json 路径')
+    p.add_argument('--output', '-o', dest='output', help='输出 MIDI 文件')
 
     # extract-solo
     p = sub.add_parser('extract-solo', help='分轨 Solo 提取')
-    p.add_argument('input', help='MIDI 文件')
-    p.add_argument('start', type=float, help='起始时间（秒）')
-    p.add_argument('end', type=float, help='结束时间（秒）')
-    p.add_argument('output_dir', help='输出目录')
+    p.add_argument('_pos_input', nargs='?', help='(deprecated) MIDI 文件')
+    p.add_argument('_pos_start', nargs='?', type=float, help='(deprecated) 起始时间（秒）')
+    p.add_argument('_pos_end', nargs='?', type=float, help='(deprecated) 结束时间（秒）')
+    p.add_argument('_pos_output_dir', nargs='?', help='(deprecated) 输出目录')
+    p.add_argument('--input', '-i', dest='input', help='MIDI 文件')
+    p.add_argument('--start', type=float, required=True, help='起始时间（秒）')
+    p.add_argument('--end', type=float, required=True, help='结束时间（秒）')
+    p.add_argument('--output-dir', '-o', dest='output_dir', help='输出目录')
 
     # analyze
     p = sub.add_parser('analyze', help='MIDI piano roll analysis report')
-    p.add_argument('input', help='MIDI 文件')
+    p.add_argument('_pos_input', nargs='?', help='(deprecated) MIDI 文件')
+    p.add_argument('--input', '-i', dest='input', help='MIDI 文件')
     p.add_argument('--segment', type=float, default=2.0, help='密度条时间分段（秒，最小 0.1）')
 
     # snapshot
@@ -232,7 +272,8 @@ def main():
 
     # midi-to-audio
     p = sub.add_parser('midi-to-audio', help='用 FluidSynth 将 MIDI 转为音频（WAV/OGG）')
-    p.add_argument('input', help='MIDI 文件或目录（配合 --batch）')
+    p.add_argument('_pos_input', nargs='?', help='(deprecated) MIDI 文件或目录')
+    p.add_argument('--input', '-i', dest='input', help='MIDI 文件或目录（配合 --batch）')
     p.add_argument('--sf2', required=True, help='SoundFont (.sf2) 文件路径')
     p.add_argument('--output-dir', '-o', default='', help='输出目录（默认和输入同目录）')
     p.add_argument('--format', '-f', choices=['wav', 'ogg', 'mp3'], default='wav', help='输出格式')
@@ -242,10 +283,12 @@ def main():
 
     # midi-to-abc
     p = sub.add_parser('midi-to-abc', help='将 MIDI 文件转换为 ABC 记谱法')
-    p.add_argument('input', help='输入 MIDI 文件')
+    p.add_argument('_pos_input', nargs='?', help='(deprecated) 输入 MIDI 文件')
+    p.add_argument('--input', '-i', dest='input', help='输入 MIDI 文件')
     p.add_argument('--output', '-o', required=True, help='输出 ABC 文件')
 
     args = parser.parse_args()
+    _compat_normalize(args)
 
     commands = {
         'check-deps': cmd_check_deps,
