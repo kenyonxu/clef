@@ -11,6 +11,9 @@ signal seek_requested(position: float)
 ## 音符被修改（触发导出脏标记）
 signal note_edited()
 
+## 请求导出 MIDI
+signal export_requested(notes: Array)
+
 ## 单条音符数据
 class RollNote:
 	var channel: int
@@ -114,12 +117,16 @@ var _channel_instruments: Dictionary = {}  ## channel -> preset_index
 var _muted_channels: Dictionary = {}      ## channel -> bool
 var l10n: ClefL10n
 
+var _context_menu: PopupMenu = null
+var _velocity_dialog: AcceptDialog = null
+
 
 func _ready() -> void:
 	custom_minimum_size = Vector2i(0, 160)
 	size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	size_flags_vertical = Control.SIZE_EXPAND_FILL
 	mouse_default_cursor_shape = Control.CURSOR_IBEAM
+	_create_context_menu()
 
 
 # ─── 公共 API ─────────────────────────────────────────────
@@ -137,7 +144,9 @@ func set_notes(notes: Array[RollNote], duration: float) -> void:
 	queue_redraw()
 
 
-## 设置通道乐器映射 (channel -> preset_index)
+## 获取当前音符数组
+func get_notes() -> Array[RollNote]:
+	return _notes## 设置通道乐器映射 (channel -> preset_index)
 func set_channel_instruments(instruments: Dictionary) -> void:
 	_channel_instruments = instruments
 	queue_redraw()
@@ -334,8 +343,16 @@ func _gui_input(event: InputEvent) -> void:
 				_drag_original_notes.clear()
 			elif mb.button_index == MOUSE_BUTTON_LEFT and not mb.pressed:
 				pass
-			elif mb.button_index == MOUSE_BUTTON_RIGHT:
-				pass  # Phase 3: context menu
+			elif mb.button_index == MOUSE_BUTTON_RIGHT and mb.pressed:
+				var hit := _hit_test(mb.position)
+				if hit["index"] >= 0:
+					if not _selection.has(hit["index"]):
+						_selection.clear()
+						_selection.append(hit["index"])
+						queue_redraw()
+					_context_menu.position = get_global_mouse_position() + Vector2(2, 2)
+					_context_menu.popup()
+					get_viewport().set_input_as_handled()
 
 	if event is InputEventMouseMotion:
 		if _dragging:
@@ -504,6 +521,93 @@ func _delete_selected() -> void:
 	_selection.clear()
 	commit_command(cmd)
 
+
+func _create_context_menu() -> void:
+	_context_menu = PopupMenu.new()
+	_context_menu.id_pressed.connect(_on_context_menu_item)
+	add_child(_context_menu)
+	_context_menu.add_item("删除音符", 0)
+	_context_menu.add_item("音高 +1", 1)
+	_context_menu.add_item("音高 -1", 2)
+	_context_menu.add_separator()
+	_context_menu.add_item("编辑力度...", 3)
+	_context_menu.add_separator()
+	_context_menu.add_item("导出修改后的 MIDI", 10)
+
+
+func _on_context_menu_item(id: int) -> void:
+	match id:
+		0:
+			_delete_selected()
+		1:
+			_shift_selected_pitch(1)
+		2:
+			_shift_selected_pitch(-1)
+		3:
+			_edit_velocity_popup()
+		10:
+			export_requested.emit(_notes)
+
+
+func _shift_selected_pitch(delta: int) -> void:
+	if _selection.is_empty():
+		return
+	var cmd := begin_command("property", "音高 %+d" % delta)
+	var before_snap := []
+	var after_snap := []
+	for idx in _selection:
+		if idx >= 0 and idx < _notes.size():
+			before_snap.append({"index": idx, "pitch": _notes[idx].pitch})
+			_notes[idx].pitch = clampi(_notes[idx].pitch + delta, 0, 127)
+			after_snap.append({"index": idx, "pitch": _notes[idx].pitch})
+	cmd.before = {"pitch_changes": before_snap}
+	cmd.after = {"pitch_changes": after_snap}
+	commit_command(cmd)
+
+
+func _edit_velocity_popup() -> void:
+	if _selection.is_empty():
+		return
+	_velocity_dialog = AcceptDialog.new()
+	_velocity_dialog.title = "编辑力度"
+	var vbox := VBoxContainer.new()
+	var label := Label.new()
+	label.text = "力度 (0-127):"
+	vbox.add_child(label)
+	var input := LineEdit.new()
+	input.placeholder_text = "100"
+	if not _selection.is_empty():
+		var first_note: RollNote = _notes[_selection[0]]
+		input.text = str(first_note.velocity)
+	input.alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(input)
+	_velocity_dialog.add_child(vbox)
+	_velocity_dialog.confirmed.connect(func():
+		var val := int(input.text)
+		if val >= 0 and val <= 127:
+			_set_selected_velocity(val)
+		_velocity_dialog.queue_free()
+	)
+	add_child(_velocity_dialog)
+	_velocity_dialog.popup_centered(Vector2i(200, 100))
+	input.grab_focus()
+	input.select_all()
+
+
+func _set_selected_velocity(vel: int) -> void:
+	var cmd := begin_command("property", "力度 → %d" % vel)
+	var before_snap := []
+	var after_snap := []
+	for idx in _selection:
+		if idx >= 0 and idx < _notes.size():
+			before_snap.append({"index": idx, "velocity": _notes[idx].velocity})
+			_notes[idx].velocity = vel
+			after_snap.append({"index": idx, "velocity": vel})
+	cmd.before = {"velocity_changes": before_snap}
+	cmd.after = {"velocity_changes": after_snap}
+	commit_command(cmd)
+
+
 # ─── 命中检测 ─────────────────────────────────────────────
 
 ## 返回 {index: int, edge: String}，edge: "none" | "left" | "right"
@@ -584,6 +688,16 @@ func _apply_snapshot(snapshot: Dictionary) -> void:
 		sorted_items.sort_custom(func(a, b): return a["index"] > b["index"])
 		for item in sorted_items:
 			_notes.insert(item["index"], item["note_data"])
+	elif snapshot.has("pitch_changes"):
+		for item in snapshot["pitch_changes"]:
+			var idx: int = item["index"]
+			if idx >= 0 and idx < _notes.size():
+				_notes[idx].pitch = item["pitch"]
+	elif snapshot.has("velocity_changes"):
+		for item in snapshot["velocity_changes"]:
+			var idx: int = item["index"]
+			if idx >= 0 and idx < _notes.size():
+				_notes[idx].velocity = item["velocity"]
 
 		elif snapshot.has("added_index"):
 		_notes.remove_at(snapshot["added_index"])
