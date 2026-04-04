@@ -3,6 +3,9 @@
 Handles measure alignment via bar-line counting and rest padding,
 generates proper ABC headers from plan.json metadata, and produces
 voice blocks with %%MIDI directives.
+
+Sanitize pass: strips || double barlines and %% V: phantom directives
+from fragment content before merging. Validates MIDI channel uniqueness.
 """
 
 import re
@@ -92,6 +95,56 @@ def generate_header(plan: dict) -> str:
     return "\n".join(lines)
 
 
+def sanitize_content(content: str) -> str:
+    """Sanitize an ABC fragment before merging.
+
+    1. Replace || double barlines with | in music content lines.
+    2. Replace %% V:X comments (not %%MIDI) with % V:X to prevent
+       phantom voice declarations.
+    """
+    lines = content.splitlines()
+    fixed = []
+    for line in lines:
+        stripped = line.strip()
+        # Skip ABC header fields (single letter + colon) and comments
+        is_header = bool(re.match(r'^[A-Za-z]\s*:', stripped))
+        is_comment = stripped.startswith('%') or stripped.startswith('%%')
+        if not is_header and not is_comment:
+            line = line.replace('||', '|')
+        # Fix %% V: comments (not %%MIDI directives)
+        if stripped.startswith('%%') and re.search(r'V:\d+', stripped) and '%%MIDI' not in stripped:
+            line = line.replace('%%', '%', 1)
+        fixed.append(line)
+    return '\n'.join(fixed)
+
+
+def check_channel_uniqueness(plan: dict) -> list[str]:
+    """Validate that all MIDI channels in orchestration are unique and in valid range.
+
+    Returns list of error messages (empty if all unique and valid).
+    Standard allocation: Ch0 melody, Ch1 harmony, Ch2 bass, Ch9 drums.
+    """
+    orchestration = plan.get("orchestration", {})
+    seen: dict[int, str] = {}
+    errors: list[str] = []
+    for part_key, part_info in orchestration.items():
+        channel = part_info.get("channel")
+        if channel is not None:
+            name = part_info.get("name", part_key)
+            if not isinstance(channel, int) or not (0 <= channel <= 15):
+                errors.append(
+                    f"'{name}' has invalid MIDI channel {channel!r} (must be 0-15)"
+                )
+                continue
+            if channel in seen:
+                errors.append(
+                    f"MIDI channel {channel} used by both '{seen[channel]}' and '{name}'"
+                )
+            else:
+                seen[channel] = name
+    return errors
+
+
 def merge(plan: dict, fragments: dict, mode: str = "full") -> str:
     """Merge multiple voice fragments into a complete ABC score.
 
@@ -106,6 +159,11 @@ def merge(plan: dict, fragments: dict, mode: str = "full") -> str:
     time_signature = plan.get("time_signature", "4/4")
     orchestration = plan.get("orchestration", {})
 
+    # Validate MIDI channel uniqueness
+    channel_errors = check_channel_uniqueness(plan)
+    if channel_errors:
+        raise ValueError(f"MIDI channel conflict: {'; '.join(channel_errors)}")
+
     # Determine which voices to include
     voice_labels = sorted(fragments.keys())
     if mode == "solo":
@@ -118,10 +176,11 @@ def merge(plan: dict, fragments: dict, mode: str = "full") -> str:
     measure_counts = {v: count_measures(fragments[v]) for v in voice_labels}
     max_measures = max(measure_counts.values()) if measure_counts else 0
 
-    # Pad all voices to max measures
+    # Sanitize and pad all voices to max measures
     padded = {}
     for v in voice_labels:
-        padded[v] = pad_with_rests(fragments[v], max_measures, time_signature)
+        sanitized = sanitize_content(fragments[v])
+        padded[v] = pad_with_rests(sanitized, max_measures, time_signature)
 
     # Build output
     parts = [generate_header(plan)]

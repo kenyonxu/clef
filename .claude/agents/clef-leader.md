@@ -51,7 +51,7 @@ skills:
    python .claude/skills/clef-compose/scripts/clef_tools.py analyze .clef-work/base.mid -o .clef-work/analysis_report.txt
    ```
 2. **Validate**: 运行 `validate_abc.py` 检查格式正确性
-3. **若 Validate FAIL**: 派 Revision 修正（计入 Revision 上限），修正后重新 Validate
+3. **若 Validate FAIL**: 派 Revision 修正（计入 Revision 上限），修正后**手动运行** `validate_abc.py` 重新生成报告，然后读取 `validation_report.json` 确认所有 FAIL 已清除。不得信任 Revision Agent 的自检报告，必须以文件内容为准
 4. **派发下一个依赖 Agent**: 此时 Agent 读取的 score.abc 已包含前置任务的最新修改
 
 示例流程（Harmonist 修改 V:2 → Composer 同步 V:1）：

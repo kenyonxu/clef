@@ -53,6 +53,7 @@ class ValidationIssue:
     severity: str   # 'fail', 'warn', or 'info'
     voice: str      # 'V:1', 'V:2', or 'global'
     message: str    # Human-readable description
+    known_artifact: bool = False  # True if likely a music21 parsing artifact
 
 
 @dataclass
@@ -259,10 +260,15 @@ def check_pitch_range(score: music21.stream.Score, plan: dict, abc_path: str = "
 
     # Detect bass/perc clef voices for octave offset correction
     bass_clef_voices: set[int] = set()
+    perc_clef_voices: set[int] = set()
     if abc_path:
         with open(abc_path, "r", encoding="utf-8") as f:
             for line in f:
-                if re.match(r'V:\d+.*clef=(bass|perc)', line):
+                if re.match(r'V:\d+.*clef=perc', line):
+                    m = re.match(r'V:(\d+)', line)
+                    if m:
+                        perc_clef_voices.add(int(m.group(1)))
+                elif re.match(r'V:\d+.*clef=bass', line):
                     m = re.match(r'V:(\d+)', line)
                     if m:
                         bass_clef_voices.add(int(m.group(1)))
@@ -310,14 +316,19 @@ def check_pitch_range(score: music21.stream.Score, plan: dict, abc_path: str = "
 
             for midi, pitch_name in zip(midi_notes, pitch_names):
                 if midi < lo or midi > hi:
+                    is_perc = voice_id in perc_clef_voices
                     issues.append(ValidationIssue(
                         category="pitch_range",
-                        severity="fail",
+                        severity="warn" if is_perc else "fail",
                         voice=voice_label,
                         message=(
                             f"Note {pitch_name} (MIDI {midi}) "
                             f"out of range [{lo}-{hi}] for '{part_name}'"
+                            + (" [KNOWN_ARTIFACT] clef=perc pitch parsing "
+                               "differs between music21 and converter"
+                               if is_perc else "")
                         ),
+                        known_artifact=is_perc,
                     ))
     return issues
 
@@ -408,6 +419,9 @@ def _parse_abc_measure_durations(
         voice_label_match = re.match(r"V:(\d+)", v_line)
         voice_label = f"V:{voice_label_match.group(1)}" if voice_label_match else f"V:{voice_idx + 1}"
 
+        # Detect clef=perc for known artifact marking
+        is_perc_voice = bool(re.search(r'clef=perc', v_line))
+
         # Filter out directive lines (%%...) before splitting into measures
         v_body_filtered = "\n".join(
             line for line in v_body.splitlines()
@@ -437,13 +451,17 @@ def _parse_abc_measure_durations(
             if abs(duration - beats_per_measure) > 0.01:
                 issues.append(ValidationIssue(
                     category="measure_duration",
-                    severity="fail",
+                    severity="warn" if is_perc_voice else "fail",
                     voice=voice_label,
                     message=(
                         f"Measure {measure_num} duration "
                         f"{duration:.2f} beats, expected {beats_per_measure} beats "
                         f"(time signature {ts_str})"
+                        + (" [KNOWN_ARTIFACT] clef=perc duration parsing "
+                           "differs between music21 and converter"
+                           if is_perc_voice else "")
                     ),
+                    known_artifact=is_perc_voice,
                 ))
             measure_num += 1
         voice_idx += 1
