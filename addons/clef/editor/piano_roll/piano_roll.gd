@@ -115,6 +115,8 @@ func _ready() -> void:
 ## 设置音符数据并刷新
 func set_notes(notes: Array[RollNote], duration: float) -> void:
 	_notes = notes
+	_undo_stack.clear()
+	_redo_stack.clear()
 	_duration = duration
 	_collect_active_channels()
 	_recalc_layout()
@@ -151,6 +153,8 @@ func set_playback_position(position: float) -> void:
 ## 清空所有状态
 func clear_notes() -> void:
 	_notes.clear()
+	_undo_stack.clear()
+	_redo_stack.clear()
 	_duration = 0.0
 	_playback_position = -1.0
 	_min_pitch = 0
@@ -359,8 +363,7 @@ func commit_command(cmd: EditCommand) -> void:
 	if _undo_stack.size() > MAX_HISTORY:
 		_undo_stack.pop_front()
 	_redo_stack.clear()
-	queue_redraw()
-	note_edited.emit()
+	_notify_edit()
 
 func _undo() -> void:
 	if _undo_stack.is_empty():
@@ -368,8 +371,7 @@ func _undo() -> void:
 	var cmd := _undo_stack.pop_back() as EditCommand
 	_apply_snapshot(cmd.before)
 	_redo_stack.append(cmd)
-	queue_redraw()
-	note_edited.emit()
+	_notify_edit()
 
 func _redo() -> void:
 	if _redo_stack.is_empty():
@@ -377,11 +379,17 @@ func _redo() -> void:
 	var cmd := _redo_stack.pop_back() as EditCommand
 	_apply_snapshot(cmd.after)
 	_undo_stack.append(cmd)
+	_notify_edit()
+
+func _notify_edit() -> void:
 	queue_redraw()
 	note_edited.emit()
 
+## 深拷贝 RollNote，防止 undo 栈引用被修改
+func _clone_note(n: RollNote) -> RollNote:
+	return RollNote.new(n.channel, n.pitch, n.start_time, n.duration, n.velocity)
+
 func _apply_snapshot(snapshot: Dictionary) -> void:
-	# 各操作类型在后续 Phase 实现具体恢复逻辑
 	if snapshot.has("deleted_note"):
 		_notes.insert(snapshot["index"], snapshot["deleted_note"])
 	elif snapshot.has("added_index"):
@@ -390,3 +398,5 @@ func _apply_snapshot(snapshot: Dictionary) -> void:
 		var idx: int = snapshot["index"]
 		if idx >= 0 and idx < _notes.size():
 			_notes[idx] = snapshot["note_data"]
+		else:
+			push_warning("Undo/redo: snapshot index %d out of bounds (size %d)" % [idx, _notes.size()])
