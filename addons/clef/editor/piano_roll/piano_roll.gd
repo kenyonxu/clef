@@ -17,6 +17,9 @@ signal export_requested(notes: Array)
 ## 添加标注
 signal annotation_added(note_index: int, text: String, severity: String)
 
+## 请求导出 Agent 反馈 JSON
+signal agent_feedback_requested(feedback: Dictionary)
+
 ## 单条音符数据
 class RollNote:
 	var channel: int
@@ -138,6 +141,9 @@ var _velocity_dialog: AcceptDialog = null
 var _annotations: Array[Annotation] = []
 var _annotation_popup: PanelContainer = null
 
+## 屏蔽（逐音符静音）索引
+var _muted_indices: Array[int] = []
+
 
 func _ready() -> void:
 	custom_minimum_size = Vector2i(0, 160)
@@ -156,6 +162,7 @@ func set_notes(notes: Array[RollNote], duration: float) -> void:
 	_redo_stack.clear()
 	_selection.clear()
 	_annotations.clear()
+	_muted_indices.clear()
 	_hovered_note = -1
 	_duration = duration
 	_collect_active_channels()
@@ -209,6 +216,7 @@ func clear_notes() -> void:
 	_active_channels.clear()
 	_channel_instruments.clear()
 	_muted_channels.clear()
+	_muted_indices.clear()
 	queue_redraw()
 
 
@@ -502,6 +510,15 @@ func _draw_notes() -> void:
 			base_color.g * brightness,
 			base_color.b * brightness
 		)
+			# 屏蔽态：半透明 + 删除线
+			if _is_note_muted(i):
+				color.a = 0.3
+				draw_rect(Rect2(x, y, w, h), color)
+				draw_line(Vector2(x, y + h / 2), Vector2(x + w, y + h / 2), Color(1, 0.3, 0.3), 1.5)
+				# Still show selection border if selected
+				if sel_set.has(i):
+					draw_rect(Rect2(x - 1, y - 1, w + 2, h + 2), Color(1, 1, 1, 0.5), false, 2.0)
+				continue
 		draw_rect(Rect2(x, y, w, h), color)
 
 		# 选中高亮边框
@@ -569,6 +586,49 @@ func _draw_annotations() -> void:
 		draw_colored_polygon(points, color)
 
 
+
+func _get_agent_feedback() -> Dictionary:
+	var annotations_data := []
+	for ann in _annotations:
+		if ann.note_index < 0 or ann.note_index >= _notes.size():
+			continue
+		var note := _notes[ann.note_index]
+		annotations_data.append({
+			"channel": note.channel,
+			"pitch": note.pitch,
+			"severity": ann.severity,
+			"note": ann.text,
+		})
+	return {
+		"version": 1,
+		"annotations": annotations_data,
+	}
+
+
+func _toggle_mute_selected() -> void:
+	if _selection.is_empty():
+		return
+	var newly_muted := []
+	var newly_unmuted := []
+	for idx in _selection:
+		var found := _muted_indices.find(idx)
+		if found >= 0:
+			_muted_indices.remove_at(found)
+			newly_unmuted.append(idx)
+		else:
+			_muted_indices.append(idx)
+			newly_muted.append(idx)
+	if not newly_muted.is_empty() or not newly_unmuted.is_empty():
+		var cmd := begin_command("mute", "屏蔽 %d / 恢复 %d" % [newly_muted.size(), newly_unmuted.size()])
+		cmd.before = {"muted_indices": newly_unmuted.duplicate()}
+		cmd.after = {"muted_indices": newly_muted.duplicate()}
+		commit_command(cmd)
+	queue_redraw()
+
+
+func _is_note_muted(index: int) -> bool:
+	return _muted_indices.find(index) >= 0
+
 func _create_context_menu() -> void:
 	_context_menu = PopupMenu.new()
 	_context_menu.id_pressed.connect(_on_context_menu_item)
@@ -579,9 +639,11 @@ func _create_context_menu() -> void:
 	_context_menu.add_separator()
 	_context_menu.add_item("编辑力度...", 3)
 	_context_menu.add_separator()
+	_context_menu.add_item("添加标注...", 4)
+	_context_menu.add_item("屏蔽（临时静音）", 5)
+	_context_menu.add_separator()
 	_context_menu.add_item("导出修改后的 MIDI", 10)
-		_context_menu.add_separator()
-		_context_menu.add_item("添加标注...", 4)
+	_context_menu.add_item("生成 Agent 反馈", 11)
 
 
 func _on_context_menu_item(id: int) -> void:
@@ -598,6 +660,10 @@ func _on_context_menu_item(id: int) -> void:
 			export_requested.emit(_notes)
 		4:
 			_open_annotation_popup()
+			5:
+				_toggle_mute_selected()
+			11:
+				agent_feedback_requested.emit(_get_agent_feedback())
 
 
 func _shift_selected_pitch(delta: int) -> void:
@@ -788,15 +854,15 @@ func _clone_note(n: RollNote) -> RollNote:
 	return RollNote.new(n.channel, n.pitch, n.start_time, n.duration, n.velocity)
 
 func _apply_snapshot(snapshot: Dictionary) -> void:
-		if snapshot.has("indices"):
-			var items: Array = snapshot["indices"]
-			for item in items:
-				var idx: int = item["index"]
-				if idx >= 0 and idx < _notes.size():
-					_notes[idx].pitch = item["pitch"]
-					_notes[idx].start_time = item["start_time"]
-					_notes[idx].duration = item["duration"]
-		elif snapshot.has("deleted_note"):
+	if snapshot.has("indices"):
+		var items: Array = snapshot["indices"]
+		for item in items:
+			var idx: int = item["index"]
+			if idx >= 0 and idx < _notes.size():
+				_notes[idx].pitch = item["pitch"]
+				_notes[idx].start_time = item["start_time"]
+				_notes[idx].duration = item["duration"]
+	elif snapshot.has("deleted_note"):
 		_notes.insert(snapshot["index"], snapshot["deleted_note"])
 	elif snapshot.has("deleted_items"):
 		var items: Array = snapshot["deleted_items"]
@@ -814,10 +880,13 @@ func _apply_snapshot(snapshot: Dictionary) -> void:
 			var idx: int = item["index"]
 			if idx >= 0 and idx < _notes.size():
 				_notes[idx].velocity = item["velocity"]
-
-		elif snapshot.has("added_index"):
+	elif snapshot.has("muted_indices"):
+		for idx in snapshot["muted_indices"]:
+			if _muted_indices.find(idx) < 0:
+				_muted_indices.append(idx)
+	elif snapshot.has("added_index"):
 		_notes.remove_at(snapshot["added_index"])
-		elif snapshot.has("index") and snapshot.has("note_data"):
+	elif snapshot.has("index") and snapshot.has("note_data"):
 		var idx: int = snapshot["index"]
 		if idx >= 0 and idx < _notes.size():
 			_notes[idx] = snapshot["note_data"]

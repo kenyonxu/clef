@@ -171,6 +171,18 @@ func _build_layout() -> void:
 		_editor_player.seek(pos)
 	)
 	_piano_roll.export_requested.connect(_on_piano_roll_export)
+	_piano_roll.agent_feedback_requested.connect(func(feedback: Dictionary):
+		var timestamp := Time.get_datetime_string_from_system().replace(":", "-").replace(" ", "_")
+		var abs_path := ProjectSettings.globalize_path("res://addons/clef/output/agent_feedback_" + timestamp + ".json")
+		DirAccess.make_dir_recursive_absolute(abs_path.get_base_dir())
+		var file := FileAccess.open(abs_path, FileAccess.WRITE)
+		if file:
+			file.store_string(JSON.stringify(feedback, "\t"))
+			file.close()
+			print("[ClefStation] Agent feedback exported: ", abs_path)
+		else:
+			push_error("[ClefStation] Failed to export agent feedback: ", abs_path)
+	)
 	center_vbox.add_child(_piano_roll)
 
 	_mini_mixer = MiniMixer.new()
