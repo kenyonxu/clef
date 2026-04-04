@@ -4,6 +4,7 @@ class_name PianoRoll
 extends Control
 
 const ChannelColors = preload("res://addons/clef/editor/channel_colors.gd")
+const PianoRollActions = preload("res://addons/clef/editor/piano_roll/piano_roll_actions.gd")
 
 ## 点击卷帘请求跳转到指定时间位置
 signal seek_requested(position: float)
@@ -155,6 +156,8 @@ var l10n: ClefL10n
 var _context_menu: PopupMenu = null
 var _velocity_dialog: AcceptDialog = null
 
+var _actions: PianoRollActions = null
+
 var _annotations: Array[Annotation] = []
 var _annotation_popup: PanelContainer = null
 
@@ -192,7 +195,12 @@ var _pan_start_pitch_offset: int = 0
 
 ## 网格吸附
 var snap_enabled: bool = false
-var snap_interval: float = 0.1
+var _snap_interval: float = 0.1
+
+var snap_interval: float:
+	get: return _snap_interval
+	set(v):
+		_snap_interval = maxf(0.001, v)
 
 
 func _ready() -> void:
@@ -201,7 +209,8 @@ func _ready() -> void:
 	size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	size_flags_vertical = Control.SIZE_EXPAND_FILL
 	mouse_default_cursor_shape = Control.CURSOR_ARROW
-	_create_context_menu()
+	_actions = PianoRollActions.new(self)
+	_actions.create_context_menu()
 	_create_h_scroll()
 
 
@@ -374,7 +383,7 @@ func _recalc_layout() -> void:
 	_min_pitch = maxi(0, lo - 12)
 	_max_pitch = mini(127, hi + 12)
 	# 像素/秒：整首歌适配宽度（基准，zoom=1.0 时整首可见）
-	var w := float(size.x) - 0.0
+	var w := float(size.x)
 	if w > 0.0 and _duration > 0.0:
 		_pixels_per_second = w / _duration
 	# 像素/音高：音域适配高度（减去图例+滚动条）
@@ -418,7 +427,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		return
 	if key.keycode == KEY_DELETE and not _selection.is_empty():
 		get_viewport().set_input_as_handled()
-		_delete_selected()
+		_actions._delete_selected()
 		return
 	# Ctrl+= / Ctrl+- 水平缩放
 	if key.ctrl_pressed and not key.shift_pressed and key.keycode == KEY_EQUAL:
@@ -719,7 +728,7 @@ func _draw() -> void:
 	_draw_notes()
 	# 播放头
 	_draw_playback_cursor()
-	_draw_annotations()
+	_actions.draw_annotations()
 
 	# 框选矩形
 	if _box_selecting:
@@ -799,7 +808,7 @@ func _draw_notes() -> void:
 
 	var visible_start := _view_offset
 	var visible_end := _view_offset + _visible_time_range()
-	var right_x := size.x - 0.0
+	var right_x := size.x
 	var bottom_y := size.y - _SCROLL_BAR_HEIGHT
 	var eppn := _effective_ppn()
 
@@ -860,268 +869,6 @@ func _draw_playback_cursor() -> void:
 	var x := _time_to_x(_playback_position)
 	var bottom_y := size.y - _SCROLL_BAR_HEIGHT
 	draw_line(Vector2(x, 0), Vector2(x, bottom_y), _PLAYBACK_COLOR, 2.0)
-
-
-# ─── 编辑操作 ─────────────────────────────────────────────
-
-func _delete_selected() -> void:
-	if _selection.is_empty():
-		return
-	var sorted := _selection.duplicate()
-	sorted.sort_custom(func(a, b): return a > b)
-
-	var cmd := begin_command("delete", "删除 %d 个音符" % sorted.size())
-	var deleted_items := []
-	for idx in sorted:
-		deleted_items.append({"index": idx, "note_data": _clone_note(_notes[idx])})
-	cmd.before = {"deleted_items": deleted_items}
-
-	for idx in sorted:
-		_notes.remove_at(idx)
-
-	cmd.after = {"deleted_indices": sorted.duplicate()}
-	_selection.clear()
-	commit_command(cmd)
-
-
-func _draw_annotations() -> void:
-	var colors := {
-		"info": Color(0.3, 0.7, 1.0),
-		"warning": Color(1.0, 0.8, 0.2),
-		"error": Color(1.0, 0.3, 0.3),
-	}
-	var drawn_count: Dictionary = {}
-	for ann in _annotations:
-		if ann.note_index < 0 or ann.note_index >= _notes.size():
-			continue
-		var note := _notes[ann.note_index]
-		var x := _time_to_x(note.start_time)
-		var y := _pitch_to_y(note.pitch + 1)
-		var offset := drawn_count.get(ann.note_index, 0)
-		drawn_count[ann.note_index] = offset + 1
-		var color: Color = colors.get(ann.severity, colors["info"])
-		var tri_x: float = x + offset * 8.0
-		var tri_size := 6.0
-		var points := PackedVector2Array([
-			Vector2(tri_x, y - 2),
-			Vector2(tri_x + tri_size, y - 2),
-			Vector2(tri_x + tri_size / 2, y - tri_size - 2),
-		])
-		draw_colored_polygon(points, color)
-
-
-
-func _get_agent_feedback() -> Dictionary:
-	var annotations_data := []
-	for ann in _annotations:
-		if ann.note_index < 0 or ann.note_index >= _notes.size():
-			continue
-		var note := _notes[ann.note_index]
-		annotations_data.append({
-			"channel": note.channel,
-			"pitch": note.pitch,
-			"severity": ann.severity,
-			"note": ann.text,
-		})
-	return {
-		"version": 1,
-		"annotations": annotations_data,
-	}
-
-
-func _toggle_mute_selected() -> void:
-	if _selection.is_empty():
-		return
-	var before_state := _muted_indices.duplicate()
-	var newly_muted := []
-	var newly_unmuted := []
-	for idx in _selection:
-		var found := _muted_indices.find(idx)
-		if found >= 0:
-			_muted_indices.remove_at(found)
-			newly_unmuted.append(idx)
-		else:
-			_muted_indices.append(idx)
-			newly_muted.append(idx)
-	if not newly_muted.is_empty() or not newly_unmuted.is_empty():
-		var cmd := begin_command("mute", "屏蔽 %d / 恢复 %d" % [newly_muted.size(), newly_unmuted.size()])
-		cmd.before = {"muted_indices": before_state}
-		cmd.after = {"muted_indices": _muted_indices.duplicate()}
-		commit_command(cmd)
-	queue_redraw()
-
-
-func _is_note_muted(index: int) -> bool:
-	return _muted_indices.find(index) >= 0
-
-func _create_context_menu() -> void:
-	_context_menu = PopupMenu.new()
-	_context_menu.id_pressed.connect(_on_context_menu_item)
-	add_child(_context_menu)
-	_context_menu.add_item("删除音符", 0)
-	_context_menu.add_item("音高 +1", 1)
-	_context_menu.add_item("音高 -1", 2)
-	_context_menu.add_separator()
-	_context_menu.add_item("编辑力度...", 3)
-	_context_menu.add_separator()
-	_context_menu.add_item("添加标注...", 4)
-	_context_menu.add_item("屏蔽（临时静音）", 5)
-	_context_menu.add_separator()
-	_context_menu.add_item("导出修改后的 MIDI", 10)
-	_context_menu.add_item("生成 Agent 反馈", 11)
-	_context_menu.add_separator()
-	_context_menu.add_item("清除所有临时音符", 12)
-	_context_menu.add_item("导出修改后的 ABC", 13)
-
-
-func _on_context_menu_item(id: int) -> void:
-	match id:
-		0:
-			_delete_selected()
-		1:
-			_shift_selected_pitch(1)
-		2:
-			_shift_selected_pitch(-1)
-		3:
-			_edit_velocity_popup()
-		4:
-			_open_annotation_popup()
-		5:
-			_toggle_mute_selected()
-		10:
-			export_requested.emit(_notes)
-		11:
-			agent_feedback_requested.emit(_get_agent_feedback())
-		12:
-			_temp_notes.clear()
-			queue_redraw()
-		13:
-			abc_export_requested.emit()
-
-
-func _shift_selected_pitch(delta: int) -> void:
-	if _selection.is_empty():
-		return
-	var cmd := begin_command("property", "音高 %+d" % delta)
-	var before_snap := []
-	var after_snap := []
-	for idx in _selection:
-		if idx >= 0 and idx < _notes.size():
-			before_snap.append({"index": idx, "pitch": _notes[idx].pitch})
-			_notes[idx].pitch = clampi(_notes[idx].pitch + delta, 0, 127)
-			after_snap.append({"index": idx, "pitch": _notes[idx].pitch})
-	cmd.before = {"pitch_changes": before_snap}
-	cmd.after = {"pitch_changes": after_snap}
-	commit_command(cmd)
-
-
-func _edit_velocity_popup() -> void:
-	if _selection.is_empty():
-		return
-	_velocity_dialog = AcceptDialog.new()
-	_velocity_dialog.title = "编辑力度"
-	var vbox := VBoxContainer.new()
-	var label := Label.new()
-	label.text = "力度 (0-127):"
-	vbox.add_child(label)
-	var input := LineEdit.new()
-	input.placeholder_text = "100"
-	if not _selection.is_empty():
-		var first_note: RollNote = _notes[_selection[0]]
-		input.text = str(first_note.velocity)
-	input.alignment = HORIZONTAL_ALIGNMENT_CENTER
-	vbox.add_child(input)
-	_velocity_dialog.add_child(vbox)
-	_velocity_dialog.confirmed.connect(func():
-		var val := int(input.text)
-		if val >= 0 and val <= 127:
-			_set_selected_velocity(val)
-		_velocity_dialog.queue_free()
-	)
-	add_child(_velocity_dialog)
-	_velocity_dialog.popup_centered(Vector2i(200, 100))
-	input.grab_focus()
-	input.select_all()
-
-
-func _set_selected_velocity(vel: int) -> void:
-	var cmd := begin_command("property", "力度 → %d" % vel)
-	var before_snap := []
-	var after_snap := []
-	for idx in _selection:
-		if idx >= 0 and idx < _notes.size():
-			before_snap.append({"index": idx, "velocity": _notes[idx].velocity})
-			_notes[idx].velocity = vel
-			after_snap.append({"index": idx, "velocity": vel})
-	cmd.before = {"velocity_changes": before_snap}
-	cmd.after = {"velocity_changes": after_snap}
-	commit_command(cmd)
-
-
-
-func _open_annotation_popup() -> void:
-	if _selection.is_empty():
-		return
-	if _annotation_popup == null:
-		_create_annotation_popup()
-	_annotation_popup.position = get_global_mouse_position() + Vector2(5, 5)
-	_annotation_popup.visible = true
-
-
-func _create_annotation_popup() -> void:
-	_annotation_popup = PanelContainer.new()
-	var vbox := VBoxContainer.new()
-	var sev_hbox := HBoxContainer.new()
-	var sev_label := Label.new()
-	sev_label.text = "严重度:"
-	sev_hbox.add_child(sev_label)
-	var sev_option := OptionButton.new()
-	sev_option.add_item("info")
-	sev_option.add_item("warning")
-	sev_option.add_item("error")
-	sev_hbox.add_child(sev_option)
-	vbox.add_child(sev_hbox)
-	var text_label := Label.new()
-	text_label.text = "备注:"
-	vbox.add_child(text_label)
-	var text_input := TextEdit.new()
-	text_input.custom_minimum_size = Vector2(280, 60)
-	vbox.add_child(text_input)
-	var btn_hbox := HBoxContainer.new()
-	btn_hbox.add_spacer(true)
-	var cancel_btn := Button.new()
-	cancel_btn.text = "取消"
-	var confirm_btn := Button.new()
-	confirm_btn.text = "确认"
-	btn_hbox.add_child(cancel_btn)
-	btn_hbox.add_child(confirm_btn)
-	vbox.add_child(btn_hbox)
-	_annotation_popup.add_child(vbox)
-	add_child(_annotation_popup)
-	_annotation_popup.visible = false
-	cancel_btn.pressed.connect(func():
-		_annotation_popup.visible = false
-	)
-	confirm_btn.pressed.connect(func():
-		_add_annotation_from_popup(sev_option.selected, text_input.text.strip_edges())
-		_annotation_popup.visible = false
-	)
-
-
-func _add_annotation_from_popup(sev_index: int, text: String) -> void:
-	if text.is_empty():
-		return
-	var severity: String = ["info", "warning", "error"][sev_index] if sev_index < 3 else "info"
-	var before_count := _annotations.size()
-	for idx in _selection:
-		var ann := Annotation.new(idx, text, severity)
-		_annotations.append(ann)
-		annotation_added.emit(idx, text, severity)
-	var cmd := begin_command("annotation", "添加标注: %s" % text)
-	cmd.before = {"annotation_count": before_count}
-	cmd.after = {"annotation_count": _annotations.size()}
-	commit_command(cmd)
-	queue_redraw()
 
 
 # ─── 命中检测 ─────────────────────────────────────────────
@@ -1236,7 +983,7 @@ func _apply_snapshot(snapshot: Dictionary) -> void:
 func _visible_time_range() -> float:
 	var epps := _effective_pps()
 	if epps <= 0.0: return _duration
-	return float(size.x - 0.0) / epps
+	return float(size.x) / epps
 
 
 func _visible_pitch_count() -> int:
@@ -1258,6 +1005,7 @@ func _clamp_pitch_offset() -> void:
 	_pitch_offset = clampi(_pitch_offset, 0, max_pitch_offset)
 
 
+## 根据 epps 计算合适的刻度间距（与 piano_time_ruler.gd 保持同步）
 func _get_time_interval() -> float:
 	var epps := _effective_pps()
 	if epps <= 0.0: return 1.0
