@@ -249,6 +249,13 @@ func _create_annotation_popup() -> void:
 	btn_hbox.add_child(confirm_btn)
 	vbox.add_child(btn_hbox)
 	popup.add_child(vbox)
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.18, 0.18, 0.22, 0.95)
+	style.set_border_width_all(1)
+	style.border_color = Color(0.4, 0.4, 0.45)
+	style.set_corner_radius_all(6)
+	style.set_content_margin_all(8)
+	popup.add_theme_stylebox_override("panel", style)
 	_roll.add_child(popup)
 	popup.set_as_top_level(true)
 	_roll._annotation_popup = popup
