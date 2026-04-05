@@ -442,6 +442,12 @@ func _wire_mixer() -> void:
 	_mini_mixer.master_volume_changed.connect(func(vol: float):
 		_editor_player.set_master_volume(vol)
 	)
+	_mini_mixer.channel_volume_changed.connect(func(ch: int, vol: float):
+		_editor_player.set_channel_volume(ch, vol)
+	)
+	_mini_mixer.channel_mute_changed.connect(func(ch: int, muted: bool):
+		_editor_player.set_channel_mute(ch, muted)
+	)
 
 
 func _update_mode_button_highlight(active_mode: int) -> void:
