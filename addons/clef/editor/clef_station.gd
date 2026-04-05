@@ -233,8 +233,8 @@ func _build_layout() -> void:
 
 	# 时间刻度尺
 	var _piano_ruler: PianoTimeRuler = PianoTimeRuler.new()
-	_piano_ruler.time_clicked.connect(func(t: float): _editor_player.seek(t); _piano_roll.set_playback_position(t))
-	_piano_ruler.time_scrubbed.connect(func(t: float): _editor_player.seek(t); _piano_roll.set_playback_position(t))
+	_piano_ruler.time_clicked.connect(func(t: float): _editor_player.seek(t); _piano_roll.set_playback_position(t, true))
+	_piano_ruler.time_scrubbed.connect(func(t: float): _editor_player.seek(t); _piano_roll.set_playback_position(t, true))
 	_piano_roll.view_offset_changed.connect(_piano_ruler.setup)
 	_piano_roll.playback_position_changed.connect(_piano_ruler.set_playback_position)
 	center_vbox.add_child(_piano_ruler)
@@ -391,16 +391,20 @@ func _wire_transport() -> void:
 			return
 		_editor_player.play()
 		_progress_timer.start()
+		_piano_roll.set_playing(true)
 	)
 	_transport_bar.stop_pressed.connect(func():
 		_editor_player.stop()
 		_transport_bar.update_progress(0.0, _editor_player.get_duration())
 		_progress_timer.stop()
+		_piano_roll.set_playing(false)
 	)
 	_transport_bar.pause_pressed.connect(func():
 		_editor_player.pause()
+		_piano_roll.set_playing(false)
 	)
 	_transport_bar.seek_requested.connect(func(pos: float):
+		_editor_player.seek(pos)
 		_editor_player.seek(pos)
 	)
 

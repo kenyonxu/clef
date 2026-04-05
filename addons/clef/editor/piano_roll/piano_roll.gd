@@ -116,6 +116,10 @@ const _LEGEND_BG := Color(0.08, 0.08, 0.11)
 const _GRID_LINE_COLOR := Color(0.12, 0.12, 0.16)
 const _GRID_C_COLOR := Color(0.18, 0.18, 0.22)
 const _PLAYBACK_COLOR := Color(1.0, 1.0, 1.0, 0.8)
+const _EDGE_HANDLE_WIDTH: float = 8.0
+const _EDGE_HANDLE_COLOR := Color(0.3, 0.9, 1.0, 0.85)
+const _EDGE_HANDLE_HOVER_COLOR := Color(1.0, 1.0, 1.0, 0.95)
+
 const _LEGEND_HEIGHT: float = 28.0
 
 var _notes: Array[RollNote] = []
@@ -130,6 +134,9 @@ var _selection: Array[int] = []
 
 ## 鼠标悬停音符索引（-1 表示无）
 var _hovered_note: int = -1
+
+## 悬停的边缘（"none" | "left" | "right"）
+var _hovered_edge: String = "none"
 
 ## 框选状态
 var _box_selecting: bool = false
@@ -173,6 +180,7 @@ var _edit_mode: EditMode = EditMode.SELECT
 ## 编辑模式：开启后隐藏播放线，允许编辑操作
 var _editing: bool = false
 
+var _playing: bool = false
 ## 水平缩放与滚动
 var _zoom_level: float = 1.0
 var _view_offset: float = 0.0
@@ -267,8 +275,9 @@ func clear_muted_channels() -> void:
 
 
 ## 更新播放头位置
-func set_playback_position(position: float) -> void:
-	if _editing:
+## 更新播放头位置
+func set_playback_position(position: float, force: bool = false) -> void:
+	if _editing and not force and not _playing:
 		return
 	_playback_position = position
 	playback_position_changed.emit(position)
@@ -285,7 +294,6 @@ func set_playback_position(position: float) -> void:
 			_update_scroll_bars()
 			_notify_view_changed()
 	queue_redraw()
-
 
 ## 清空所有状态
 func clear_notes() -> void:
@@ -321,6 +329,9 @@ func set_editing(enabled: bool) -> void:
 	queue_redraw()
 	editing_changed.emit(enabled)
 
+
+func set_playing(playing: bool) -> void:
+	_playing = playing
 
 func is_editing() -> bool:
 	return _editing
@@ -673,10 +684,12 @@ func _handle_mouse_motion(event: InputEventMouseMotion) -> void:
 		_drag_update(event.position)
 	else:
 		var hit := _hit_test(event.position)
-		if hit["index"] != _hovered_note:
+		var is_hovered_selected: bool = bool(hit["index"] >= 0 and _selection.has(hit["index"]))
+		_hovered_edge = hit["edge"] if _editing and is_hovered_selected else "none"
+		if hit["index"] != _hovered_note or _hovered_edge != (hit["edge"] if hit["index"] >= 0 else "none"):
 			_hovered_note = hit["index"]
+			mouse_default_cursor_shape = Control.CURSOR_HSPLIT if _hovered_edge != "none" else Control.CURSOR_ARROW
 			queue_redraw()
-
 
 func _drag_update(pos: Vector2) -> void:
 	var delta: Vector2 = pos - _drag_start_pos
@@ -696,7 +709,7 @@ func _drag_update(pos: Vector2) -> void:
 			var time_delta: float = delta.x / _effective_pps()
 			if snap_enabled:
 				time_delta = round(time_delta / snap_interval) * snap_interval
-			time_delta = clampf(time_delta, 0.0, _drag_original_notes[0]["duration"])
+			time_delta = clampf(time_delta, -_drag_original_notes[0]["start_time"], _drag_original_notes[0]["duration"])
 			for orig in _drag_original_notes:
 				var idx: int = orig["index"]
 				if idx >= 0 and idx < _notes.size():
@@ -859,6 +872,12 @@ func _draw_notes() -> void:
 		# 选中高亮边框
 		if sel_set.has(i):
 			draw_rect(Rect2(x - 1, y - 1, w + 2, h + 2), Color(1, 1, 1, 0.9), false, 2.0)
+			# 边缘拖拽手柄（仅编辑模式）
+			if _editing:
+				var hw := _EDGE_HANDLE_WIDTH
+				var hc := _EDGE_HANDLE_HOVER_COLOR if i == _hovered_note and _hovered_edge != "none" else _EDGE_HANDLE_COLOR
+				draw_rect(Rect2(x - hw / 2.0, y, hw, h), hc)
+				draw_rect(Rect2(x + w - hw / 2.0, y, hw, h), hc)
 
 		# 悬停高亮
 		if i == _hovered_note:
@@ -900,16 +919,26 @@ func _hit_test(pos: Vector2) -> Dictionary:
 		# 用垂直边界匹配，而非精确音高整数匹配
 		var y_top := _pitch_to_y(n.pitch + 1)
 		var y_bottom := _pitch_to_y(n.pitch)
-		if pos.y >= y_top and pos.y < y_bottom and time >= n.start_time and time <= n.start_time + n.duration:
+		if pos.y < y_top or pos.y >= y_bottom:
+			continue
+		# 音符内部命中
+		if time >= n.start_time and time <= n.start_time + n.duration:
 			var edge := _check_edge(pos, n)
 			return {"index": i, "edge": edge}
+		# 边缘区域命中（延伸到音符边界外）
+		var x_left := _time_to_x(n.start_time)
+		var x_right := _time_to_x(n.start_time + n.duration)
+		var tolerance := _EDGE_HANDLE_WIDTH / 2.0
+		if absf(pos.x - x_left) <= tolerance or absf(pos.x - x_right) <= tolerance:
+			var edge := _check_edge(pos, n)
+			if edge != "none":
+				return {"index": i, "edge": edge}
 	return {"index": -1, "edge": "none"}
-
 
 func _check_edge(pos: Vector2, note: RollNote) -> String:
 	var x_left := _time_to_x(note.start_time)
 	var x_right := _time_to_x(note.start_time + note.duration)
-	var tolerance := 4.0
+	var tolerance := _EDGE_HANDLE_WIDTH / 2.0
 	if absf(pos.x - x_left) <= tolerance:
 		return "left"
 	if absf(pos.x - x_right) <= tolerance:
@@ -1062,6 +1091,7 @@ func _create_v_scroll() -> void:
 	_v_scroll.add_theme_stylebox_override("scroll", StyleBoxEmpty.new())
 	_v_scroll.value_changed.connect(_on_v_scroll_changed)
 	add_child(_v_scroll)
+
 func _reposition_scroll_bars() -> void:
 	if _h_scroll:
 		_h_scroll.offset_top = size.y - _SCROLL_BAR_HEIGHT
@@ -1089,7 +1119,6 @@ func _on_h_scroll_changed(value: float) -> void:
 	_view_offset = value
 	_notify_view_changed()
 	queue_redraw()
-
 
 func _on_v_scroll_changed(value: float) -> void:
 	_pitch_offset = int(value)
