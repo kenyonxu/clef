@@ -127,13 +127,14 @@ func _invert_mute_selected() -> void:
 	if sel.is_empty():
 		return
 	var before_state := _roll._muted_indices.duplicate()
+	var sel_set := {}
 	for idx in sel:
-		var found := _roll._muted_indices.find(idx)
-		if found >= 0:
-			_roll._muted_indices.remove_at(found)
-		else:
-			_roll._muted_indices.append(idx)
-	var cmd := _roll.begin_command("mute", "反向屏蔽 %d 个音符" % sel.size())
+		sel_set[idx] = true
+	_roll._muted_indices.clear()
+	for i in _roll._notes.size():
+		if not sel_set.has(i):
+			_roll._muted_indices.append(i)
+	var cmd := _roll.begin_command("mute", "反向屏蔽: 仅保留 %d 个音符" % sel.size())
 	cmd.before = {"muted_indices": before_state}
 	cmd.after = {"muted_indices": _roll._muted_indices.duplicate()}
 	_roll.commit_command(cmd)
