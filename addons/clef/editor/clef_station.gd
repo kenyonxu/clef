@@ -428,6 +428,7 @@ func _wire_transport() -> void:
 		_transport_bar.update_progress(0.0, _editor_player.get_duration())
 		_progress_timer.stop()
 		_piano_roll.set_playing(false)
+		_piano_roll.set_playback_position(0.0, true)
 	)
 	_transport_bar.pause_pressed.connect(func():
 		_editor_player.pause()
