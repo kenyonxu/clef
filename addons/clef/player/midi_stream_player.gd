@@ -21,8 +21,9 @@ extends Node
 @export var chorus_enabled: bool = true : set = set_chorus_enabled
 @export_range(0.0, 1.0, 0.01) var chorus_wet: float = 0.2 : set = set_chorus_wet
 @export var compressor_enabled: bool = false : set = set_compressor_enabled
-@export_range(-60.0, 0.0, 1.0) var compressor_threshold_db: float = -24.0 : set = set_compressor_threshold_db
+@export_range(-60.0, 0.0, 1.0) var compressor_threshold_db: float = -12.0 : set = set_compressor_threshold_db
 @export_range(1.0, 64.0, 0.1) var compressor_ratio: float = 4.0 : set = set_compressor_ratio
+@export_range(-20.0, 20.0, 0.1) var compressor_gain_db: float = 0.0 : set = set_compressor_gain_db
 @export var eq_enabled: bool = false : set = set_eq_enabled
 var bus: String = "Master" : set = set_bus
 
@@ -221,6 +222,10 @@ func set_compressor_ratio(v: float) -> void:
 	compressor_ratio = v
 	_update_compressor()
 
+func set_compressor_gain_db(v: float) -> void:
+	compressor_gain_db = v
+	_update_compressor()
+
 func _update_compressor() -> void:
 	if _clef_master_bus_idx < 0:
 		return
@@ -230,6 +235,7 @@ func _update_compressor() -> void:
 			AudioServer.set_bus_effect_enabled(_clef_master_bus_idx, i, compressor_enabled)
 			effect.threshold = compressor_threshold_db
 			effect.ratio = compressor_ratio
+			effect.gain = compressor_gain_db
 			return
 
 	# --- EQ6 setter ---
@@ -274,6 +280,7 @@ func _setup_audio_buses() -> void:
 		var compressor := AudioEffectCompressor.new()
 		compressor.threshold = compressor_threshold_db
 		compressor.ratio = compressor_ratio
+		compressor.gain = compressor_gain_db
 		compressor.attack_us = 20.0
 		compressor.release_ms = 250.0
 		AudioServer.add_bus_effect(_clef_master_bus_idx, compressor)

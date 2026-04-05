@@ -5,11 +5,13 @@ Clef 是一个 Godot 4.6+ 的 MIDI 播放引擎插件，使用 SF2 SoundFont 合
 ## 特性
 
 - **SF2 合成** — 基于 AudioStreamPlayer 池架构，使用 SoundFont 2 文件合成音频
+- **SF2 滤波** — 离线 biquad LPF 预处理 SF2 采样，还原 SoundFont 原始音色
 - **完整 MIDI 支持** — Note On/Off、Program Change、Control Change、Pitch Bend、Tempo Change
 - **立体声采样** — 自动检测 SF2 立体声采样对，生成交错立体声 AudioStreamWAV
 - **实时控制** — CC1 调制、CC7 音量、CC10 声相、CC11 表情、CC64 延音踏板、RPN 弯音灵敏度
 - **多声道混音** — 自动创建 16 通道音频总线 + 独立声相
-- **语音池** — 可配置复音数（默认 32），按通道窃取策略
+- **总线效果器** — ClefMaster 总线集成 Compressor（动态压缩）和 6 段 EQ（均衡）
+- **语音池** — 可配置复音数（默认 64），按通道窃取策略
 - **LLM 编曲** — Clef JSON v1.1 格式 + LLM 系统提示词，支持 AI 辅助作曲
 - **Clef Station** — 编辑器内 MIDI 工作站面板，集成音色浏览、播放控制、混音台和 MIDI 监视器
 - **编辑器工具** — Inspector 预览播放、JSON↔MIDI 互转、文件系统右键菜单
@@ -71,8 +73,18 @@ var position: float = player.get_playback_position()
 | `autoplay` | `bool` | `false` | 场景加载后自动播放 |
 | `volume_db` | `float` | `-20.0` | 主音量（dB） |
 | `pitch_scale` | `float` | `1.0` | 全局音高缩放 |
-| `max_polyphony` | `int` | `32` | 最大同时发声数（1-128） |
+| `max_polyphony` | `int` | `64` | 最大同时发声数（1-128） |
 | `bus` | `String` | `"Master"` | 输出音频总线 |
+| `reverb_enabled` | `bool` | `true` | 启用混响效果 |
+| `reverb_room_size` | `float` | `0.29` | 混响房间大小（0-1） |
+| `reverb_wet` | `float` | `0.15` | 混响湿信号比例（0-1） |
+| `chorus_enabled` | `bool` | `true` | 启用合唱效果 |
+| `chorus_wet` | `float` | `0.2` | 合唱湿信号比例（0-1） |
+| `compressor_enabled` | `bool` | `false` | 启用动态压缩（多声部叠加时防止削波） |
+| `compressor_threshold_db` | `float` | `-12.0` | 压缩阈值（-60~0 dB） |
+| `compressor_ratio` | `float` | `4.0` | 压缩比（1~64） |
+| `compressor_gain_db` | `float` | `0.0` | 压缩补偿增益（-20~20 dB） |
+| `eq_enabled` | `bool` | `false` | 启用 6 段均衡器（在 Audio 面板调参） |
 
 ## 信号
 
