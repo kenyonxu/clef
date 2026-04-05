@@ -26,6 +26,7 @@ var _soundfont_browser: SoundfontBrowser
 var _bridge: RefCounted = null
 var _midi_monitor: MidiMonitor
 var _editor_player: EditorPlayer
+var _edit_dirty: bool = false
 var _transport_bar: TransportBar
 var _piano_roll: PianoRoll
 var _mini_mixer: MiniMixer
@@ -233,7 +234,6 @@ func _build_layout() -> void:
 	center_vbox.add_child(edit_bar)
 
 	# 时间刻度尺
-var _edit_dirty: bool = false
 	var _piano_ruler: PianoTimeRuler = PianoTimeRuler.new()
 	_piano_ruler.time_clicked.connect(func(t: float): _editor_player.seek(t); _piano_roll.set_playback_position(t, true))
 	_piano_ruler.time_scrubbed.connect(func(t: float): _editor_player.seek(t); _piano_roll.set_playback_position(t, true))

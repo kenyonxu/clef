@@ -685,8 +685,8 @@ func _handle_mouse_motion(event: InputEventMouseMotion) -> void:
 		_drag_update(event.position)
 	else:
 		var hit := _hit_test(event.position)
-		var new_note := hit["index"]
-		var new_edge := hit["edge"] if _editing and new_note >= 0 and _selection.has(new_note) else "none"
+		var new_note: int =  hit["index"]
+		var new_edge: String = hit["edge"] if _editing and new_note >= 0 and _selection.has(new_note) else "none"
 		if new_note != _hovered_note or new_edge != _hovered_edge:
 			_hovered_note = new_note
 			_hovered_edge = new_edge
@@ -716,7 +716,8 @@ func _drag_update(pos: Vector2) -> void:
 			for orig in _drag_original_notes:
 				if orig["start_time"] < min_start: min_start = orig["start_time"]
 				if orig["duration"] < min_dur: min_dur = orig["duration"]
-			time_delta = clampf(time_delta, -min_start, min_dur)			for orig in _drag_original_notes:
+			time_delta = clampf(time_delta, -min_start, min_dur)			
+			for orig in _drag_original_notes:
 				var idx: int = orig["index"]
 				if idx >= 0 and idx < _notes.size():
 					_notes[idx].start_time = orig["start_time"] + time_delta
@@ -866,7 +867,7 @@ func _draw_notes() -> void:
 			base_color.b * brightness
 		)
 		# 屏蔽态：半透明 + 删除线
-		if _is_note_muted(i):
+		if is_note_muted(i):
 			color.a = 0.3
 			draw_rect(Rect2(x, y, w, h), color)
 			draw_line(Vector2(x, y + h / 2), Vector2(x + w, y + h / 2), Color(1, 0.3, 0.3), 1.5)
@@ -907,7 +908,7 @@ func _draw_playback_cursor() -> void:
 	draw_line(Vector2(x, 0), Vector2(x, bottom_y), _PLAYBACK_COLOR, 2.0)
 
 
-func _is_note_muted(index: int) -> bool:
+func is_note_muted(index: int) -> bool:
 	return _muted_indices.find(index) >= 0
 
 func _make_annotation(idx: int, text: String, severity: String) -> Annotation:
