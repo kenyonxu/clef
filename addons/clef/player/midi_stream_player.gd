@@ -360,6 +360,21 @@ func seek(position: float) -> void:
 	_preprocess_events_up_to(int(_current_tick))
 
 
+## 热更新：从当前 midi_resource 重建事件列表（编辑同步用）
+func rebuild_events() -> void:
+	if midi_resource == null:
+		return
+	if _voice_pool != null:
+		_voice_pool.stop_all()
+	var saved_tick := _current_tick
+	_build_sorted_events()
+	_current_tick = saved_tick
+	_channel_instruments.clear()
+	for state in _channel_states:
+		state.reset()
+	_preprocess_events_up_to(int(_current_tick))
+
+
 ## 获取曲目总时长 (秒)
 func get_duration() -> float:
 	if midi_resource == null:
@@ -697,3 +712,7 @@ func _apply_channel_pan(ch: int) -> void:
 		if effect is AudioEffectPanner:
 			effect.pan = (state.pan * 2.0) - 1.0
 			break
+
+	var count := 0
+	for t in midi_resource.tracks:
+		count += t.notes.size()

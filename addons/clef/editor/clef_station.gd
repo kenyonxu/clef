@@ -172,6 +172,7 @@ func _build_layout() -> void:
 		_editor_player.seek(pos)
 	)
 	_piano_roll.export_requested.connect(_on_piano_roll_export)
+	_piano_roll.note_edited.connect(_on_piano_roll_note_edited)
 	_piano_roll.agent_feedback_requested.connect(func(feedback: Dictionary):
 		var timestamp := Time.get_datetime_string_from_system().replace(":", "-").replace(" ", "_")
 		var abs_path := ProjectSettings.globalize_path("res://addons/clef/output/agent_feedback_" + timestamp + ".json")
@@ -468,15 +469,11 @@ func _update_piano_roll() -> void:
 		_mini_mixer.set_channel_instrument(ch, channel_instruments[ch])
 
 
-func _on_piano_roll_export(notes: Array) -> void:
+
+func _build_midi_data_from_notes(notes: Array) -> MidiData:
 	var midi_res: MidiResource = _editor_player.get_midi_resource()
 	if midi_res == null:
-		push_warning("No MIDI loaded, cannot export")
-		return
-	if notes.is_empty():
-		push_warning("No notes to export")
-		return
-	# Build MidiData
+		return null
 	var midi_data := MidiData.new(
 		midi_res.tempo, [], midi_res.timebase,
 		midi_res.tempo_events.duplicate(true),
@@ -484,31 +481,45 @@ func _on_piano_roll_export(notes: Array) -> void:
 		midi_res.pitch_bend_events.duplicate(true),
 		midi_res.program_events.duplicate(true)
 	)
-	# Collect notes per channel
 	var channel_notes: Dictionary = {}
-	for rn in notes:
+	var ticks_per_second := float(midi_res.tempo) / 60.0 * float(midi_res.timebase)
+	if ticks_per_second <= 0.0:
+		return null
+	for idx in range(notes.size()):
+		if _piano_roll._muted_indices.has(idx):
+			continue
+		var rn = notes[idx]
 		var ch: int = rn.channel
 		if ch == 9 and _piano_roll._muted_channels.has(ch):
 			continue
 		if not channel_notes.has(ch):
 			channel_notes[ch] = []
-		var ticks_per_second := float(midi_res.tempo) / 60.0 * float(midi_res.timebase)
-		if ticks_per_second <= 0.0:
-			continue
 		var start_ticks := int(rn.start_time * ticks_per_second)
 		var duration_ticks := int(rn.duration * ticks_per_second)
 		channel_notes[ch].append(NoteData.new(rn.pitch, start_ticks, duration_ticks, rn.velocity))
-	# Build tracks
 	for ch in channel_notes:
 		var track := TrackData.new()
 		track.channel = ch
-		track.notes = channel_notes[ch]
+		track.notes.assign(channel_notes[ch])
 		for orig_track in midi_res.tracks:
 			if orig_track.channel == ch:
 				track.instrument = orig_track.instrument
 				track.name = orig_track.name
 				break
 		midi_data.tracks.append(track)
+	return midi_data
+
+func _on_piano_roll_note_edited() -> void:
+	var midi_data := _build_midi_data_from_notes(_piano_roll.get_notes())
+	if midi_data == null:
+		return
+	var new_res := MidiResource.new()
+	new_res.from_midi_data(midi_data)
+	_editor_player.update_resource(new_res)
+func _on_piano_roll_export(notes: Array) -> void:
+	var midi_data := _build_midi_data_from_notes(notes)
+	if midi_data == null:
+		return
 	# Write file
 	var bytes := MidiWriter.encode(midi_data)
 	var output_dir := "res://addons/clef/output/"
