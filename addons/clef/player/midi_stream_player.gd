@@ -20,6 +20,9 @@ extends Node
 @export_range(0.0, 1.0, 0.01) var reverb_wet: float = 0.15 : set = set_reverb_wet
 @export var chorus_enabled: bool = true : set = set_chorus_enabled
 @export_range(0.0, 1.0, 0.01) var chorus_wet: float = 0.2 : set = set_chorus_wet
+@export var compressor_enabled: bool = false : set = set_compressor_enabled
+@export_range(-60.0, 0.0, 1.0) var compressor_threshold_db: float = -24.0 : set = set_compressor_threshold_db
+@export_range(1.0, 64.0, 0.1) var compressor_ratio: float = 4.0 : set = set_compressor_ratio
 var bus: String = "Master" : set = set_bus
 
 signal note_triggered(channel: int, pitch: int, velocity: int)
@@ -204,6 +207,30 @@ func set_chorus_wet(value: float) -> void:
 		if eff != null:
 			eff.wet = value
 
+# --- Compressor setter ---
+func set_compressor_enabled(v: bool) -> void:
+	compressor_enabled = v
+	_update_compressor()
+
+func set_compressor_threshold_db(v: float) -> void:
+	compressor_threshold_db = v
+	_update_compressor()
+
+func set_compressor_ratio(v: float) -> void:
+	compressor_ratio = v
+	_update_compressor()
+
+func _update_compressor() -> void:
+	if _clef_master_bus_idx < 0:
+		return
+	for i in range(AudioServer.get_bus_effect_count(_clef_master_bus_idx)):
+		var effect = AudioServer.get_bus_effect(_clef_master_bus_idx, i)
+		if effect is AudioEffectCompressor:
+			AudioServer.set_bus_effect_enabled(_clef_master_bus_idx, i, compressor_enabled)
+			effect.threshold_db = compressor_threshold_db
+			effect.ratio = compressor_ratio
+			return
+
 # --- Helper ---
 func _get_effect_index(bus_idx: int, effect: AudioEffect) -> int:
 	for i in range(AudioServer.get_bus_effect_count(bus_idx)):
@@ -222,6 +249,21 @@ func _setup_audio_buses() -> void:
 		AudioServer.set_bus_name(_clef_master_bus_idx, "ClefMaster")
 		AudioServer.set_bus_send(_clef_master_bus_idx, bus)
 		AudioServer.set_bus_volume_db(_clef_master_bus_idx, volume_db)
+	# --- Compressor (ensure existence on ClefMaster) ---
+	var has_compressor := false
+	for k in range(AudioServer.get_bus_effect_count(_clef_master_bus_idx)):
+		if AudioServer.get_bus_effect(_clef_master_bus_idx, k) is AudioEffectCompressor:
+			has_compressor = true
+			break
+	if not has_compressor:
+		var compressor := AudioEffectCompressor.new()
+		compressor.threshold_db = compressor_threshold_db
+		compressor.ratio = compressor_ratio
+		compressor.attack_us = 20.0
+		compressor.release_ms = 250.0
+		AudioServer.add_bus_effect(_clef_master_bus_idx, compressor)
+		AudioServer.set_bus_effect_enabled(_clef_master_bus_idx,
+			AudioServer.get_bus_effect_count(_clef_master_bus_idx) - 1, compressor_enabled)
 	# --- Reverb/Chorus (ensure existence on ClefMaster) ---
 	var has_reverb := false
 	for k in range(AudioServer.get_bus_effect_count(_clef_master_bus_idx)):
