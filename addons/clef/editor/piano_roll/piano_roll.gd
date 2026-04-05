@@ -27,7 +27,10 @@ signal agent_feedback_requested(feedback: Dictionary)
 ## 请求导出 ABC 记谱法
 signal abc_export_requested()
 
-## 编辑模式切换
+## 模式切换
+signal mode_changed(new_mode: int)
+
+## 编辑模式切换（向后兼容）
 signal editing_changed(enabled: bool)
 
 ## 缩放/滚动状态变更（给 ruler 用）
@@ -174,11 +177,11 @@ var _muted_indices: Array[int] = []
 ## 临时音符（试听用，不写入 MIDI）
 var _temp_notes: Array[RollNote] = []
 
-enum EditMode { SELECT, ANNOTATE, ADD_NOTE }
-var _edit_mode: EditMode = EditMode.SELECT
+enum Mode { PLAYING, EDITING, FEEDBACK }
+var _mode: Mode = Mode.PLAYING
 
-## 编辑模式：开启后隐藏播放线，允许编辑操作
-var _editing: bool = false
+enum EditSubMode { SELECT, ADD_NOTE }
+var _edit_sub_mode: EditSubMode = EditSubMode.SELECT
 
 var _playing: bool = false
 ## 水平缩放与滚动
@@ -276,7 +279,7 @@ func clear_muted_channels() -> void:
 
 ## 更新播放头位置
 func set_playback_position(position: float, force: bool = false) -> void:
-	if _editing and not force and not _playing:
+	if _mode == Mode.EDITING and not force and not _playing:
 		return
 	_playback_position = position
 	playback_position_changed.emit(position)
@@ -320,13 +323,27 @@ func clear_notes() -> void:
 	queue_redraw()
 
 
-## 切换编辑模式
-func set_editing(enabled: bool) -> void:
-	_editing = enabled
-	if enabled:
+## 切换模式（核心入口）
+func set_mode(new_mode: Mode) -> void:
+	if _mode == new_mode:
+		return
+	_mode = new_mode
+	if new_mode == Mode.EDITING:
 		_playback_position = -1.0
+		_playing = false
+	elif new_mode == Mode.PLAYING:
+		_selection.clear()
+	elif new_mode == Mode.FEEDBACK:
+		_selection.clear()
+	mode_changed.emit(new_mode)
+	editing_changed.emit(new_mode == Mode.EDITING)
+	if is_instance_valid(_actions):
+		_actions._rebuild_context_menu()
 	queue_redraw()
-	editing_changed.emit(enabled)
+
+
+func set_editing(enabled: bool) -> void:
+	set_mode(Mode.EDITING if enabled else Mode.PLAYING)
 
 
 func set_playing(playing: bool) -> void:
@@ -335,7 +352,15 @@ func set_playing(playing: bool) -> void:
 		queue_redraw()
 
 func is_editing() -> bool:
-	return _editing
+	return _mode == Mode.EDITING
+
+
+func is_feedback_mode() -> bool:
+	return _mode == Mode.FEEDBACK
+
+
+func is_playing() -> bool:
+	return _playing
 
 
 # ─── 坐标映射 ─────────────────────────────────────────────
@@ -423,7 +448,7 @@ func _notification(what: int) -> void:
 
 
 func _unhandled_key_input(event: InputEvent) -> void:
-	if not _editing:
+	if _mode != Mode.EDITING:
 		return
 	var key := event as InputEventKey
 	if key == null or not key.pressed:
@@ -540,13 +565,14 @@ func _handle_mouse_button(mb: InputEventMouseButton) -> void:
 
 
 func _handle_left_press(mb: InputEventMouseButton) -> void:
-	if not _editing:
+	if _mode == Mode.PLAYING:
 		_selection.clear()
 		queue_redraw()
 		var t := _pixel_to_time(mb.position.x)
 		if _duration > 0.0 and t >= 0.0 and t <= _duration:
 			seek_requested.emit(t)
 		return
+	# EDITING 和 FEEDBACK：允许选中
 	var hit := _hit_test(mb.position)
 	if hit["index"] >= 0:
 		if mb.shift_pressed:
@@ -559,27 +585,28 @@ func _handle_left_press(mb: InputEventMouseButton) -> void:
 		else:
 			_selection.clear()
 			_selection.append(hit["index"])
-		# 开始拖拽
-		_dragging = true
-		_drag_start_pos = mb.position
-		_drag_original_notes.clear()
-		if hit["edge"] == "left":
-			_drag_type = 2
-		elif hit["edge"] == "right":
-			_drag_type = 3
-		else:
-			_drag_type = 1  # MOVE
-		for idx in _selection:
-			var n := _notes[idx]
-			_drag_original_notes.append({
-				"index": idx,
-				"pitch": n.pitch,
-				"start_time": n.start_time,
-				"duration": n.duration,
-			})
+		# 仅编辑模式开始拖拽
+		if _mode == Mode.EDITING:
+			_dragging = true
+			_drag_start_pos = mb.position
+			_drag_original_notes.clear()
+			if hit["edge"] == "left":
+				_drag_type = 2
+			elif hit["edge"] == "right":
+				_drag_type = 3
+			else:
+				_drag_type = 1  # MOVE
+			for idx in _selection:
+				var n := _notes[idx]
+				_drag_original_notes.append({
+					"index": idx,
+					"pitch": n.pitch,
+					"start_time": n.start_time,
+					"duration": n.duration,
+				})
 		queue_redraw()
 	else:
-		if _edit_mode == EditMode.ADD_NOTE:
+		if _edit_sub_mode == EditSubMode.ADD_NOTE:
 			var pitch := _y_to_pitch(mb.position.y)
 			var time := _pixel_to_time(mb.position.x)
 			if snap_enabled:
@@ -655,7 +682,7 @@ func _handle_left_release(_mb: InputEventMouseButton) -> void:
 
 
 func _handle_right_click(mb: InputEventMouseButton) -> void:
-	if not _editing:
+	if _mode == Mode.PLAYING:
 		return
 	var hit := _hit_test(mb.position)
 	if hit["index"] >= 0:
@@ -686,7 +713,7 @@ func _handle_mouse_motion(event: InputEventMouseMotion) -> void:
 	else:
 		var hit := _hit_test(event.position)
 		var new_note: int =  hit["index"]
-		var new_edge: String = hit["edge"] if _editing and new_note >= 0 and _selection.has(new_note) else "none"
+		var new_edge: String = hit["edge"] if _mode == Mode.EDITING and new_note >= 0 and _selection.has(new_note) else "none"
 		if new_note != _hovered_note or new_edge != _hovered_edge:
 			_hovered_note = new_note
 			_hovered_edge = new_edge
@@ -758,7 +785,9 @@ func _draw() -> void:
 	_draw_notes()
 	# 播放头
 	_draw_playback_cursor()
-	_actions.draw_annotations()
+	# 标注（仅反馈模式）
+	if _mode == Mode.FEEDBACK:
+		_actions.draw_annotations()
 
 	# 框选矩形
 	if _box_selecting:
@@ -880,7 +909,7 @@ func _draw_notes() -> void:
 		if sel_set.has(i):
 			draw_rect(Rect2(x - 1, y - 1, w + 2, h + 2), Color(1, 1, 1, 0.9), false, 2.0)
 			# 边缘拖拽手柄（仅编辑模式）
-			if _editing:
+			if _mode == Mode.EDITING:
 				var hw := _EDGE_HANDLE_WIDTH
 				var hc := _EDGE_HANDLE_HOVER_COLOR if i == _hovered_note and _hovered_edge != "none" else _EDGE_HANDLE_COLOR
 				draw_rect(Rect2(x - hw / 2.0, y, hw, h), hc)

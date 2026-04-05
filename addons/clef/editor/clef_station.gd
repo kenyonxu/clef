@@ -219,19 +219,43 @@ func _build_layout() -> void:
 		else:
 			push_warning("[ClefStation] Cannot open output directory for ABC export")
 	)
-	# 编辑模式切换栏
-	var edit_bar := HBoxContainer.new()
-	edit_bar.add_child(Control.new())
-	var edit_btn := Button.new()
-	edit_btn.text = "编辑模式"
-	edit_btn.toggle_mode = true
-	edit_btn.toggled.connect(func(on: bool):
-		_piano_roll.set_editing(on)
-		edit_btn.text = "退出编辑" if on else "编辑模式"
+	# 模式切换栏
+	var mode_bar := HBoxContainer.new()
+	mode_bar.add_child(Control.new())
+	var mode_group := ButtonGroup.new()
+	var btn_play := Button.new()
+	btn_play.text = "▶ 播放"
+	btn_play.toggle_mode = true
+	btn_play.button_group = mode_group
+	btn_play.button_pressed = true
+	btn_play.pressed.connect(func():
+		_piano_roll.set_mode(PianoRoll.Mode.PLAYING)
+		_editor_player.stop()
+		_progress_timer.stop()
+		_transport_bar.update_progress(0.0, _editor_player.get_duration())
 	)
-	edit_bar.add_child(edit_btn)
-	edit_bar.add_child(Control.new())
-	center_vbox.add_child(edit_bar)
+	mode_bar.add_child(btn_play)
+	var btn_edit := Button.new()
+	btn_edit.text = "✏ 编辑"
+	btn_edit.toggle_mode = true
+	btn_edit.button_group = mode_group
+	btn_edit.pressed.connect(func():
+		_piano_roll.set_mode(PianoRoll.Mode.EDITING)
+		_editor_player.stop()
+		_progress_timer.stop()
+		_transport_bar.update_progress(0.0, _editor_player.get_duration())
+	)
+	mode_bar.add_child(btn_edit)
+	var btn_feedback := Button.new()
+	btn_feedback.text = "❗ 反馈"
+	btn_feedback.toggle_mode = true
+	btn_feedback.button_group = mode_group
+	btn_feedback.pressed.connect(func():
+		_piano_roll.set_mode(PianoRoll.Mode.FEEDBACK)
+	)
+	mode_bar.add_child(btn_feedback)
+	mode_bar.add_child(Control.new())
+	center_vbox.add_child(mode_bar)
 
 	# 时间刻度尺
 	var _piano_ruler: PianoTimeRuler = PianoTimeRuler.new()
@@ -389,6 +413,8 @@ func _on_load_pressed() -> void:
 
 func _wire_transport() -> void:
 	_transport_bar.play_pressed.connect(func():
+		if _piano_roll._mode == PianoRoll.Mode.EDITING:
+			_piano_roll.set_mode(PianoRoll.Mode.PLAYING)
 		if _editor_player.is_playing():
 			return
 		_editor_player.play()

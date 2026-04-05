@@ -13,8 +13,24 @@ func _init(roll: PianoRoll) -> void:
 # ─── 右键菜单 ───────────────────────────────────────────────
 
 func create_context_menu() -> PopupMenu:
+	_build_edit_menu()
+	return _roll._context_menu
+
+
+func _rebuild_context_menu() -> void:
+	if _roll._context_menu != null:
+		_roll._context_menu.queue_free()
+		_roll._context_menu = null
+	match _roll._mode:
+		PianoRoll.Mode.EDITING:
+			_build_edit_menu()
+		PianoRoll.Mode.FEEDBACK:
+			_build_feedback_menu()
+
+
+func _build_edit_menu() -> void:
 	var menu := PopupMenu.new()
-	menu.id_pressed.connect(_handle_menu_item)
+	menu.id_pressed.connect(_handle_edit_menu_item)
 	_roll._context_menu = menu
 	_roll.add_child(menu)
 	menu.add_item("删除音符", 0)
@@ -23,31 +39,44 @@ func create_context_menu() -> PopupMenu:
 	menu.add_separator()
 	menu.add_item("编辑力度...", 3)
 	menu.add_separator()
-	menu.add_item("添加标注...", 4)
-	menu.add_item("屏蔽（临时静音）", 5)
+	menu.add_item("屏蔽选中音符", 4)
+	menu.add_item("反向屏蔽", 5)
 	menu.add_separator()
-	menu.add_item("导出修改后的 MIDI", 10)
-	menu.add_item("生成 Agent 反馈", 11)
-	menu.add_separator()
-	menu.add_item("清除所有临时音符", 12)
-	menu.add_item("导出修改后的 ABC", 13)
-	return menu
+	menu.add_item("导出修改后的 MIDI", 6)
+	menu.add_item("导出修改后的 ABC", 7)
 
 
-func _handle_menu_item(id: int) -> void:
+func _build_feedback_menu() -> void:
+	var menu := PopupMenu.new()
+	menu.id_pressed.connect(_handle_feedback_menu_item)
+	_roll._context_menu = menu
+	_roll.add_child(menu)
+	menu.add_item("添加标注...", 10)
+	menu.add_separator()
+	menu.add_item("屏蔽选中音符", 11)
+	menu.add_item("反向屏蔽", 12)
+	menu.add_separator()
+	menu.add_item("生成 Agent 反馈", 13)
+
+
+func _handle_edit_menu_item(id: int) -> void:
 	match id:
 		0: _delete_selected()
 		1: _shift_selected_pitch(1)
 		2: _shift_selected_pitch(-1)
 		3: _edit_velocity_popup()
-		4: _open_annotation_popup()
-		5: _toggle_mute_selected()
-		10: _roll.export_requested.emit(_roll._notes)
-		11: _roll.agent_feedback_requested.emit(get_agent_feedback())
-		12:
-			_roll._temp_notes.clear()
-			_roll.queue_redraw()
-		13: _roll.abc_export_requested.emit()
+		4: _toggle_mute_selected()
+		5: _invert_mute_selected()
+		6: _roll.export_requested.emit(_roll._notes)
+		7: _roll.abc_export_requested.emit()
+
+
+func _handle_feedback_menu_item(id: int) -> void:
+	match id:
+		10: _open_annotation_popup()
+		11: _toggle_mute_selected()
+		12: _invert_mute_selected()
+		13: _roll.agent_feedback_requested.emit(get_agent_feedback())
 
 
 # ─── 音符操作 ───────────────────────────────────────────────
@@ -90,6 +119,24 @@ func _toggle_mute_selected() -> void:
 		cmd.before = {"muted_indices": before_state}
 		cmd.after = {"muted_indices": _roll._muted_indices.duplicate()}
 		_roll.commit_command(cmd)
+	_roll.queue_redraw()
+
+
+func _invert_mute_selected() -> void:
+	var sel := _roll._selection
+	if sel.is_empty():
+		return
+	var before_state := _roll._muted_indices.duplicate()
+	for idx in sel:
+		var found := _roll._muted_indices.find(idx)
+		if found >= 0:
+			_roll._muted_indices.remove_at(found)
+		else:
+			_roll._muted_indices.append(idx)
+	var cmd := _roll.begin_command("mute", "反向屏蔽 %d 个音符" % sel.size())
+	cmd.before = {"muted_indices": before_state}
+	cmd.after = {"muted_indices": _roll._muted_indices.duplicate()}
+	_roll.commit_command(cmd)
 	_roll.queue_redraw()
 
 
