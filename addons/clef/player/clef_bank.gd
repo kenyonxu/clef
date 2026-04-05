@@ -45,11 +45,13 @@ func get_instrument(preset_index: int, key: int, velocity: int, channel: int) ->
 	var is_stereo: bool = sample.linked_sample_data.size() > 0
 
 	# 缓存 key: 基于采样数据特征
-	var cache_key: String = "%d_%d_%d_%d_%d_%d" % [
+	var cache_key: String = "%d_%d_%d_%d_%d_%d_%d_%d" % [
 		sample.sample_data.size(), sample.root_key,
 		sample.sample_rate, sample.tuning_cents,
 		1 if sample.has_loop else 0,
 		1 if is_stereo else 0,
+		sample.filter_fc if sample.filter_fc >= 0 else -1,
+		sample.filter_q if sample.filter_q >= 0 else -1,
 	]
 	if _cache.has(cache_key):
 		return _cache[cache_key]
@@ -80,6 +82,11 @@ func get_instrument(preset_index: int, key: int, velocity: int, channel: int) ->
 		full_data = _head_silent_stereo + interleaved
 	else:
 		full_data = _head_silent + sample.sample_data
+
+	# 离线 LPF: 对 PCM 预处理, 绕开 Godot AudioEffectFilter 的已知 bug
+	if sample.filter_fc >= 0 and sample.filter_fc < 20000.0:
+		var q: float = sample.filter_q if sample.filter_q >= 0.0 else 0.0
+		full_data = AudioFilter.apply_biquad_lpf(full_data, sample.filter_fc, q, 44100, is_stereo)
 
 	asw.data = full_data
 
