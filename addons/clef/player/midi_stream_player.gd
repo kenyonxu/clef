@@ -228,7 +228,7 @@ func _update_compressor() -> void:
 		var effect = AudioServer.get_bus_effect(_clef_master_bus_idx, i)
 		if effect is AudioEffectCompressor:
 			AudioServer.set_bus_effect_enabled(_clef_master_bus_idx, i, compressor_enabled)
-			effect.threshold_db = compressor_threshold_db
+			effect.threshold = compressor_threshold_db
 			effect.ratio = compressor_ratio
 			return
 
@@ -272,7 +272,7 @@ func _setup_audio_buses() -> void:
 			break
 	if not has_compressor:
 		var compressor := AudioEffectCompressor.new()
-		compressor.threshold_db = compressor_threshold_db
+		compressor.threshold = compressor_threshold_db
 		compressor.ratio = compressor_ratio
 		compressor.attack_us = 20.0
 		compressor.release_ms = 250.0
