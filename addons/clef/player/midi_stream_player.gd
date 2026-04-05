@@ -23,6 +23,7 @@ extends Node
 @export var compressor_enabled: bool = false : set = set_compressor_enabled
 @export_range(-60.0, 0.0, 1.0) var compressor_threshold_db: float = -24.0 : set = set_compressor_threshold_db
 @export_range(1.0, 64.0, 0.1) var compressor_ratio: float = 4.0 : set = set_compressor_ratio
+@export var eq_enabled: bool = false : set = set_eq_enabled
 var bus: String = "Master" : set = set_bus
 
 signal note_triggered(channel: int, pitch: int, velocity: int)
@@ -231,6 +232,20 @@ func _update_compressor() -> void:
 			effect.ratio = compressor_ratio
 			return
 
+	# --- EQ6 setter ---
+func set_eq_enabled(v: bool) -> void:
+	eq_enabled = v
+	_update_eq()
+
+func _update_eq() -> void:
+	if _clef_master_bus_idx < 0:
+		return
+	for i in range(AudioServer.get_bus_effect_count(_clef_master_bus_idx)):
+		var effect = AudioServer.get_bus_effect(_clef_master_bus_idx, i)
+		if effect is AudioEffectEQ6:
+			AudioServer.set_bus_effect_enabled(_clef_master_bus_idx, i, eq_enabled)
+			return
+
 # --- Helper ---
 func _get_effect_index(bus_idx: int, effect: AudioEffect) -> int:
 	for i in range(AudioServer.get_bus_effect_count(bus_idx)):
@@ -264,6 +279,17 @@ func _setup_audio_buses() -> void:
 		AudioServer.add_bus_effect(_clef_master_bus_idx, compressor)
 		AudioServer.set_bus_effect_enabled(_clef_master_bus_idx,
 			AudioServer.get_bus_effect_count(_clef_master_bus_idx) - 1, compressor_enabled)
+	# --- EQ6 (ensure existence on ClefMaster) ---
+	var has_eq := false
+	for k in range(AudioServer.get_bus_effect_count(_clef_master_bus_idx)):
+		if AudioServer.get_bus_effect(_clef_master_bus_idx, k) is AudioEffectEQ6:
+			has_eq = true
+			break
+	if not has_eq:
+		var eq := AudioEffectEQ6.new()
+		AudioServer.add_bus_effect(_clef_master_bus_idx, eq)
+		AudioServer.set_bus_effect_enabled(_clef_master_bus_idx,
+			AudioServer.get_bus_effect_count(_clef_master_bus_idx) - 1, eq_enabled)
 	# --- Reverb/Chorus (ensure existence on ClefMaster) ---
 	var has_reverb := false
 	for k in range(AudioServer.get_bus_effect_count(_clef_master_bus_idx)):
