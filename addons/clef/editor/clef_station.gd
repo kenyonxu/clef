@@ -27,6 +27,7 @@ var _bridge: RefCounted = null
 var _midi_monitor: MidiMonitor
 var _editor_player: EditorPlayer
 var _edit_dirty: bool = false
+var _mode_buttons: Array[Button] = []
 var _transport_bar: TransportBar
 var _piano_roll: PianoRoll
 var _mini_mixer: MiniMixer
@@ -254,6 +255,8 @@ func _build_layout() -> void:
 		_piano_roll.set_mode(PianoRoll.Mode.FEEDBACK)
 	)
 	mode_bar.add_child(btn_feedback)
+	_mode_buttons = [btn_play, btn_edit, btn_feedback]
+	_update_mode_button_highlight(PianoRoll.Mode.PLAYING)
 	mode_bar.add_child(Control.new())
 	center_vbox.add_child(mode_bar)
 
@@ -351,6 +354,7 @@ func _init_editor_player() -> void:
 	)
 	_wire_transport()
 	_wire_mixer()
+	_piano_roll.mode_changed.connect(_update_mode_button_highlight)
 
 
 func _init_progress_timer() -> void:
@@ -440,6 +444,29 @@ func _wire_mixer() -> void:
 	_mini_mixer.master_volume_changed.connect(func(vol: float):
 		_editor_player.set_master_volume(vol)
 	)
+
+
+func _update_mode_button_highlight(active_mode: int) -> void:
+	var accent := Color(0.3, 0.6, 1.0)
+	var normal := StyleBoxFlat.new()
+	normal.bg_color = Color(0.15, 0.15, 0.18)
+	normal.set_border_width_all(1)
+	normal.border_color = Color(0.3, 0.3, 0.35)
+	normal.set_corner_radius_all(4)
+	var active := StyleBoxFlat.new()
+	active.bg_color = Color(0.2, 0.25, 0.35)
+	active.set_border_width_all(2)
+	active.border_color = accent
+	active.set_corner_radius_all(4)
+	for i in _mode_buttons.size():
+		if i == active_mode:
+			_mode_buttons[i].add_theme_stylebox_override("normal", active)
+			_mode_buttons[i].add_theme_stylebox_override("hover", active)
+			_mode_buttons[i].add_theme_stylebox_override("pressed", active)
+		else:
+			_mode_buttons[i].add_theme_stylebox_override("normal", normal)
+			_mode_buttons[i].add_theme_stylebox_override("hover", normal)
+			_mode_buttons[i].add_theme_stylebox_override("pressed", normal)
 	_mini_mixer.channel_volume_changed.connect(func(ch: int, vol: float):
 		_editor_player.set_channel_volume(ch, vol)
 	)
