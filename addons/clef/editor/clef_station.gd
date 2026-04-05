@@ -417,8 +417,6 @@ func _on_load_pressed() -> void:
 
 func _wire_transport() -> void:
 	_transport_bar.play_pressed.connect(func():
-		if _piano_roll._mode == PianoRoll.Mode.EDITING:
-			_piano_roll.set_mode(PianoRoll.Mode.PLAYING)
 		if _editor_player.is_playing():
 			return
 		_editor_player.play()
