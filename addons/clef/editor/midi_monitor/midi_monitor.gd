@@ -63,6 +63,7 @@ var _rate_count: int = 0
 var _current_rate: int = 0
 var _filter_btns: Dictionary = {}
 var _scroll_btn: Button = null
+var _active_player: Node = null
 var l10n: ClefL10n
 
 
@@ -204,6 +205,7 @@ func connect_bridge(bridge: RefCounted) -> void:
 		bridge.player_changed.connect(func(player):
 			if player == null:
 				_active_notes = 0
+				_active_player = player
 		)
 
 
@@ -222,16 +224,22 @@ func _on_midi_note_off(ch: int, pitch: int) -> void:
 
 
 func _on_midi_cc(ch: int, controller: int, value: int) -> void:
+	if _active_player == null or not _active_player.is_playing():
+		return
 	_buffer_event(MidiEvent.new(EventType.CC, ch, controller, value))
 	_rate_count += 1
 
 
 func _on_midi_pitch_bend(ch: int, value: int) -> void:
+	if _active_player == null or not _active_player.is_playing():
+		return
 	_buffer_event(MidiEvent.new(EventType.PITCH_BEND, ch, value, 0))
 	_rate_count += 1
 
 
 func _on_midi_program_change(ch: int, preset: int) -> void:
+	if _active_player == null or not _active_player.is_playing():
+		return
 	_buffer_event(MidiEvent.new(EventType.PROGRAM_CHANGE, ch, preset, 0))
 	_rate_count += 1
 

@@ -163,6 +163,44 @@ func _build_layout() -> void:
 		_save_editor_config()
 	)
 	load_row.add_child(auto_load_btn)
+	# 模式切换按钮
+	var mode_spacer := Control.new()
+	mode_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	load_row.add_child(mode_spacer)
+	var mode_group := ButtonGroup.new()
+	var btn_play := Button.new()
+	btn_play.text = l10n.t("▶ Playing mode")
+	btn_play.toggle_mode = true
+	btn_play.button_group = mode_group
+	btn_play.button_pressed = true
+	btn_play.pressed.connect(func():
+		_piano_roll.set_mode(PianoRoll.Mode.PLAYING)
+		_editor_player.stop()
+		_progress_timer.stop()
+		_transport_bar.update_progress(0.0, _editor_player.get_duration())
+	)
+	load_row.add_child(btn_play)
+	var btn_edit := Button.new()
+	btn_edit.text = l10n.t("✏ Editing mode")
+	btn_edit.toggle_mode = true
+	btn_edit.button_group = mode_group
+	btn_edit.pressed.connect(func():
+		_piano_roll.set_mode(PianoRoll.Mode.EDITING)
+		_editor_player.stop()
+		_progress_timer.stop()
+		_transport_bar.update_progress(0.0, _editor_player.get_duration())
+	)
+	load_row.add_child(btn_edit)
+	var btn_feedback := Button.new()
+	btn_feedback.text = l10n.t("❗ Feedback mode")
+	btn_feedback.toggle_mode = true
+	btn_feedback.button_group = mode_group
+	btn_feedback.pressed.connect(func():
+		_piano_roll.set_mode(PianoRoll.Mode.FEEDBACK)
+	)
+	load_row.add_child(btn_feedback)
+	_mode_buttons = [btn_play, btn_edit, btn_feedback]
+	_update_mode_button_highlight(PianoRoll.Mode.PLAYING)
 
 	center_vbox.add_child(load_row)
 
@@ -220,45 +258,6 @@ func _build_layout() -> void:
 		else:
 			push_warning("[ClefStation] Cannot open output directory for ABC export")
 	)
-	# 模式切换栏
-	var mode_bar := HBoxContainer.new()
-	mode_bar.add_child(Control.new())
-	var mode_group := ButtonGroup.new()
-	var btn_play := Button.new()
-	btn_play.text = l10n.t("▶ Playing mode")
-	btn_play.toggle_mode = true
-	btn_play.button_group = mode_group
-	btn_play.button_pressed = true
-	btn_play.pressed.connect(func():
-		_piano_roll.set_mode(PianoRoll.Mode.PLAYING)
-		_editor_player.stop()
-		_progress_timer.stop()
-		_transport_bar.update_progress(0.0, _editor_player.get_duration())
-	)
-	mode_bar.add_child(btn_play)
-	var btn_edit := Button.new()
-	btn_edit.text = l10n.t("✏ Editing mode")
-	btn_edit.toggle_mode = true
-	btn_edit.button_group = mode_group
-	btn_edit.pressed.connect(func():
-		_piano_roll.set_mode(PianoRoll.Mode.EDITING)
-		_editor_player.stop()
-		_progress_timer.stop()
-		_transport_bar.update_progress(0.0, _editor_player.get_duration())
-	)
-	mode_bar.add_child(btn_edit)
-	var btn_feedback := Button.new()
-	btn_feedback.text = l10n.t("❗ Feedback mode")
-	btn_feedback.toggle_mode = true
-	btn_feedback.button_group = mode_group
-	btn_feedback.pressed.connect(func():
-		_piano_roll.set_mode(PianoRoll.Mode.FEEDBACK)
-	)
-	mode_bar.add_child(btn_feedback)
-	_mode_buttons = [btn_play, btn_edit, btn_feedback]
-	_update_mode_button_highlight(PianoRoll.Mode.PLAYING)
-	mode_bar.add_child(Control.new())
-	center_vbox.add_child(mode_bar)
 
 	# 时间刻度尺
 	var _piano_ruler: PianoTimeRuler = PianoTimeRuler.new()
