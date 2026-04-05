@@ -146,8 +146,7 @@ func update_resource(midi_res: MidiResource) -> void:
 	if _player == null:
 		return
 	_player.midi_resource = midi_res
-	if _player.is_playing():
-		_player.rebuild_events()
+	_player.rebuild_events()
 
 
 func set_channel_volume(channel: int, vol: float) -> void:

@@ -275,7 +275,6 @@ func clear_muted_channels() -> void:
 
 
 ## 更新播放头位置
-## 更新播放头位置
 func set_playback_position(position: float, force: bool = false) -> void:
 	if _editing and not force and not _playing:
 		return
@@ -331,7 +330,9 @@ func set_editing(enabled: bool) -> void:
 
 
 func set_playing(playing: bool) -> void:
-	_playing = playing
+	if _playing != playing:
+		_playing = playing
+		queue_redraw()
 
 func is_editing() -> bool:
 	return _editing
@@ -684,10 +685,11 @@ func _handle_mouse_motion(event: InputEventMouseMotion) -> void:
 		_drag_update(event.position)
 	else:
 		var hit := _hit_test(event.position)
-		var is_hovered_selected: bool = bool(hit["index"] >= 0 and _selection.has(hit["index"]))
-		_hovered_edge = hit["edge"] if _editing and is_hovered_selected else "none"
-		if hit["index"] != _hovered_note or _hovered_edge != (hit["edge"] if hit["index"] >= 0 else "none"):
-			_hovered_note = hit["index"]
+		var new_note := hit["index"]
+		var new_edge := hit["edge"] if _editing and new_note >= 0 and _selection.has(new_note) else "none"
+		if new_note != _hovered_note or new_edge != _hovered_edge:
+			_hovered_note = new_note
+			_hovered_edge = new_edge
 			mouse_default_cursor_shape = Control.CURSOR_HSPLIT if _hovered_edge != "none" else Control.CURSOR_ARROW
 			queue_redraw()
 
@@ -709,8 +711,12 @@ func _drag_update(pos: Vector2) -> void:
 			var time_delta: float = delta.x / _effective_pps()
 			if snap_enabled:
 				time_delta = round(time_delta / snap_interval) * snap_interval
-			time_delta = clampf(time_delta, -_drag_original_notes[0]["start_time"], _drag_original_notes[0]["duration"])
+			var min_start: float = _drag_original_notes[0]["start_time"]
+			var min_dur: float = _drag_original_notes[0]["duration"]
 			for orig in _drag_original_notes:
+				if orig["start_time"] < min_start: min_start = orig["start_time"]
+				if orig["duration"] < min_dur: min_dur = orig["duration"]
+			time_delta = clampf(time_delta, -min_start, min_dur)			for orig in _drag_original_notes:
 				var idx: int = orig["index"]
 				if idx >= 0 and idx < _notes.size():
 					_notes[idx].start_time = orig["start_time"] + time_delta

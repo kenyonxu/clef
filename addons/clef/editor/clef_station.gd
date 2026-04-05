@@ -233,6 +233,7 @@ func _build_layout() -> void:
 	center_vbox.add_child(edit_bar)
 
 	# 时间刻度尺
+var _edit_dirty: bool = false
 	var _piano_ruler: PianoTimeRuler = PianoTimeRuler.new()
 	_piano_ruler.time_clicked.connect(func(t: float): _editor_player.seek(t); _piano_roll.set_playback_position(t, true))
 	_piano_ruler.time_scrubbed.connect(func(t: float): _editor_player.seek(t); _piano_roll.set_playback_position(t, true))
@@ -406,7 +407,6 @@ func _wire_transport() -> void:
 	)
 	_transport_bar.seek_requested.connect(func(pos: float):
 		_editor_player.seek(pos)
-		_editor_player.seek(pos)
 	)
 
 
@@ -486,11 +486,11 @@ func _build_midi_data_from_notes(notes: Array) -> MidiData:
 	if ticks_per_second <= 0.0:
 		return null
 	for idx in range(notes.size()):
-		if _piano_roll._muted_indices.has(idx):
+		if _piano_roll.is_note_muted(idx):
 			continue
 		var rn = notes[idx]
 		var ch: int = rn.channel
-		if ch == 9 and _piano_roll._muted_channels.has(ch):
+		if ch == 9 and _piano_roll.is_channel_muted(ch):
 			continue
 		if not channel_notes.has(ch):
 			channel_notes[ch] = []
@@ -510,6 +510,13 @@ func _build_midi_data_from_notes(notes: Array) -> MidiData:
 	return midi_data
 
 func _on_piano_roll_note_edited() -> void:
+	_edit_dirty = true
+	call_deferred("_flush_edit_sync")
+
+func _flush_edit_sync() -> void:
+	if not _edit_dirty:
+		return
+	_edit_dirty = false
 	var midi_data := _build_midi_data_from_notes(_piano_roll.get_notes())
 	if midi_data == null:
 		return

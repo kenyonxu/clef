@@ -352,11 +352,7 @@ func seek(position: float) -> void:
 		return
 	var target_tick: int = int(position * _ticks_per_second)
 	_current_tick = float(clampi(target_tick, 0, _duration_ticks))
-	if _voice_pool != null:
-		_voice_pool.stop_all()
-	_channel_instruments.clear()
-	for state in _channel_states:
-		state.reset()
+	_reset_playback_state()
 	_preprocess_events_up_to(int(_current_tick))
 
 
@@ -364,15 +360,20 @@ func seek(position: float) -> void:
 func rebuild_events() -> void:
 	if midi_resource == null:
 		return
-	if _voice_pool != null:
-		_voice_pool.stop_all()
+	_reset_playback_state()
 	var saved_tick := _current_tick
 	_build_sorted_events()
-	_current_tick = saved_tick
+	_current_tick = minf(saved_tick, float(_duration_ticks))
+	_preprocess_events_up_to(int(_current_tick))
+
+
+## 重置播放状态（停止所有声音、清除通道缓存）
+func _reset_playback_state() -> void:
+	if _voice_pool != null:
+		_voice_pool.stop_all()
 	_channel_instruments.clear()
 	for state in _channel_states:
 		state.reset()
-	_preprocess_events_up_to(int(_current_tick))
 
 
 ## 获取曲目总时长 (秒)
@@ -713,6 +714,3 @@ func _apply_channel_pan(ch: int) -> void:
 			effect.pan = (state.pan * 2.0) - 1.0
 			break
 
-	var count := 0
-	for t in midi_resource.tracks:
-		count += t.notes.size()
