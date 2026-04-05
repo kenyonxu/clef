@@ -225,7 +225,7 @@ func _build_layout() -> void:
 	mode_bar.add_child(Control.new())
 	var mode_group := ButtonGroup.new()
 	var btn_play := Button.new()
-	btn_play.text = "▶ 播放"
+	btn_play.text = "▶ 播放模式"
 	btn_play.toggle_mode = true
 	btn_play.button_group = mode_group
 	btn_play.button_pressed = true
@@ -237,7 +237,7 @@ func _build_layout() -> void:
 	)
 	mode_bar.add_child(btn_play)
 	var btn_edit := Button.new()
-	btn_edit.text = "✏ 编辑"
+	btn_edit.text = "✏ 编辑模式"
 	btn_edit.toggle_mode = true
 	btn_edit.button_group = mode_group
 	btn_edit.pressed.connect(func():
@@ -248,7 +248,7 @@ func _build_layout() -> void:
 	)
 	mode_bar.add_child(btn_edit)
 	var btn_feedback := Button.new()
-	btn_feedback.text = "❗ 反馈"
+	btn_feedback.text = "❗ 反馈模式"
 	btn_feedback.toggle_mode = true
 	btn_feedback.button_group = mode_group
 	btn_feedback.pressed.connect(func():
