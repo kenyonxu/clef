@@ -213,8 +213,11 @@ func _open_annotation_popup() -> void:
 		return
 	if _roll._annotation_popup == null:
 		_create_annotation_popup()
-	_roll._annotation_popup.position = _roll.get_global_mouse_position() + Vector2(5, 5)
-	_roll._annotation_popup.visible = true
+	var popup := _roll._annotation_popup
+	popup.position = _roll.get_global_mouse_position() + Vector2(5, 5)
+	popup.visible = true
+	if _roll._annotation_text_input != null:
+		_roll._annotation_text_input.grab_focus()
 
 
 func _create_annotation_popup() -> void:
@@ -247,7 +250,9 @@ func _create_annotation_popup() -> void:
 	vbox.add_child(btn_hbox)
 	popup.add_child(vbox)
 	_roll.add_child(popup)
+	popup.set_as_top_level(true)
 	_roll._annotation_popup = popup
+	_roll._annotation_text_input = text_input
 	popup.visible = false
 	cancel_btn.pressed.connect(func(): popup.visible = false)
 	confirm_btn.pressed.connect(func():

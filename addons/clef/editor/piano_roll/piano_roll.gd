@@ -170,6 +170,7 @@ var _actions: PianoRollActions = null
 
 var _annotations: Array[Annotation] = []
 var _annotation_popup: PanelContainer = null
+var _annotation_text_input: TextEdit = null
 
 ## 屏蔽（逐音符静音）索引
 var _muted_indices: Array[int] = []
