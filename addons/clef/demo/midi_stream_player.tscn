@@ -9,6 +9,7 @@ script = ExtResource("1_onpv1")
 midi_resource = ExtResource("2_l6gpy")
 loop = true
 volume_db = 1.0
+eq_enabled = true
 bus = "Master"
 metadata/_custom_type_script = "uid://sbfmdmuq6o3n"
 
