@@ -225,7 +225,7 @@ func _build_layout() -> void:
 	mode_bar.add_child(Control.new())
 	var mode_group := ButtonGroup.new()
 	var btn_play := Button.new()
-	btn_play.text = "▶ 播放模式"
+	btn_play.text = l10n.t("▶ Playing mode")
 	btn_play.toggle_mode = true
 	btn_play.button_group = mode_group
 	btn_play.button_pressed = true
@@ -237,7 +237,7 @@ func _build_layout() -> void:
 	)
 	mode_bar.add_child(btn_play)
 	var btn_edit := Button.new()
-	btn_edit.text = "✏ 编辑模式"
+	btn_edit.text = l10n.t("✏ Editing mode")
 	btn_edit.toggle_mode = true
 	btn_edit.button_group = mode_group
 	btn_edit.pressed.connect(func():
@@ -248,7 +248,7 @@ func _build_layout() -> void:
 	)
 	mode_bar.add_child(btn_edit)
 	var btn_feedback := Button.new()
-	btn_feedback.text = "❗ 反馈模式"
+	btn_feedback.text = l10n.t("❗ Feedback mode")
 	btn_feedback.toggle_mode = true
 	btn_feedback.button_group = mode_group
 	btn_feedback.pressed.connect(func():
@@ -399,7 +399,7 @@ func _on_load_pressed() -> void:
 	dialog.file_mode = EditorFileDialog.FILE_MODE_OPEN_FILE
 	dialog.access = EditorFileDialog.ACCESS_RESOURCES
 	dialog.title = l10n.t("Load MIDI")
-	dialog.filters = PackedStringArray(["*.mid ; MIDI", "*.tres ; MidiResource", "*.json ; JSON"])
+	dialog.filters = PackedStringArray([l10n.t("*.mid ; MIDI"), l10n.t("*.tres ; MidiResource"), l10n.t("*.json ; JSON")])
 	if _last_midi_dir != "":
 		dialog.current_dir = _last_midi_dir
 	EditorInterface.get_base_control().add_child(dialog)
@@ -449,6 +449,10 @@ func _wire_mixer() -> void:
 	_mini_mixer.channel_mute_changed.connect(func(ch: int, muted: bool):
 		_editor_player.set_channel_mute(ch, muted)
 	)
+	_editor_player.set_master_volume(_mini_mixer.get_master_volume())
+	for ch in MiniMixer.CHANNEL_COUNT:
+		_editor_player.set_channel_volume(ch, _mini_mixer.get_channel_volume(ch))
+		_editor_player.set_channel_mute(ch, _mini_mixer.is_channel_muted(ch))
 
 
 func _update_mode_button_highlight(active_mode: int) -> void:
@@ -472,12 +476,7 @@ func _update_mode_button_highlight(active_mode: int) -> void:
 			_mode_buttons[i].add_theme_stylebox_override("normal", normal)
 			_mode_buttons[i].add_theme_stylebox_override("hover", normal)
 			_mode_buttons[i].add_theme_stylebox_override("pressed", normal)
-	_mini_mixer.channel_volume_changed.connect(func(ch: int, vol: float):
-		_editor_player.set_channel_volume(ch, vol)
-	)
-	_mini_mixer.channel_mute_changed.connect(func(ch: int, muted: bool):
-		_editor_player.set_channel_mute(ch, muted)
-	)
+
 
 
 func _update_progress() -> void:

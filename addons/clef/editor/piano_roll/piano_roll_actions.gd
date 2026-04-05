@@ -33,17 +33,17 @@ func _build_edit_menu() -> void:
 	menu.id_pressed.connect(_handle_edit_menu_item)
 	_roll._context_menu = menu
 	_roll.add_child(menu)
-	menu.add_item("删除音符", 0)
-	menu.add_item("音高 +1", 1)
-	menu.add_item("音高 -1", 2)
+	menu.add_item(_roll.l10n.t("Delete notes"), 0)
+	menu.add_item(_roll.l10n.t("Pitch +1"), 1)
+	menu.add_item(_roll.l10n.t("Pitch -1"), 2)
 	menu.add_separator()
-	menu.add_item("编辑力度...", 3)
+	menu.add_item(_roll.l10n.t("Edit velocity..."), 3)
 	menu.add_separator()
-	menu.add_item("屏蔽选中音符", 4)
-	menu.add_item("反向屏蔽", 5)
+	menu.add_item(_roll.l10n.t("Mute selected notes"), 4)
+	menu.add_item(_roll.l10n.t("Invert mute"), 5)
 	menu.add_separator()
-	menu.add_item("导出修改后的 MIDI", 6)
-	menu.add_item("导出修改后的 ABC", 7)
+	menu.add_item(_roll.l10n.t("Export edited MIDI"), 6)
+	menu.add_item(_roll.l10n.t("Export edited ABC"), 7)
 
 
 func _build_feedback_menu() -> void:
@@ -51,12 +51,12 @@ func _build_feedback_menu() -> void:
 	menu.id_pressed.connect(_handle_feedback_menu_item)
 	_roll._context_menu = menu
 	_roll.add_child(menu)
-	menu.add_item("添加标注...", 10)
+	menu.add_item(_roll.l10n.t("Add annotation..."), 10)
 	menu.add_separator()
-	menu.add_item("屏蔽选中音符", 11)
-	menu.add_item("反向屏蔽", 12)
+	menu.add_item(_roll.l10n.t("Mute selected notes"), 11)
+	menu.add_item(_roll.l10n.t("Invert mute"), 12)
 	menu.add_separator()
-	menu.add_item("生成 Agent 反馈", 13)
+	menu.add_item(_roll.l10n.t("Generate Agent feedback"), 13)
 
 
 func _handle_edit_menu_item(id: int) -> void:
@@ -87,7 +87,7 @@ func _delete_selected() -> void:
 		return
 	var sorted := sel.duplicate()
 	sorted.sort_custom(func(a, b): return a > b)
-	var cmd := _roll.begin_command("delete", "删除 %d 个音符" % sorted.size())
+	var cmd := _roll.begin_command("delete", _roll.l10n.t("Delete %d notes") % sorted.size())
 	var deleted_items := []
 	for idx in sorted:
 		deleted_items.append({"index": idx, "note_data": _roll._clone_note(_roll._notes[idx])})
@@ -115,7 +115,7 @@ func _toggle_mute_selected() -> void:
 			_roll._muted_indices.append(idx)
 			newly_muted.append(idx)
 	if not newly_muted.is_empty() or not newly_unmuted.is_empty():
-		var cmd := _roll.begin_command("mute", "屏蔽 %d / 恢复 %d" % [newly_muted.size(), newly_unmuted.size()])
+		var cmd := _roll.begin_command("mute", _roll.l10n.t("Mute %d / Unmute %d") % [newly_muted.size(), newly_unmuted.size()])
 		cmd.before = {"muted_indices": before_state}
 		cmd.after = {"muted_indices": _roll._muted_indices.duplicate()}
 		_roll.commit_command(cmd)
@@ -134,7 +134,7 @@ func _invert_mute_selected() -> void:
 	for i in _roll._notes.size():
 		if not sel_set.has(i):
 			_roll._muted_indices.append(i)
-	var cmd := _roll.begin_command("mute", "反向屏蔽: 仅保留 %d 个音符" % sel.size())
+	var cmd := _roll.begin_command("mute", _roll.l10n.t("Invert mute: keep %d notes") % sel.size())
 	cmd.before = {"muted_indices": before_state}
 	cmd.after = {"muted_indices": _roll._muted_indices.duplicate()}
 	_roll.commit_command(cmd)
@@ -145,7 +145,7 @@ func _shift_selected_pitch(delta: int) -> void:
 	var sel := _roll._selection
 	if sel.is_empty():
 		return
-	var cmd := _roll.begin_command("property", "音高 %+d" % delta)
+	var cmd := _roll.begin_command("property", _roll.l10n.t("Pitch %+d") % delta)
 	var before_snap := []
 	var after_snap := []
 	for idx in sel:
@@ -165,10 +165,10 @@ func _edit_velocity_popup() -> void:
 	if sel.is_empty():
 		return
 	var dialog := AcceptDialog.new()
-	dialog.title = "编辑力度"
+	dialog.title = _roll.l10n.t("Edit Velocity")
 	var vbox := VBoxContainer.new()
 	var label := Label.new()
-	label.text = "力度 (0-127):"
+	label.text = _roll.l10n.t("Velocity (0-127):")
 	vbox.add_child(label)
 	var input := LineEdit.new()
 	input.placeholder_text = "100"
@@ -193,7 +193,7 @@ func _edit_velocity_popup() -> void:
 
 func _set_selected_velocity(vel: int) -> void:
 	var sel := _roll._selection
-	var cmd := _roll.begin_command("property", "力度 → %d" % vel)
+	var cmd := _roll.begin_command("property", _roll.l10n.t("Velocity → %d") % vel)
 	var before_snap := []
 	var after_snap := []
 	for idx in sel:
@@ -225,7 +225,7 @@ func _create_annotation_popup() -> void:
 	var vbox := VBoxContainer.new()
 	var sev_hbox := HBoxContainer.new()
 	var sev_label := Label.new()
-	sev_label.text = "严重度:"
+	sev_label.text = _roll.l10n.t("Severity:")
 	sev_hbox.add_child(sev_label)
 	var sev_option := OptionButton.new()
 	sev_option.add_item("info")
@@ -234,7 +234,7 @@ func _create_annotation_popup() -> void:
 	sev_hbox.add_child(sev_option)
 	vbox.add_child(sev_hbox)
 	var text_label := Label.new()
-	text_label.text = "备注:"
+	text_label.text = _roll.l10n.t("Notes:")
 	vbox.add_child(text_label)
 	var text_input := TextEdit.new()
 	text_input.custom_minimum_size = Vector2(280, 60)
@@ -242,9 +242,9 @@ func _create_annotation_popup() -> void:
 	var btn_hbox := HBoxContainer.new()
 	btn_hbox.add_spacer(true)
 	var cancel_btn := Button.new()
-	cancel_btn.text = "取消"
+	cancel_btn.text = _roll.l10n.t("Cancel")
 	var confirm_btn := Button.new()
-	confirm_btn.text = "确认"
+	confirm_btn.text = _roll.l10n.t("Confirm")
 	btn_hbox.add_child(cancel_btn)
 	btn_hbox.add_child(confirm_btn)
 	vbox.add_child(btn_hbox)
@@ -277,7 +277,7 @@ func _add_annotation_from_popup(sev_index: int, text: String) -> void:
 		var ann := _roll._make_annotation(idx, text, severity)
 		_roll._annotations.append(ann)
 		_roll.annotation_added.emit(idx, text, severity)
-	var cmd := _roll.begin_command("annotation", "添加标注: %s" % text)
+	var cmd := _roll.begin_command("annotation", _roll.l10n.t("Add annotation: %s") % text)
 	cmd.before = {"annotations": before_anns}
 	cmd.after = {"annotations": _roll._annotations.duplicate()}
 	_roll.commit_command(cmd)

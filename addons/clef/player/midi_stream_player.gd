@@ -269,7 +269,7 @@ func _setup_audio_buses() -> void:
 		_clef_master_bus_idx = AudioServer.get_bus_count() - 1
 		AudioServer.set_bus_name(_clef_master_bus_idx, "ClefMaster")
 		AudioServer.set_bus_send(_clef_master_bus_idx, bus)
-		AudioServer.set_bus_volume_db(_clef_master_bus_idx, volume_db)
+	AudioServer.set_bus_volume_db(_clef_master_bus_idx, volume_db)
 	# --- Compressor (ensure existence on ClefMaster) ---
 	var has_compressor := false
 	for k in range(AudioServer.get_bus_effect_count(_clef_master_bus_idx)):
@@ -334,6 +334,8 @@ func _setup_audio_buses() -> void:
 			panner.pan = 0.0
 			AudioServer.add_bus_effect(ch_idx, panner)
 func start_playback(from_position: float = 0.0) -> void:
+	if _clef_master_bus_idx >= 0:
+		AudioServer.set_bus_volume_db(_clef_master_bus_idx, volume_db)
 	if midi_resource == null:
 		push_warning("MidiStreamPlayer: midi_resource 为空")
 		return

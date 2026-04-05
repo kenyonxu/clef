@@ -216,3 +216,13 @@ func _on_mute_toggled(pressed: bool, channel: int, btn: Button) -> void:
 	_set_mute_style(btn, pressed)
 	_channel_sliders[channel].editable = not pressed
 	channel_mute_changed.emit(channel, pressed)
+
+
+func get_master_volume() -> float:
+	return _master_slider.value
+
+func get_channel_volume(channel: int) -> float:
+	return _channel_sliders[channel].value
+
+func is_channel_muted(channel: int) -> bool:
+	return _mute_buttons[channel].button_pressed

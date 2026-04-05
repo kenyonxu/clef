@@ -11,6 +11,7 @@ var _host_node: Node = null
 var _bridge: RefCounted = null
 var _current_path: String = ""
 var _last_seek_position: float = 0.0
+var _master_volume_db: float = -12.0
 var l10n: ClefL10n = null
 
 
@@ -67,7 +68,7 @@ func load_file(path: String) -> bool:
 	_player.enable_editor_preview()
 	_player.midi_resource = midi_res
 	_player.soundfont = ProjectSettings.get_setting("clef/default_soundfont", "")
-	_player.volume_db = -12.0
+	_player.volume_db = _master_volume_db
 	# 添加到场景根节点，避免 editor main screen 的 viewport 问题
 	Engine.get_main_loop().root.add_child(_player)
 
@@ -164,6 +165,7 @@ func set_channel_mute(channel: int, muted: bool) -> void:
 
 
 func set_master_volume(volume_db: float) -> void:
+	_master_volume_db = volume_db
 	if _player == null:
 		return
 	_player.volume_db = volume_db
