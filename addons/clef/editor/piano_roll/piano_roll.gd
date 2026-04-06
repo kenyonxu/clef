@@ -36,6 +36,9 @@ signal editing_changed(enabled: bool)
 ## 缩放/滚动状态变更（给 ruler 用）
 signal view_offset_changed(view_offset: float, zoom_level: float, pps: float, duration: float)
 
+## 轨道变更（新增轨道时通知 ClefStation 同步）
+signal track_changed(channel: int, preset: int)
+
 ## 单条音符数据
 class RollNote:
 	var channel: int
@@ -179,7 +182,13 @@ var _annotation_text_input: TextEdit = null
 var _muted_indices: Array[int] = []
 
 ## 临时音符（试听用，不写入 MIDI）
-var _temp_notes: Array[RollNote] = []
+var _temp_notes: Array[RollNote] = []	## deprecated, keep compat
+
+## drag-to-create note state
+var _creating_note: bool = false
+var _create_pitch: int = 60
+var _create_start_time: float = 0.0
+var _preview_note: RollNote = null	## creation preview
 
 ## 剪贴板
 var _clipboard: Array[RollNote] = []
@@ -191,7 +200,7 @@ var _active_channel: int = 0
 enum Mode { PLAYING, EDITING, FEEDBACK }
 var _mode: Mode = Mode.PLAYING
 
-enum EditSubMode { SELECT, ADD_NOTE }
+enum EditSubMode { SELECT }
 var _edit_sub_mode: EditSubMode = EditSubMode.SELECT
 
 var _playing: bool = false
@@ -249,7 +258,6 @@ func set_notes(notes: Array[RollNote], duration: float) -> void:
 	_selection.clear()
 	_annotations.clear()
 	_muted_indices.clear()
-	_temp_notes.clear()
 	_hovered_note = -1
 	_duration = duration
 	_zoom_level = 1.0
@@ -330,7 +338,6 @@ func clear_notes() -> void:
 	_channel_instruments.clear()
 	_muted_channels.clear()
 	_muted_indices.clear()
-	_temp_notes.clear()
 	queue_redraw()
 
 
@@ -565,6 +572,18 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		return
 
 func _gui_input(event: InputEvent) -> void:
+	# Legend bar 交互
+	if event is InputEventMouseButton and event.position.y < _LEGEND_HEIGHT:
+		var mb := event as InputEventMouseButton
+		if mb.pressed and mb.button_index == MOUSE_BUTTON_LEFT:
+			var plus_x := size.x - 28.0
+			if mb.position.x >= plus_x:
+				_open_gm_selector_popup()
+				accept_event()
+				return
+			_handle_legend_click(mb.position.x)
+			accept_event()
+			return
 	if event is InputEventMouseButton:
 		_handle_mouse_button(event as InputEventMouseButton)
 	elif event is InputEventMouseMotion:
@@ -667,29 +686,52 @@ func _handle_left_press(mb: InputEventMouseButton) -> void:
 				})
 		queue_redraw()
 	else:
-		if _edit_sub_mode == EditSubMode.ADD_NOTE:
-			var pitch := _y_to_pitch(mb.position.y)
-			var time := _pixel_to_time(mb.position.x)
+		if _mode == Mode.EDITING:
+			# drag to create note
+			_creating_note = true
+			_create_pitch = clampi(_y_to_pitch(mb.position.y), 0, 127)
+			_create_start_time = maxf(0.0, _pixel_to_time(mb.position.x))
 			if snap_enabled:
-				time = round(time / snap_interval) * snap_interval
-			var channel := 0
-			if not _selection.is_empty():
-				var idx: int = _selection[0] as int
-				if idx >= 0 and idx < _notes.size():
-					channel = _notes[idx].channel
-			var new_note := RollNote.new(channel, pitch, time, 0.5, 100)
-			_temp_notes.append(new_note)
-			note_edited.emit()
-			queue_redraw()
+				_create_start_time = round(_create_start_time / snap_interval) * snap_interval
+			_preview_note = null
 		else:
 			_selection.clear()
 			_box_selecting = true
 			_box_select_start = mb.position
 			_box_select_end = mb.position
-			queue_redraw()
+		queue_redraw()
 
 
 func _handle_left_release(_mb: InputEventMouseButton) -> void:
+	# confirm drag-to-create note
+	if _creating_note:
+		_creating_note = false
+		if _preview_note != null and _preview_note.duration >= 0.05:
+			var new_note := _preview_note.duplicate()
+			_notes.append(new_note)
+			var idx := _notes.size() - 1
+			var cmd := begin_command("add", "创建音符")
+			cmd.before = {"added_index": idx}
+			cmd.after = {}
+			commit_command(cmd)
+			_selection.clear()
+			_selection.append(idx)
+		else:
+			# single click -> default 1 beat note
+			var beat_dur := 0.5
+			var new_note := RollNote.new(_active_channel, _create_pitch, _create_start_time, beat_dur, 100)
+			_notes.append(new_note)
+			var idx := _notes.size() - 1
+			var cmd := begin_command("add", "创建音符")
+			cmd.before = {"added_index": idx}
+			cmd.after = {}
+			commit_command(cmd)
+			_selection.clear()
+			_selection.append(idx)
+		_preview_note = null
+		queue_redraw()
+		note_edited.emit()
+		return
 	if _dragging:
 		_dragging = false
 		var changed := false
@@ -768,6 +810,14 @@ func _handle_mouse_motion(event: InputEventMouseMotion) -> void:
 		_apply_view_change()
 	elif _box_selecting:
 		_box_select_end = event.position
+		queue_redraw()
+	elif _creating_note and event.button_mask & MOUSE_BUTTON_MASK_LEFT:
+		var current_time := _pixel_to_time(event.position.x)
+		if snap_enabled:
+			current_time = round(current_time / snap_interval) * snap_interval
+		var start_t := minf(_create_start_time, current_time)
+		var dur := absf(current_time - _create_start_time)
+		_preview_note = RollNote.new(_active_channel, _create_pitch, start_t, dur, 100)
 		queue_redraw()
 	elif _dragging:
 		_drag_update(event.position)
@@ -863,38 +913,58 @@ func _draw() -> void:
 
 
 func _draw_legend() -> void:
-	# 图例背景
+	# 背景
 	draw_rect(Rect2(0, 0, size.x, _LEGEND_HEIGHT), _LEGEND_BG)
-	# 底部分隔线
+	# 分隔线
 	draw_line(Vector2(0, _LEGEND_HEIGHT), Vector2(size.x, _LEGEND_HEIGHT), Color(0.2, 0.2, 0.25))
-	# 各通道色块 + 标签（跳过静音通道）
-	var x := 6.0
+
+	var x := 8.0
 	var font := ThemeDB.fallback_font
+	var font_size := 12
+	var plus_width := 28.0
+
 	for ch in _active_channels:
 		if _muted_channels.has(ch):
 			continue
-		var color: Color = ChannelColors.COLORS[ch % 16]
-		# 色块 (20x20)
-		draw_rect(Rect2(x, 4, 20, 20), color)
-		x += 24.0
-		# "ChN InstrumentName"
-		var label := "Ch%d" % ch
+		var preset: int = _channel_instruments.get(ch, 0)
+		var name: String
 		if ch == 9:
-			label += " Standard Drum Kit"
-		elif _channel_instruments.has(ch):
-			var preset: int = _channel_instruments[ch]
-			if preset >= 0 and preset < _GM_NAMES.size():
-				label += " " + _GM_NAMES[preset]
-		draw_string(
-			font,
-			Vector2(x, 20),
-			label,
-			HORIZONTAL_ALIGNMENT_LEFT, -1, 20,
-			Color(0.6, 0.6, 0.65)
-			)
-		# 精确测量文字宽度
-		var text_size := font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, 20)
-		x += text_size.x + 16.0
+			name = "Ch%d" % ch
+		else:
+			name = "Ch%d %s" % [ch, _GM_NAMES[preset] if preset < _GM_NAMES.size() else "?"]
+		var color := ChannelColors.COLORS[ch % 16]
+		var text_w := font.get_string_size(name, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
+		var label_w := text_w + 28
+
+		# 防止标签超出 "+" 按钮区域
+		if x + label_w > size.x - plus_width - 16:
+			break
+
+		# 选中高亮背景
+		if ch == _active_channel:
+			draw_rect(Rect2(x - 2, 2, label_w, _LEGEND_HEIGHT - 4), Color(0.15, 0.15, 0.2))
+			draw_rect(Rect2(x - 2, 2, label_w, _LEGEND_HEIGHT - 4), Color(1.0, 1.0, 1.0, 0.6), false, 1.0)
+
+		# 色块
+		draw_rect(Rect2(x, 5, 18, 18), color)
+		if ch == _active_channel:
+			draw_rect(Rect2(x, 5, 18, 18), Color(1.0, 1.0, 1.0, 0.8), false, 1.5)
+
+		# 文字
+		var text_color := Color(1.0, 1.0, 1.0) if ch == _active_channel else Color(0.7, 0.7, 0.75)
+		draw_string(font, Vector2(x + 24, _LEGEND_HEIGHT / 2 + font_size / 2 - 1),
+			name, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, text_color)
+
+		x += label_w
+
+	# "+" 按钮
+	var plus_rect := Rect2(size.x - plus_width, 0, plus_width, _LEGEND_HEIGHT)
+	draw_rect(plus_rect, Color(0.12, 0.12, 0.16))
+	draw_line(Vector2(plus_rect.position.x + plus_rect.size.x, 0),
+		Vector2(plus_rect.position.x + plus_rect.size.x, _LEGEND_HEIGHT), Color(0.2, 0.2, 0.25))
+	var ps := font.get_string_size("+", HORIZONTAL_ALIGNMENT_CENTER, -1, 16)
+	draw_string(font, Vector2(plus_rect.position.x + plus_rect.size.x / 2 - ps.x / 2, _LEGEND_HEIGHT / 2 + 4),
+		"+", HORIZONTAL_ALIGNMENT_CENTER, -1, 16, Color(0.6, 0.8, 0.6))
 
 
 func _draw_pitch_grid() -> void:
@@ -980,14 +1050,18 @@ func _draw_notes() -> void:
 		if i == _hovered_note:
 			draw_rect(Rect2(x, y, w, h), Color(1, 1, 1, 0.15))
 
-	# 临时音符（虚线风格）
-	for tn in _temp_notes:
-		var x := _time_to_x(tn.start_time)
-		var w := tn.duration * _effective_pps()
-		var y := _pitch_to_y(tn.pitch + 1)
-		var h := eppn - 1.0
-		draw_rect(Rect2(x, y, w, h), Color(0.3, 1.0, 0.3, 0.4))
-		draw_rect(Rect2(x, y, w, h), Color(0.3, 1.0, 0.3, 0.8), false, 1.0)
+	# creation preview note
+	if _preview_note != null:
+		var pn := _preview_note
+		var x1 := _time_to_x(pn.start_time)
+		var x2 := _time_to_x(pn.start_time + pn.duration)
+		var y1 := _pitch_to_y(pn.pitch + 1)
+		var y2 := _pitch_to_y(pn.pitch)
+		var rect := Rect2(minf(x1, x2), minf(y1, y2), absf(x2 - x1), absf(y2 - y1))
+		draw_rect(rect, Color(0.2, 0.8, 0.3, 0.5))
+		draw_rect(rect, Color(0.3, 1.0, 0.4, 0.8), false, 1.0)
+
+
 
 
 func _draw_playback_cursor() -> void:
@@ -1031,6 +1105,68 @@ func _hit_test(pos: Vector2) -> Dictionary:
 			if edge != "none":
 				return {"index": i, "edge": edge}
 	return {"index": -1, "edge": "none"}
+
+func _handle_legend_click(click_x: float) -> void:
+	var font := ThemeDB.fallback_font
+	var font_size := 12
+	var x := 8.0
+	for ch in _active_channels:
+		if _muted_channels.has(ch):
+			continue
+		var preset: int = _channel_instruments.get(ch, 0)
+		var name: String
+		if ch == 9:
+			name = "Ch%d" % ch
+		else:
+			name = "Ch%d %s" % [ch, _GM_NAMES[preset] if preset < _GM_NAMES.size() else "?"]
+		var text_w := font.get_string_size(name, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
+		var label_w := text_w + 28
+		if x + label_w > size.x - 36:
+			break
+		if click_x >= x and click_x < x + label_w:
+			if _active_channel != ch:
+				_active_channel = ch
+				queue_redraw()
+			return
+		x += label_w
+
+
+var _gm_selector: Control = null
+
+func _open_gm_selector_popup() -> void:
+	if _gm_selector == null:
+		_gm_selector = preload("res://addons/clef/editor/piano_roll/gm_instrument_selector.gd").new()
+		_gm_selector.instrument_selected.connect(_on_instrument_selected)
+		add_child(_gm_selector)
+	_gm_selector.position = get_global_mouse_position() + Vector2(10, 10)
+	_gm_selector.popup_centered()
+
+
+func _on_instrument_selected(preset: int) -> void:
+	# 找最小未使用的 channel（跳过 9）
+	var used_channels: Array[int] = []
+	for ch in _active_channels:
+		used_channels.append(ch)
+	var new_ch: int = -1
+	for c in range(16):
+		if c == 9:
+			continue
+		if not c in used_channels:
+			new_ch = c
+			break
+	if new_ch < 0:
+		push_warning("Piano Roll: 轨道数已达上限")
+		return
+
+	_channel_instruments[new_ch] = preset
+	if not new_ch in _active_channels:
+		_active_channels.append(new_ch)
+	_active_channels.sort()
+	_active_channel = new_ch
+
+	track_changed.emit(new_ch, preset)
+	queue_redraw()
+
 
 func _check_edge(pos: Vector2, note: RollNote) -> String:
 	var x_left := _time_to_x(note.start_time)
