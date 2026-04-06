@@ -16,7 +16,7 @@ signal playback_position_changed(time: float)
 signal note_edited()
 
 ## 请求导出 MIDI
-signal export_requested(notes: Array)
+signal export_requested(notes: Array, path: String)
 
 ## 添加标注
 signal annotation_added(note_index: int, text: String, severity: String)
@@ -193,6 +193,7 @@ var _preview_note: RollNote = null	## creation preview
 ## 剪贴板
 var _clipboard: Array[RollNote] = []
 var _clipboard_ref_time: float = 0.0
+var _clipboard_ref_pitch: int = 60
 
 ## 当前选中轨道
 var _active_channel: int = 0
@@ -242,6 +243,18 @@ func _ready() -> void:
 	size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	size_flags_vertical = Control.SIZE_EXPAND_FILL
 	mouse_default_cursor_shape = Control.CURSOR_ARROW
+	_legend_popup = PopupMenu.new()
+	_legend_popup.add_item("切换音色", 0)
+	_legend_popup.id_pressed.connect(_on_legend_popup_id_pressed)
+	add_child(_legend_popup)
+	_file_dialog = FileDialog.new()
+	_file_dialog.file_mode = FileDialog.FILE_MODE_SAVE_FILE
+	_file_dialog.access = FileDialog.ACCESS_FILESYSTEM
+	_file_dialog.filters = PackedStringArray(["*.mid ; MIDI Files"])
+	_file_dialog.title = "导出 MIDI"
+	_file_dialog.current_dir = ProjectSettings.globalize_path("res://addons/clef/output/")
+	_file_dialog.file_selected.connect(_on_export_file_selected)
+	add_child(_file_dialog)
 	_actions = PianoRollActions.new(self)
 	_actions.create_context_menu()
 	_create_h_scroll()
@@ -279,6 +292,11 @@ func get_notes() -> Array[RollNote]:
 func set_channel_instruments(instruments: Dictionary) -> void:
 	_channel_instruments = instruments
 	queue_redraw()
+
+
+## 获取通道乐器映射
+func get_channel_instruments() -> Dictionary:
+	return _channel_instruments
 
 
 ## 设置通道静音状态（由 MiniMixer 触发）
@@ -465,7 +483,7 @@ func _notification(what: int) -> void:
 		queue_redraw()
 
 
-func _unhandled_key_input(event: InputEvent) -> void:
+func _shortcut_input(event: InputEvent) -> void:
 	if _mode != Mode.EDITING:
 		return
 	var key := event as InputEventKey
@@ -491,12 +509,15 @@ func _unhandled_key_input(event: InputEvent) -> void:
 			sorted_sel.sort()
 			_clipboard.clear()
 			_clipboard_ref_time = INF
+			_clipboard_ref_pitch = 60
 			for idx in sorted_sel:
 				if idx >= 0 and idx < _notes.size():
 					var n: RollNote = _notes[idx]
 					_clipboard.append(n.duplicate())
 					if n.start_time < _clipboard_ref_time:
 						_clipboard_ref_time = n.start_time
+					if n.pitch < _clipboard_ref_pitch:
+						_clipboard_ref_pitch = n.pitch
 			if _clipboard_ref_time == INF:
 				_clipboard_ref_time = 0.0
 		return
@@ -505,22 +526,25 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		if _clipboard.is_empty():
 			return
 		get_viewport().set_input_as_handled()
-		var target_time: float
 		var mouse_pos := get_local_mouse_position()
-		if Rect2(Vector2.ZERO, size).has_point(mouse_pos):
+		var mouse_in_area := Rect2(Vector2.ZERO, size).has_point(mouse_pos)
+		var target_time: float
+		var target_pitch: int
+		if mouse_in_area:
 			target_time = _pixel_to_time(mouse_pos.x)
-		elif _playback_position >= 0.0:
-			target_time = _playback_position
+			target_pitch = _y_to_pitch(mouse_pos.y)
 		else:
-			target_time = _view_offset
+			target_time = _playback_position if _playback_position >= 0.0 else _view_offset
+			target_pitch = 60  # fallback C4
 		var time_offset := target_time - _clipboard_ref_time
+		var pitch_offset := target_pitch - _clipboard_ref_pitch
 		var cmd := begin_command("add", "粘贴 %d 个音符" % _clipboard.size())
 		var added_indices: Array[int] = []
 		_selection.clear()
 		for cn in _clipboard:
 			var new_note := RollNote.new(
 				_active_channel,
-				cn.pitch,
+				clampi(cn.pitch + pitch_offset, 0, 127),
 				maxf(0.0, cn.start_time + time_offset),
 				cn.duration,
 				cn.velocity
@@ -571,19 +595,42 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		queue_redraw()
 		return
 
+
+func _unhandled_key_input(event: InputEvent) -> void:
+	# 非冲突按键已迁移到 _shortcut_input
+	# 保留此函数以便未来添加非快捷键处理
+	pass
+
 func _gui_input(event: InputEvent) -> void:
 	# Legend bar 交互
 	if event is InputEventMouseButton and event.position.y < _LEGEND_HEIGHT:
 		var mb := event as InputEventMouseButton
 		if mb.pressed and mb.button_index == MOUSE_BUTTON_LEFT:
-			var plus_x := size.x - 28.0
-			if mb.position.x >= plus_x:
+			var plus_x := _get_plus_button_x()
+			var export_x := size.x - 28.0
+			# 导出按钮
+			if mb.position.x >= export_x:
+				_show_export_dialog()
+				accept_event()
+				return
+			# "+" 按钮（仅编辑模式）
+			if _mode == Mode.EDITING and mb.position.x >= plus_x and mb.position.x < export_x:
 				_open_gm_selector_popup()
 				accept_event()
 				return
-			_handle_legend_click(mb.position.x)
-			accept_event()
-			return
+			# 轨道切换
+			if _mode == Mode.EDITING:
+				_handle_legend_click(mb.position.x)
+				accept_event()
+				return
+		if mb.pressed and mb.button_index == MOUSE_BUTTON_RIGHT and _mode == Mode.EDITING:
+				var ch := _hit_test_legend(mb.position.x)
+				if ch >= 0:
+					_legend_context_channel = ch
+					var mouse_screen := DisplayServer.mouse_get_position()
+					_legend_popup.popup(Rect2i(mouse_screen + Vector2i(2, 2), Vector2i()))
+					accept_event()
+					return
 	if event is InputEventMouseButton:
 		_handle_mouse_button(event as InputEventMouseButton)
 	elif event is InputEventMouseMotion:
@@ -662,6 +709,8 @@ func _handle_left_press(mb: InputEventMouseButton) -> void:
 				_selection.remove_at(found)
 			else:
 				_selection.append(idx)
+		elif hit["index"] in _selection:
+			pass  # 点击已选中音符，保持多选状态
 		else:
 			_selection.clear()
 			_selection.append(hit["index"])
@@ -686,20 +735,22 @@ func _handle_left_press(mb: InputEventMouseButton) -> void:
 				})
 		queue_redraw()
 	else:
-		if _mode == Mode.EDITING:
-			# drag to create note
+		if _mode == Mode.EDITING and mb.alt_pressed:
+			# Alt+点击 → 创建音符
 			_creating_note = true
 			_create_pitch = clampi(_y_to_pitch(mb.position.y), 0, 127)
 			_create_start_time = maxf(0.0, _pixel_to_time(mb.position.x))
 			if snap_enabled:
 				_create_start_time = round(_create_start_time / snap_interval) * snap_interval
 			_preview_note = null
+			queue_redraw()
 		else:
+			# 框选（原行为）
 			_selection.clear()
 			_box_selecting = true
 			_box_select_start = mb.position
 			_box_select_end = mb.position
-		queue_redraw()
+			queue_redraw()
 
 
 func _handle_left_release(_mb: InputEventMouseButton) -> void:
@@ -936,8 +987,8 @@ func _draw_legend() -> void:
 		var text_w := font.get_string_size(name, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
 		var label_w := text_w + 28
 
-		# 防止标签超出 "+" 按钮区域
-		if x + label_w > size.x - plus_width - 16:
+		# 防止标签超出按钮区域
+		if x + label_w > size.x - plus_width * 2 - 16:
 			break
 
 		# 选中高亮背景
@@ -957,14 +1008,23 @@ func _draw_legend() -> void:
 
 		x += label_w
 
-	# "+" 按钮
-	var plus_rect := Rect2(size.x - plus_width, 0, plus_width, _LEGEND_HEIGHT)
+	# "+" 按钮（跟随轨道末尾）
+	var plus_rect := Rect2(x + 4, 0, plus_width, _LEGEND_HEIGHT)
 	draw_rect(plus_rect, Color(0.12, 0.12, 0.16))
-	draw_line(Vector2(plus_rect.position.x + plus_rect.size.x, 0),
-		Vector2(plus_rect.position.x + plus_rect.size.x, _LEGEND_HEIGHT), Color(0.2, 0.2, 0.25))
-	var ps := font.get_string_size("+", HORIZONTAL_ALIGNMENT_CENTER, -1, 16)
-	draw_string(font, Vector2(plus_rect.position.x + plus_rect.size.x / 2 - ps.x / 2, _LEGEND_HEIGHT / 2 + 4),
-		"+", HORIZONTAL_ALIGNMENT_CENTER, -1, 16, Color(0.6, 0.8, 0.6))
+	draw_line(Vector2(plus_rect.position.x, 0),
+		Vector2(plus_rect.position.x, _LEGEND_HEIGHT), Color(0.2, 0.2, 0.25))
+	var ps := font.get_string_size("+", HORIZONTAL_ALIGNMENT_CENTER, -1, 20)
+	draw_string(font, Vector2(plus_rect.position.x + plus_width / 2 - ps.x / 2, _LEGEND_HEIGHT / 2 + 5),
+		"+", HORIZONTAL_ALIGNMENT_CENTER, -1, 20, Color(0.6, 0.8, 0.6))
+
+	# "⤓" 导出按钮（固定右端）
+	var export_rect := Rect2(size.x - plus_width, 0, plus_width, _LEGEND_HEIGHT)
+	draw_rect(export_rect, Color(0.12, 0.12, 0.16))
+	draw_line(Vector2(export_rect.position.x, 0),
+		Vector2(export_rect.position.x, _LEGEND_HEIGHT), Color(0.2, 0.2, 0.25))
+	var es := font.get_string_size("⤓", HORIZONTAL_ALIGNMENT_CENTER, -1, 20)
+	draw_string(font, Vector2(export_rect.position.x + plus_width / 2 - es.x / 2, _LEGEND_HEIGHT / 2 + 5),
+		"⤓", HORIZONTAL_ALIGNMENT_CENTER, -1, 20, Color(0.6, 0.7, 0.9))
 
 
 func _draw_pitch_grid() -> void:
@@ -1106,7 +1166,28 @@ func _hit_test(pos: Vector2) -> Dictionary:
 				return {"index": i, "edge": edge}
 	return {"index": -1, "edge": "none"}
 
-func _handle_legend_click(click_x: float) -> void:
+func _get_plus_button_x() -> float:
+	var font := ThemeDB.fallback_font
+	var font_size := 12
+	var x := 8.0
+	for ch in _active_channels:
+		if _muted_channels.has(ch):
+			continue
+		var preset: int = _channel_instruments.get(ch, 0)
+		var name: String
+		if ch == 9:
+			name = "Ch%d" % ch
+		else:
+			name = "Ch%d %s" % [ch, _GM_NAMES[preset] if preset < _GM_NAMES.size() else "?"]
+		var text_w := font.get_string_size(name, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
+		var label_w := text_w + 28
+		if x + label_w > size.x - 72:
+			break
+		x += label_w
+	return x + 4
+
+
+func _hit_test_legend(click_x: float) -> int:
 	var font := ThemeDB.fallback_font
 	var font_size := 12
 	var x := 8.0
@@ -1124,24 +1205,80 @@ func _handle_legend_click(click_x: float) -> void:
 		if x + label_w > size.x - 36:
 			break
 		if click_x >= x and click_x < x + label_w:
-			if _active_channel != ch:
-				_active_channel = ch
-				queue_redraw()
-			return
+			return ch
 		x += label_w
+	return -1
 
 
-var _gm_selector: Control = null
+func _handle_legend_click(click_x: float) -> void:
+	var ch := _hit_test_legend(click_x)
+	if ch >= 0 and _active_channel != ch:
+		_active_channel = ch
+		queue_redraw()
+
+
+var _gm_selector: Window = null
+var _soundfont_browser: SoundfontBrowser = null
+var _legend_popup: PopupMenu = null
+var _legend_context_channel: int = -1
+var _file_dialog: FileDialog = null
+
+func set_soundfont_browser(browser: SoundfontBrowser) -> void:
+	_soundfont_browser = browser
+
 
 func _open_gm_selector_popup() -> void:
 	if _gm_selector == null:
 		_gm_selector = preload("res://addons/clef/editor/piano_roll/gm_instrument_selector.gd").new()
 		_gm_selector.instrument_selected.connect(_on_instrument_selected)
 		add_child(_gm_selector)
+	# 每次打开时重新填充（SF2 可能已更换）
+	var patches: Array = []
+	if _soundfont_browser != null:
+		patches = _soundfont_browser.get_patches()
+	_gm_selector.populate(patches)
 	_gm_selector.position = get_global_mouse_position() + Vector2(10, 10)
 	_gm_selector.popup_centered()
 
 
+
+func _show_export_dialog() -> void:
+	var ts := Time.get_datetime_string_from_system().replace(":", "-").replace(" ", "_")
+	_file_dialog.current_path = _file_dialog.current_dir.path_join("edited_" + ts + ".mid")
+	_file_dialog.popup_centered(Vector2i(800, 600))
+
+
+func _on_export_file_selected(fpath: String) -> void:
+	export_requested.emit(_notes, fpath)
+
+
+func _on_legend_popup_id_pressed(id: int) -> void:
+	match id:
+		0:  # 切换音色
+			if _legend_context_channel < 0:
+				return
+			if _gm_selector == null:
+				_gm_selector = preload("res://addons/clef/editor/piano_roll/gm_instrument_selector.gd").new()
+				add_child(_gm_selector)
+			if _gm_selector.instrument_selected.is_connected(_on_instrument_selected):
+				_gm_selector.instrument_selected.disconnect(_on_instrument_selected)
+			if not _gm_selector.instrument_selected.is_connected(_on_instrument_change_selected):
+				_gm_selector.instrument_selected.connect(_on_instrument_change_selected)
+			var patches: Array = []
+			if _soundfont_browser != null:
+				patches = _soundfont_browser.get_patches()
+			_gm_selector.populate(patches)
+			_gm_selector.position = get_global_mouse_position() + Vector2(10, 10)
+			_gm_selector.popup_centered()
+
+
+func _on_instrument_change_selected(preset: int) -> void:
+	var ch := _legend_context_channel
+	if ch < 0:
+		return
+	_channel_instruments[ch] = preset
+	track_changed.emit(ch, preset)
+	queue_redraw()
 func _on_instrument_selected(preset: int) -> void:
 	# 找最小未使用的 channel（跳过 9）
 	var used_channels: Array[int] = []

@@ -83,6 +83,10 @@ func load_profile(json_path: String) -> bool:
 	return true
 
 
+func get_patches() -> Array[PatchData]:
+	return _patches
+
+
 func _populate_tree(filter_text: String) -> void:
 	_tree.clear()
 	if _patches.is_empty():
