@@ -1,6 +1,6 @@
 ## MIDI 资源类型，Godot 原生 Resource
 ## 可在 Inspector 中查看/编辑，保存为 .tres
-
+@icon("res://addons/clef/icons/clef_icon.png")
 class_name MidiResource
 extends Resource
 

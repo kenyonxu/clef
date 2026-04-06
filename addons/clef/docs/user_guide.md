@@ -459,10 +459,6 @@ func switch_soundfont(path: String):
 
 ## 8. LLM 辅助编曲
 
-Clef 提供两种 LLM 辅助作曲方式：**Clef Compose**（推荐，基于 Claude Code 多 Agent 协作）和 **模板编曲**（手动将 JSON 提交给任意 LLM）。
-
-### 方式一：Clef Compose（推荐）
-
 在 Claude Code 中使用 `/clef-compose` 命令，用自然语言描述音乐需求即可自动生成 MIDI。系统通过 7 个专业 Agent 协作完成：旋律创作 → 和声编配 → 节奏设计 → 表现力注入 → 质量评审 → 自动迭代 → MIDI 输出。
 
 使用示例：
@@ -472,26 +468,6 @@ Clef 提供两种 LLM 辅助作曲方式：**Clef Compose**（推荐，基于 Cl
 ```
 
 详细用法参见 [LLM 作曲使用指南](user_docs/llm_midi_composer_guide_cn.md)。
-
-### 方式二：模板编曲
-
-将 [系统提示词](user_docs/celf_composer_llm_system_prompt_cn.md) 和 [模板文件](../templates/) 提供给 ChatGPT / Claude 等 LLM，手动完成 JSON → MIDI 转换。
-
-使用流程：
-
-1. 将 [templates/default.json](../templates/default.json) 作为起始模板
-2. 向 LLM 描述你的需求，附带系统提示词
-3. LLM 返回 Clef JSON
-4. 在 Godot 中使用编辑器工具（右键 `.json` → Convert to MIDI）转换为 MIDI
-5. 在 Inspector 中预览试听
-
-#### 模板文件
-
-| 文件 | 用途 |
-|------|------|
-| `templates/default.json` | 最小有效 JSON，适合快速测试 |
-| `templates/example_full.json` | 完整示例，包含多轨、CC、弯音、速度变化 |
-| `templates/llm_compose_guide.json` | 精炼规范速查表 |
 
 ---
 
