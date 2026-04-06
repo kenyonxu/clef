@@ -344,15 +344,15 @@ func _build_selection_context() -> Dictionary:
 	var pitches := []
 	var channels := []
 	var t_min := INF
-		var t_max := -INF
+	var t_max := -INF
 	for idx in indices:
 		var n = _roll._notes[idx]
 		if not pitches.has(n.pitch):
 			pitches.append(n.pitch)
 		if not channels.has(n.channel):
 			channels.append(n.channel)
-		var start := n.start_time
-		var end := start + n.duration
+		var start: float = n.start_time
+		var end: float = start + n.duration
 		if start < t_min: t_min = start
 		if end > t_max: t_max = end
 	pitches.sort()
