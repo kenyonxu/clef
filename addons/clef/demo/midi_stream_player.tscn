@@ -1,12 +1,10 @@
 [gd_scene format=3 uid="uid://c4xyomx7pr5vj"]
 
 [ext_resource type="Script" uid="uid://sbfmdmuq6o3n" path="res://addons/clef/player/midi_stream_player.gd" id="1_onpv1"]
-[ext_resource type="Resource" uid="uid://byxojf1m7y8k1" path="res://addons/clef/output/DungeonExploration_final.mid" id="2_l6gpy"]
 [ext_resource type="PackedScene" uid="uid://bq7xjpm4k2fhn" path="res://addons/clef/ui/midi_player_ui.tscn" id="3_ui"]
 
 [node name="MidiStreamPlayer" type="Node" unique_id=627425769]
 script = ExtResource("1_onpv1")
-midi_resource = ExtResource("2_l6gpy")
 loop = true
 volume_db = 1.0
 eq_enabled = true

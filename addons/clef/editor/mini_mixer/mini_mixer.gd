@@ -3,7 +3,6 @@
 class_name MiniMixer
 extends VBoxContainer
 
-const ChannelColors = preload("res://addons/clef/editor/channel_colors.gd")
 
 signal channel_volume_changed(channel: int, volume_db: float)
 signal channel_mute_changed(channel: int, muted: bool)

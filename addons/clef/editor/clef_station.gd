@@ -4,13 +4,6 @@
 class_name ClefStation
 extends Control
 
-const SoundfontBrowser = preload("res://addons/clef/editor/soundfont_browser/soundfont_browser.gd")
-const MidiMonitor = preload("res://addons/clef/editor/midi_monitor/midi_monitor.gd")
-const EditorPlayer = preload("res://addons/clef/editor/editor_player/editor_player.gd")
-const TransportBar = preload("res://addons/clef/editor/transport_bar/transport_bar.gd")
-const MiniMixer = preload("res://addons/clef/editor/mini_mixer/mini_mixer.gd")
-const PianoRoll = preload("res://addons/clef/editor/piano_roll/piano_roll.gd")
-const PianoTimeRuler = preload("res://addons/clef/editor/piano_roll/piano_time_ruler.gd")
 
 const _CONFIG_PATH = "user://clef_editor.cfg"
 const SUPPORTED_EXTENSIONS: PackedStringArray = [".mid", ".tres", ".json"]
@@ -208,20 +201,27 @@ func _build_layout() -> void:
 
 	_piano_roll = PianoRoll.new()
 	_piano_roll.l10n = l10n
+	_piano_roll.set_soundfont_browser(_soundfont_browser)
 	_piano_roll.seek_requested.connect(func(pos: float):
 		_editor_player.seek(pos)
 	)
 	_piano_roll.export_requested.connect(_on_piano_roll_export)
 	_piano_roll.note_edited.connect(_on_piano_roll_note_edited)
-	_piano_roll.agent_feedback_requested.connect(func(feedback: Dictionary):
-		var timestamp := Time.get_datetime_string_from_system().replace(":", "-").replace(" ", "_")
-		var abs_path := ProjectSettings.globalize_path("res://addons/clef/output/agent_feedback_" + timestamp + ".json")
+	_piano_roll.track_changed.connect(_on_track_changed)
+	_piano_roll.agent_feedback_requested.connect(func(feedback: Dictionary, fpath: String = ""):
+		var abs_path: String
+		if fpath != "":
+			abs_path = fpath
+		else:
+			var timestamp := Time.get_datetime_string_from_system().replace(":", "-").replace(" ", "_")
+			abs_path = ProjectSettings.globalize_path("res://addons/clef/output/agent_feedback_" + timestamp + ".json")
 		DirAccess.make_dir_recursive_absolute(abs_path.get_base_dir())
 		var file := FileAccess.open(abs_path, FileAccess.WRITE)
 		if file:
 			file.store_string(JSON.stringify(feedback, "\t"))
 			file.close()
 			print("[ClefStation] Agent feedback exported: ", abs_path)
+			EditorInterface.get_resource_filesystem().scan()
 		else:
 			push_error("[ClefStation] Failed to export agent feedback: ", abs_path)
 	)
@@ -553,6 +553,14 @@ func _build_midi_data_from_notes(notes: Array) -> MidiData:
 		var start_ticks := int(rn.start_time * ticks_per_second)
 		var duration_ticks := int(rn.duration * ticks_per_second)
 		channel_notes[ch].append(NoteData.new(rn.pitch, start_ticks, duration_ticks, rn.velocity))
+
+	# 获取 Piano Roll 中用户设置的通道乐器映射
+	var roll_instruments: Dictionary = _piano_roll.get_channel_instruments()
+	# 收集原始 MIDI 中已有 program_events 的通道
+	var existing_channels: Dictionary = {}
+	for pc in midi_data.program_events:
+		existing_channels[int(pc["channel"])] = true
+
 	for ch in channel_notes:
 		var track := TrackData.new()
 		track.channel = ch
@@ -562,10 +570,30 @@ func _build_midi_data_from_notes(notes: Array) -> MidiData:
 				track.instrument = orig_track.instrument
 				track.name = orig_track.name
 				break
-		midi_data.tracks.append(track)
+		# 用户在 Piano Roll 中为该通道指定了新音色
+		if roll_instruments.has(ch):
+			var preset: int = int(roll_instruments[ch])
+			track.instrument = preset
+			if not existing_channels.has(ch):
+				midi_data.program_events.append({
+					"time_ticks": 0,
+					"channel": ch,
+					"preset_index": preset,
+				})
+			else:
+				for pc in midi_data.program_events:
+					if int(pc["channel"]) == ch:
+						pc["preset_index"] = preset
+						break
+			midi_data.tracks.append(track)
 	return midi_data
 
 func _on_piano_roll_note_edited() -> void:
+	_edit_dirty = true
+	call_deferred("_flush_edit_sync")
+
+func _on_track_changed(channel: int, preset: int) -> void:
+	_mini_mixer.set_channel_instrument(channel, preset)
 	_edit_dirty = true
 	call_deferred("_flush_edit_sync")
 
@@ -579,16 +607,19 @@ func _flush_edit_sync() -> void:
 	var new_res := MidiResource.new()
 	new_res.from_midi_data(midi_data)
 	_editor_player.update_resource(new_res)
-func _on_piano_roll_export(notes: Array) -> void:
+func _on_piano_roll_export(notes: Array, fpath: String = "") -> void:
 	var midi_data := _build_midi_data_from_notes(notes)
 	if midi_data == null:
 		return
 	# Write file
 	var bytes := MidiWriter.encode(midi_data)
-	var output_dir := "res://addons/clef/output/"
-	var timestamp := Time.get_datetime_string_from_system().replace(":", "-").replace(" ", "_")
-	var path := output_dir + "edited_" + timestamp + ".mid"
-	var abs_path := ProjectSettings.globalize_path(path)
+	var abs_path: String
+	if fpath != "":
+		abs_path = fpath
+	else:
+		var output_dir := "res://addons/clef/output/"
+		var timestamp := Time.get_datetime_string_from_system().replace(":", "-").replace(" ", "_")
+		abs_path = ProjectSettings.globalize_path(output_dir + "edited_" + timestamp + ".mid")
 	# Ensure directory exists
 	DirAccess.make_dir_recursive_absolute(abs_path.get_base_dir())
 	var file := FileAccess.open(abs_path, FileAccess.WRITE)
@@ -596,6 +627,7 @@ func _on_piano_roll_export(notes: Array) -> void:
 		file.store_buffer(bytes)
 		file.close()
 		print("[ClefStation] MIDI exported: ", abs_path)
+		EditorInterface.get_resource_filesystem().scan()
 	else:
 		push_error("[ClefStation] Failed to export MIDI: ", abs_path)
 

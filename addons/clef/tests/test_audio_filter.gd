@@ -1,7 +1,6 @@
 extends SceneTree
 ## 用法: godot --headless --script addons/clef/tests/test_audio_filter.gd
 
-const AudioFilter = preload("res://addons/clef/player/audio_filter.gd")
 
 func _init() -> void:
 	print("\n=== AudioFilter Test ===")

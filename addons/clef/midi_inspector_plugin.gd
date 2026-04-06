@@ -13,31 +13,41 @@ var _export_button: Button = null
 var _progress_timer: Timer = null
 var _container: HBoxContainer = null
 var _export_container: HBoxContainer = null
+var _preview_control: Control = null
 var l10n: ClefL10n
+
+const _PREVIEW_HEIGHT: float = 88.0
 
 
 func _can_handle(object: Object) -> bool:
 	return object is MidiResource
 
 
-func _parse_end(object: Object) -> void:
-	# Release old UI containers to prevent node leaks
-	if _container:
-		_container.queue_free()
-		_container = null
-	if _export_container:
-		_export_container.queue_free()
-		_export_container = null
-
-	# Stop previous playback if switching objects
+## _parse_begin 在所有属性之前调用 — 放置迷你预览和播放控制
+func _parse_begin(object: Object) -> void:
+	# 切换对象时停止播放
 	if object != _current_object and _player != null:
 		_stop_playback()
 	_current_object = object as MidiResource
 
+	# 释放旧控件
+	if _preview_control:
+		_preview_control.queue_free()
+		_preview_control = null
+	if _container:
+		_container.queue_free()
+		_container = null
+
 	if not _current_object:
 		return
 
-	# Soundfont source
+	# ── 迷你钢琴卷帘预览 ──
+	_preview_control = Control.new()
+	_preview_control.custom_minimum_size.y = _PREVIEW_HEIGHT
+	_preview_control.draw.connect(_draw_mini_preview)
+	add_custom_control(_preview_control)
+
+	# ── 播放控制行 ──
 	var sf2_path: String = ProjectSettings.get_setting(
 		"clef/default_soundfont", "")
 	if sf2_path == "":
@@ -45,7 +55,6 @@ func _parse_end(object: Object) -> void:
 
 	_container = HBoxContainer.new()
 
-	# Play button
 	_play_button = Button.new()
 	_play_button.text = "▶ " + l10n.t("Play")
 	_play_button.tooltip_text = l10n.t("Preview MIDI playback")
@@ -53,7 +62,6 @@ func _parse_end(object: Object) -> void:
 	_play_button.pressed.connect(_on_play_pressed)
 	_container.add_child(_play_button)
 
-	# Stop button
 	_stop_button = Button.new()
 	_stop_button.text = "⏹ " + l10n.t("Stop")
 	_stop_button.tooltip_text = l10n.t("Stop")
@@ -61,7 +69,6 @@ func _parse_end(object: Object) -> void:
 	_stop_button.pressed.connect(_on_stop_pressed)
 	_container.add_child(_stop_button)
 
-	# Pause button
 	_pause_button = Button.new()
 	_pause_button.text = "⏸"
 	_pause_button.tooltip_text = l10n.t("Pause")
@@ -69,7 +76,6 @@ func _parse_end(object: Object) -> void:
 	_pause_button.pressed.connect(_on_pause_pressed)
 	_container.add_child(_pause_button)
 
-	# Progress slider (supports seek)
 	_progress_slider = HSlider.new()
 	_progress_slider.custom_minimum_size.x = 150
 	_progress_slider.max_value = 1.0
@@ -79,7 +85,6 @@ func _parse_end(object: Object) -> void:
 	_progress_slider.drag_ended.connect(_on_slider_drag_ended)
 	_container.add_child(_progress_slider)
 
-	# Time label
 	_time_label = Label.new()
 	_time_label.text = "0:00 / 0:00"
 	_time_label.custom_minimum_size.x = 80
@@ -94,7 +99,17 @@ func _parse_end(object: Object) -> void:
 
 	add_custom_control(_container)
 
-	# Export JSON button (second row)
+
+## _parse_end 在所有属性之后调用 — 仅放置导出按钮
+func _parse_end(object: Object) -> void:
+	if _export_container:
+		_export_container.queue_free()
+		_export_container = null
+
+	if not _current_object:
+		return
+
+	# ── 导出行 ──
 	_export_container = HBoxContainer.new()
 
 	_export_button = Button.new()
@@ -105,6 +120,96 @@ func _parse_end(object: Object) -> void:
 
 	add_custom_control(_export_container)
 
+
+# ─── 迷你钢琴卷帘绘制 ─────────────────────────────────────
+
+func _draw_mini_preview() -> void:
+	if _current_object == null or _preview_control == null:
+		return
+	var ctrl: Control = _preview_control
+	var rect: Rect2 = ctrl.get_rect()
+	if rect.size.x < 20 or rect.size.y < 20:
+		return
+
+	# 背景
+	ctrl.draw_rect(rect, Color(0.1, 0.1, 0.14))
+
+	# 计算音符范围
+	var t_min: int = 0
+	var t_max: int = 1
+	var p_min: int = 127
+	var p_max: int = 0
+
+	for track in _current_object.tracks:
+		for note in track.notes:
+			if note.start_ticks < t_min:
+				t_min = note.start_ticks
+			var end_t: int = note.start_ticks + note.duration_ticks
+			if end_t > t_max:
+				t_max = end_t
+			if note.pitch < p_min:
+				p_min = note.pitch
+			if note.pitch > p_max:
+				p_max = note.pitch
+
+	if t_max <= t_min:
+		t_max = t_min + 1
+	if p_max < p_min:
+		p_max = p_min + 1
+
+	var margin := 3.0
+	var draw_area := Rect2(
+		margin, margin,
+		rect.size.x - margin * 2, rect.size.y - margin * 2
+	)
+	var t_range: float = float(t_max - t_min)
+	var p_range: float = float(p_max - p_min + 1)
+
+	# 绘制八度分隔线（C 音位置）
+	for octave in range(0, 11):
+		var pitch: int = octave * 12
+		if pitch < p_min or pitch > p_max:
+			continue
+		var y: float = draw_area.end.y - (float(pitch - p_min) / p_range) * draw_area.size.y
+		ctrl.draw_line(
+			Vector2(draw_area.position.x, y),
+			Vector2(draw_area.end.x, y),
+			Color(0.25, 0.25, 0.3), 0.5
+		)
+
+	# 绘制音符
+	for track in _current_object.tracks:
+		var ch: int = track.channel
+		var color: Color = ChannelColors.COLORS[ch % 16] if ch < 16 else Color(0.7, 0.7, 0.7)
+		for note in track.notes:
+			var vel_factor: float = 0.5 + 0.5 * (float(note.velocity) / 127.0)
+			var note_color := Color(
+				color.r * vel_factor,
+				color.g * vel_factor,
+				color.b * vel_factor,
+				0.85
+			)
+			var x: float = draw_area.position.x + (float(note.start_ticks - t_min) / t_range) * draw_area.size.x
+			var w: float = maxf((float(note.duration_ticks) / t_range) * draw_area.size.x, 1.0)
+			var note_y: float = draw_area.end.y - (float(note.pitch - p_min + 1) / p_range) * draw_area.size.y
+			var h: float = maxf(draw_area.size.y / p_range, 1.5)
+			ctrl.draw_rect(Rect2(x, note_y, w, h), note_color)
+
+	# 绘制播放进度线（使用进度滑块的值，与播放状态同步）
+	if _progress_slider and _progress_slider.value > 0.001:
+		var progress: float = clampf(_progress_slider.value, 0.0, 1.0)
+		var px: float = draw_area.position.x + progress * draw_area.size.x
+		ctrl.draw_line(
+			Vector2(px, draw_area.position.y),
+			Vector2(px, draw_area.end.y),
+			Color(1, 1, 1, 0.9), 2.0
+		)
+
+	# 边框
+	ctrl.draw_rect(rect, Color(0.25, 0.25, 0.3), false, 1.0)
+
+
+# ─── 播放控制 ─────────────────────────────────────────────
 
 func _on_play_pressed() -> void:
 	if _current_object == null:
@@ -122,7 +227,6 @@ func _on_play_pressed() -> void:
 	EditorInterface.get_base_control().add_child(_player)
 	_player.start_playback()
 
-	# Progress polling
 	_progress_timer = Timer.new()
 	_progress_timer.wait_time = 0.1
 	_progress_timer.timeout.connect(_update_progress)
@@ -183,6 +287,8 @@ func _stop_playback() -> void:
 		_progress_timer.stop()
 		_progress_timer.queue_free()
 		_progress_timer = null
+	if _preview_control:
+		_preview_control.queue_redraw()
 
 
 func _on_playback_finished() -> void:
@@ -200,15 +306,17 @@ func _update_progress() -> void:
 				MidiStreamPlayer.format_time(position),
 				MidiStreamPlayer.format_time(duration),
 			]
+		if _preview_control:
+			_preview_control.queue_redraw()
 
+
+# ─── 导出 JSON ────────────────────────────────────────────
 
 func _on_export_json_pressed() -> void:
 	if _current_object == null:
 		return
 
 	var res: MidiResource = _current_object
-
-	# Build MidiData directly from @export properties to avoid calling script methods on placeholders
 	var track_list: Array[TrackData] = []
 	for track_res in res.tracks:
 		var note_list: Array[NoteData] = []

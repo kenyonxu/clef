@@ -4,6 +4,7 @@
 class_name MidiResource
 extends Resource
 
+@export_category("MIDI Data")
 @export var tempo: int = 120
 @export var timebase: int = 480
 @export var tracks: Array[TrackResource] = []
