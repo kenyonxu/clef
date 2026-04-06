@@ -476,6 +476,56 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 		_redo()
 		return
+	# Ctrl+C — 复制选中音符
+	if key.ctrl_pressed and not key.shift_pressed and key.keycode == KEY_C:
+		if not _selection.is_empty():
+			get_viewport().set_input_as_handled()
+			var sorted_sel := _selection.duplicate()
+			sorted_sel.sort()
+			_clipboard.clear()
+			_clipboard_ref_time = INF
+			for idx in sorted_sel:
+				if idx >= 0 and idx < _notes.size():
+					var n: RollNote = _notes[idx]
+					_clipboard.append(n.duplicate())
+					if n.start_time < _clipboard_ref_time:
+						_clipboard_ref_time = n.start_time
+			if _clipboard_ref_time == INF:
+				_clipboard_ref_time = 0.0
+		return
+	# Ctrl+V — 粘贴音符
+	if key.ctrl_pressed and not key.shift_pressed and key.keycode == KEY_V:
+		if _clipboard.is_empty():
+			return
+		get_viewport().set_input_as_handled()
+		var target_time: float
+		var mouse_pos := get_local_mouse_position()
+		if Rect2(Vector2.ZERO, size).has_point(mouse_pos):
+			target_time = _pixel_to_time(mouse_pos.x)
+		elif _playback_position >= 0.0:
+			target_time = _playback_position
+		else:
+			target_time = _view_offset
+		var time_offset := target_time - _clipboard_ref_time
+		var cmd := begin_command("add", "粘贴 %d 个音符" % _clipboard.size())
+		var added_indices: Array[int] = []
+		_selection.clear()
+		for cn in _clipboard:
+			var new_note := RollNote.new(
+				_active_channel,
+				cn.pitch,
+				maxf(0.0, cn.start_time + time_offset),
+				cn.duration,
+				cn.velocity
+			)
+			_notes.append(new_note)
+			added_indices.append(_notes.size() - 1)
+			_selection.append(_notes.size() - 1)
+		cmd.before = {"added_indices": added_indices.duplicate()}
+		cmd.after = {}
+		commit_command(cmd)
+		queue_redraw()
+		return
 	if key.keycode == KEY_DELETE and not _selection.is_empty():
 		get_viewport().set_input_as_handled()
 		_actions._delete_selected()
