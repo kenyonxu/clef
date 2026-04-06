@@ -76,7 +76,7 @@ func _handle_feedback_menu_item(id: int) -> void:
 		10: _open_annotation_popup()
 		11: _toggle_mute_selected()
 		12: _invert_mute_selected()
-		13: _roll.agent_feedback_requested.emit(get_agent_feedback())
+		13: _roll._show_feedback_dialog()
 
 
 # ─── 音符操作 ───────────────────────────────────────────────
@@ -321,12 +321,46 @@ func get_agent_feedback() -> Dictionary:
 			continue
 		var note := _roll._notes[ann.note_index]
 		annotations_data.append({
-			"channel": note.channel,
+			"note_index": ann.note_index,
 			"pitch": note.pitch,
 			"severity": ann.severity,
 			"note": ann.text,
 		})
+	var selection := _build_selection_context()
 	return {
-		"version": 1,
+		"version": 2,
+		"selection": selection,
 		"annotations": annotations_data,
 	}
+
+
+func _build_selection_context() -> Dictionary:
+	var indices: Array[int] = []
+	for i in range(_roll._notes.size()):
+		if i in _roll._selection:
+			indices.append(i)
+	if indices.is_empty():
+		return {}
+	var pitches := []
+	var channels := []
+	var t_min := INF
+		var t_max := -INF
+	for idx in indices:
+		var n = _roll._notes[idx]
+		if not pitches.has(n.pitch):
+			pitches.append(n.pitch)
+		if not channels.has(n.channel):
+			channels.append(n.channel)
+		var start := n.start_time
+		var end := start + n.duration
+		if start < t_min: t_min = start
+		if end > t_max: t_max = end
+	pitches.sort()
+	channels.sort()
+	return {
+		"count": indices.size(),
+		"pitches": pitches,
+		"channels": channels,
+		"time_range": {"start": t_min, "end": t_max},
+	}
+

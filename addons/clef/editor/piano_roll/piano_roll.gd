@@ -22,7 +22,7 @@ signal export_requested(notes: Array, path: String)
 signal annotation_added(note_index: int, text: String, severity: String)
 
 ## 请求导出 Agent 反馈 JSON
-signal agent_feedback_requested(feedback: Dictionary)
+signal agent_feedback_requested(feedback: Dictionary, path: String)
 
 ## 请求导出 ABC 记谱法
 signal abc_export_requested()
@@ -255,6 +255,14 @@ func _ready() -> void:
 	_file_dialog.current_dir = ProjectSettings.globalize_path("res://addons/clef/output/")
 	_file_dialog.file_selected.connect(_on_export_file_selected)
 	add_child(_file_dialog)
+	_feedback_dialog = FileDialog.new()
+	_feedback_dialog.file_mode = FileDialog.FILE_MODE_SAVE_FILE
+	_feedback_dialog.access = FileDialog.ACCESS_FILESYSTEM
+	_feedback_dialog.filters = PackedStringArray(["*.json ; JSON Files"])
+	_feedback_dialog.title = "导出 Agent Feedback"
+	_feedback_dialog.current_dir = ProjectSettings.globalize_path("res://addons/clef/output/")
+	_feedback_dialog.file_selected.connect(_on_feedback_file_selected)
+	add_child(_feedback_dialog)
 	_actions = PianoRollActions.new(self)
 	_actions.create_context_menu()
 	_create_h_scroll()
@@ -608,9 +616,17 @@ func _gui_input(event: InputEvent) -> void:
 		if mb.pressed and mb.button_index == MOUSE_BUTTON_LEFT:
 			var plus_x := _get_plus_button_x()
 			var export_x := size.x - 28.0
+			var feedback_x := size.x - 56.0
+			# 反馈按钮
+			if mb.position.x >= feedback_x and mb.position.x < export_x:
+				if _mode == Mode.FEEDBACK:
+					_show_feedback_dialog()
+					accept_event()
+					return
 			# 导出按钮
 			if mb.position.x >= export_x:
-				_show_export_dialog()
+				if _mode == Mode.EDITING:
+					_show_export_dialog()
 				accept_event()
 				return
 			# "+" 按钮（仅编辑模式）
@@ -1010,21 +1026,31 @@ func _draw_legend() -> void:
 
 	# "+" 按钮（跟随轨道末尾）
 	var plus_rect := Rect2(x + 4, 0, plus_width, _LEGEND_HEIGHT)
-	draw_rect(plus_rect, Color(0.12, 0.12, 0.16))
+	draw_rect(plus_rect, Color(0.12, 0.12, 0.16) if _mode == Mode.EDITING else Color(0.08, 0.08, 0.1))
 	draw_line(Vector2(plus_rect.position.x, 0),
 		Vector2(plus_rect.position.x, _LEGEND_HEIGHT), Color(0.2, 0.2, 0.25))
 	var ps := font.get_string_size("+", HORIZONTAL_ALIGNMENT_CENTER, -1, 20)
 	draw_string(font, Vector2(plus_rect.position.x + plus_width / 2 - ps.x / 2, _LEGEND_HEIGHT / 2 + 5),
-		"+", HORIZONTAL_ALIGNMENT_CENTER, -1, 20, Color(0.6, 0.8, 0.6))
+		"+", HORIZONTAL_ALIGNMENT_CENTER, -1, 20, Color(0.6, 0.8, 0.6) if _mode == Mode.EDITING else Color(0.4, 0.4, 0.4))
+
+	# "⩩" 反馈按钮
+	var feedback_rect := Rect2(size.x - plus_width * 2, 0, plus_width, _LEGEND_HEIGHT)
+	var fb_active := _mode == Mode.FEEDBACK
+	draw_rect(feedback_rect, Color(0.12, 0.12, 0.16) if fb_active else Color(0.08, 0.08, 0.1))
+	draw_line(Vector2(feedback_rect.position.x, 0),
+		Vector2(feedback_rect.position.x, _LEGEND_HEIGHT), Color(0.2, 0.2, 0.25))
+	var fbs := font.get_string_size("⩩", HORIZONTAL_ALIGNMENT_CENTER, -1, 20)
+	draw_string(font, Vector2(feedback_rect.position.x + plus_width / 2 - fbs.x / 2, _LEGEND_HEIGHT / 2 + 5),
+		"⩩", HORIZONTAL_ALIGNMENT_CENTER, -1, 20, Color(0.9, 0.7, 0.4) if fb_active else Color(0.4, 0.4, 0.4))
 
 	# "⤓" 导出按钮（固定右端）
 	var export_rect := Rect2(size.x - plus_width, 0, plus_width, _LEGEND_HEIGHT)
-	draw_rect(export_rect, Color(0.12, 0.12, 0.16))
+	draw_rect(export_rect, Color(0.12, 0.12, 0.16) if _mode == Mode.EDITING else Color(0.08, 0.08, 0.1))
 	draw_line(Vector2(export_rect.position.x, 0),
 		Vector2(export_rect.position.x, _LEGEND_HEIGHT), Color(0.2, 0.2, 0.25))
 	var es := font.get_string_size("⤓", HORIZONTAL_ALIGNMENT_CENTER, -1, 20)
 	draw_string(font, Vector2(export_rect.position.x + plus_width / 2 - es.x / 2, _LEGEND_HEIGHT / 2 + 5),
-		"⤓", HORIZONTAL_ALIGNMENT_CENTER, -1, 20, Color(0.6, 0.7, 0.9))
+		"⤓", HORIZONTAL_ALIGNMENT_CENTER, -1, 20, Color(0.6, 0.7, 0.9) if _mode == Mode.EDITING else Color(0.4, 0.4, 0.4))
 
 
 func _draw_pitch_grid() -> void:
@@ -1222,6 +1248,7 @@ var _soundfont_browser: SoundfontBrowser = null
 var _legend_popup: PopupMenu = null
 var _legend_context_channel: int = -1
 var _file_dialog: FileDialog = null
+var _feedback_dialog: FileDialog = null
 
 func set_soundfont_browser(browser: SoundfontBrowser) -> void:
 	_soundfont_browser = browser
@@ -1240,6 +1267,16 @@ func _open_gm_selector_popup() -> void:
 	_gm_selector.position = get_global_mouse_position() + Vector2(10, 10)
 	_gm_selector.popup_centered()
 
+
+
+func _show_feedback_dialog() -> void:
+	var ts := Time.get_datetime_string_from_system().replace(":", "-").replace(" ", "_")
+	_feedback_dialog.current_path = _feedback_dialog.current_dir.path_join("agent_feedback_" + ts + ".json")
+	_feedback_dialog.popup_centered(Vector2i(800, 600))
+
+
+func _on_feedback_file_selected(fpath: String) -> void:
+	agent_feedback_requested.emit(_actions.get_agent_feedback(), fpath)
 
 
 func _show_export_dialog() -> void:

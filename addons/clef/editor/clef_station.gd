@@ -215,15 +215,20 @@ func _build_layout() -> void:
 	_piano_roll.export_requested.connect(_on_piano_roll_export)
 	_piano_roll.note_edited.connect(_on_piano_roll_note_edited)
 	_piano_roll.track_changed.connect(_on_track_changed)
-	_piano_roll.agent_feedback_requested.connect(func(feedback: Dictionary):
-		var timestamp := Time.get_datetime_string_from_system().replace(":", "-").replace(" ", "_")
-		var abs_path := ProjectSettings.globalize_path("res://addons/clef/output/agent_feedback_" + timestamp + ".json")
+	_piano_roll.agent_feedback_requested.connect(func(feedback: Dictionary, fpath: String = ""):
+		var abs_path: String
+		if fpath != "":
+			abs_path = fpath
+		else:
+			var timestamp := Time.get_datetime_string_from_system().replace(":", "-").replace(" ", "_")
+			abs_path = ProjectSettings.globalize_path("res://addons/clef/output/agent_feedback_" + timestamp + ".json")
 		DirAccess.make_dir_recursive_absolute(abs_path.get_base_dir())
 		var file := FileAccess.open(abs_path, FileAccess.WRITE)
 		if file:
 			file.store_string(JSON.stringify(feedback, "\t"))
 			file.close()
 			print("[ClefStation] Agent feedback exported: ", abs_path)
+			EditorInterface.get_resource_filesystem().scan()
 		else:
 			push_error("[ClefStation] Failed to export agent feedback: ", abs_path)
 	)
@@ -629,6 +634,7 @@ func _on_piano_roll_export(notes: Array, fpath: String = "") -> void:
 		file.store_buffer(bytes)
 		file.close()
 		print("[ClefStation] MIDI exported: ", abs_path)
+		EditorInterface.get_resource_filesystem().scan()
 	else:
 		push_error("[ClefStation] Failed to export MIDI: ", abs_path)
 
