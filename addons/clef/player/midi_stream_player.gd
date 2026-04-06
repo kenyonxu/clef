@@ -9,23 +9,31 @@ extends Node
 @export var midi_resource: MidiResource : set = set_midi_resource
 @export_file("*.sf2") var soundfont: String = "" : set = set_soundfont
 @export var loop: bool = false
-@export_range(0.1, 2.0, 0.1) var release_multiplier: float = 1.0
 @export var autoplay: bool = false
 @export_range(-80.0, 24.0, 0.1) var volume_db: float = -20.0 : set = set_volume_db
 @export_range(0.01, 4.0, 0.01) var pitch_scale: float = 1.0 : set = set_pitch_scale
-@export_range(1, 128, 1) var max_polyphony: int = 64
-# --- Audio effects ---
+
+@export_group("Audio Effects", "")
 @export var reverb_enabled: bool = true : set = set_reverb_enabled
 @export_range(0.0, 1.0, 0.01) var reverb_room_size: float = 0.29 : set = set_reverb_room_size
 @export_range(0.0, 1.0, 0.01) var reverb_wet: float = 0.15 : set = set_reverb_wet
 @export var chorus_enabled: bool = true : set = set_chorus_enabled
 @export_range(0.0, 1.0, 0.01) var chorus_wet: float = 0.2 : set = set_chorus_wet
+
+@export_subgroup("Compressor", "")
 @export var compressor_enabled: bool = false : set = set_compressor_enabled
 @export_range(-60.0, 0.0, 1.0) var compressor_threshold_db: float = -12.0 : set = set_compressor_threshold_db
 @export_range(1.0, 64.0, 0.1) var compressor_ratio: float = 4.0 : set = set_compressor_ratio
 @export_range(-20.0, 20.0, 0.1) var compressor_gain_db: float = 0.0 : set = set_compressor_gain_db
+
+@export_subgroup("Equalizer", "")
 @export var eq_enabled: bool = false : set = set_eq_enabled
+
+@export_group("Advanced", "")
+@export_range(0.1, 2.0, 0.1) var release_multiplier: float = 1.0
+@export_range(1, 128, 1) var max_polyphony: int = 64
 var bus: String = "Master" : set = set_bus
+
 
 signal note_triggered(channel: int, pitch: int, velocity: int)
 signal note_released(channel: int, pitch: int)
