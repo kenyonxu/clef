@@ -465,7 +465,19 @@ func _reset_playback_state() -> void:
 func get_duration() -> float:
 	if midi_resource == null:
 		return 0.0
-	return midi_resource.get_duration_seconds()
+	# 直接从导出属性计算，避免 placeholder 实例在编辑器中无法调用脚本方法
+	if midi_resource.tracks.is_empty():
+		return 0.0
+	var tps: float = float(midi_resource.tempo) / 60.0 * float(midi_resource.timebase)
+	if tps <= 0.0:
+		return 0.0
+	var max_end: int = 0
+	for track in midi_resource.tracks:
+		for note in track.notes:
+			var end_t: int = note.start_ticks + note.duration_ticks
+			if end_t > max_end:
+				max_end = end_t
+	return float(max_end) / tps
 
 
 ## 将秒数格式化为 MM:SS 字符串
