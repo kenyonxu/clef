@@ -51,6 +51,9 @@ class RollNote:
 		duration = dur
 		velocity = vel
 
+	func duplicate() -> RollNote:
+		return RollNote.new(channel, pitch, start_time, duration, velocity)
+
 
 ## 编辑命令（撤销/重做）
 class EditCommand:
@@ -177,6 +180,13 @@ var _muted_indices: Array[int] = []
 
 ## 临时音符（试听用，不写入 MIDI）
 var _temp_notes: Array[RollNote] = []
+
+## 剪贴板
+var _clipboard: Array[RollNote] = []
+var _clipboard_ref_time: float = 0.0
+
+## 当前选中轨道
+var _active_channel: int = 0
 
 enum Mode { PLAYING, EDITING, FEEDBACK }
 var _mode: Mode = Mode.PLAYING
@@ -1050,6 +1060,13 @@ func _apply_snapshot(snapshot: Dictionary) -> void:
 		_muted_indices = snapshot["muted_indices"].duplicate()
 	elif snapshot.has("annotations"):
 		_annotations = snapshot["annotations"].duplicate()
+	elif snapshot.has("added_indices"):
+		var indices: Array = snapshot["added_indices"]
+		var sorted_indices := indices.duplicate()
+		sorted_indices.sort_custom(func(a, b): return a > b)
+		for idx in sorted_indices:
+			if idx >= 0 and idx < _notes.size():
+				_notes.remove_at(idx)
 	elif snapshot.has("added_index"):
 		_notes.remove_at(snapshot["added_index"])
 	elif snapshot.has("index") and snapshot.has("note_data"):
