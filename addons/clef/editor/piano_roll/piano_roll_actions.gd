@@ -67,7 +67,7 @@ func _handle_edit_menu_item(id: int) -> void:
 		3: _edit_velocity_popup()
 		4: _toggle_mute_selected()
 		5: _invert_mute_selected()
-		6: _roll.export_requested.emit(_roll._notes)
+		6: _roll._show_export_dialog()
 		7: _roll.abc_export_requested.emit()
 
 
