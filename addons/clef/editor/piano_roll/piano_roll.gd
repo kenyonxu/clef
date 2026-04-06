@@ -244,14 +244,14 @@ func _ready() -> void:
 	size_flags_vertical = Control.SIZE_EXPAND_FILL
 	mouse_default_cursor_shape = Control.CURSOR_ARROW
 	_legend_popup = PopupMenu.new()
-	_legend_popup.add_item("切换音色", 0)
+	_legend_popup.add_item(l10n.t("Switch Instrument"), 0)
 	_legend_popup.id_pressed.connect(_on_legend_popup_id_pressed)
 	add_child(_legend_popup)
 	_file_dialog = FileDialog.new()
 	_file_dialog.file_mode = FileDialog.FILE_MODE_SAVE_FILE
 	_file_dialog.access = FileDialog.ACCESS_FILESYSTEM
 	_file_dialog.filters = PackedStringArray(["*.mid ; MIDI Files"])
-	_file_dialog.title = "导出 MIDI"
+	_file_dialog.title = l10n.t("Export MIDI")
 	_file_dialog.current_dir = ProjectSettings.globalize_path("res://addons/clef/output/")
 	_file_dialog.file_selected.connect(_on_export_file_selected)
 	add_child(_file_dialog)
@@ -259,7 +259,7 @@ func _ready() -> void:
 	_feedback_dialog.file_mode = FileDialog.FILE_MODE_SAVE_FILE
 	_feedback_dialog.access = FileDialog.ACCESS_FILESYSTEM
 	_feedback_dialog.filters = PackedStringArray(["*.json ; JSON Files"])
-	_feedback_dialog.title = "导出 Agent Feedback"
+	_feedback_dialog.title = l10n.t("Export Agent Feedback")
 	_feedback_dialog.current_dir = ProjectSettings.globalize_path("res://addons/clef/output/")
 	_feedback_dialog.file_selected.connect(_on_feedback_file_selected)
 	add_child(_feedback_dialog)
@@ -1257,6 +1257,7 @@ func set_soundfont_browser(browser: SoundfontBrowser) -> void:
 func _open_gm_selector_popup() -> void:
 	if _gm_selector == null:
 		_gm_selector = preload("res://addons/clef/editor/piano_roll/gm_instrument_selector.gd").new()
+		_gm_selector.l10n = l10n
 		_gm_selector.instrument_selected.connect(_on_instrument_selected)
 		add_child(_gm_selector)
 	# 每次打开时重新填充（SF2 可能已更换）
@@ -1296,6 +1297,7 @@ func _on_legend_popup_id_pressed(id: int) -> void:
 				return
 			if _gm_selector == null:
 				_gm_selector = preload("res://addons/clef/editor/piano_roll/gm_instrument_selector.gd").new()
+				_gm_selector.l10n = l10n
 				add_child(_gm_selector)
 			if _gm_selector.instrument_selected.is_connected(_on_instrument_selected):
 				_gm_selector.instrument_selected.disconnect(_on_instrument_selected)

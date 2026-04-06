@@ -39,13 +39,15 @@ const GM_NAMES: PackedStringArray = [
 	"Telephone Ring", "Helicopter", "Applause", "Gunshot",
 ]
 
+var l10n: ClefL10n
+
 var _tree: Tree
 
 func _ready() -> void:
-	title = "选择音色"
+	title = l10n.t("Select Instrument") if l10n else "Select Instrument"
 	min_size = Vector2(320, 420)
 	size = Vector2(320, 420)
-	get_ok_button().text = "取消"
+	get_ok_button().text = l10n.t("Cancel") if l10n else "Cancel"
 
 	var vbox := VBoxContainer.new()
 	add_child(vbox)
