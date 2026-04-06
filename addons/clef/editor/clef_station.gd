@@ -4,13 +4,6 @@
 class_name ClefStation
 extends Control
 
-const SoundfontBrowser = preload("res://addons/clef/editor/soundfont_browser/soundfont_browser.gd")
-const MidiMonitor = preload("res://addons/clef/editor/midi_monitor/midi_monitor.gd")
-const EditorPlayer = preload("res://addons/clef/editor/editor_player/editor_player.gd")
-const TransportBar = preload("res://addons/clef/editor/transport_bar/transport_bar.gd")
-const MiniMixer = preload("res://addons/clef/editor/mini_mixer/mini_mixer.gd")
-const PianoRoll = preload("res://addons/clef/editor/piano_roll/piano_roll.gd")
-const PianoTimeRuler = preload("res://addons/clef/editor/piano_roll/piano_time_ruler.gd")
 
 const _CONFIG_PATH = "user://clef_editor.cfg"
 const SUPPORTED_EXTENSIONS: PackedStringArray = [".mid", ".tres", ".json"]

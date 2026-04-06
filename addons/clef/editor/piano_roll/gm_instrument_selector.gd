@@ -1,5 +1,6 @@
 ## 音色选择弹窗
 ## 优先显示 SF2 实际音色，未加载时 fallback GM 硬编码
+class_name GMInstrumentSelector
 extends AcceptDialog
 
 signal instrument_selected(preset: int)

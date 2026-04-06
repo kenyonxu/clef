@@ -3,8 +3,6 @@
 class_name PianoRoll
 extends Control
 
-const ChannelColors = preload("res://addons/clef/editor/channel_colors.gd")
-const PianoRollActions = preload("res://addons/clef/editor/piano_roll/piano_roll_actions.gd")
 
 ## 点击卷帘请求跳转到指定时间位置
 signal seek_requested(position: float)
@@ -1256,7 +1254,7 @@ func set_soundfont_browser(browser: SoundfontBrowser) -> void:
 
 func _open_gm_selector_popup() -> void:
 	if _gm_selector == null:
-		_gm_selector = preload("res://addons/clef/editor/piano_roll/gm_instrument_selector.gd").new()
+		_gm_selector = GMInstrumentSelector.new()
 		_gm_selector.l10n = l10n
 		_gm_selector.instrument_selected.connect(_on_instrument_selected)
 		add_child(_gm_selector)
@@ -1296,7 +1294,7 @@ func _on_legend_popup_id_pressed(id: int) -> void:
 			if _legend_context_channel < 0:
 				return
 			if _gm_selector == null:
-				_gm_selector = preload("res://addons/clef/editor/piano_roll/gm_instrument_selector.gd").new()
+				_gm_selector = GMInstrumentSelector.new()
 				_gm_selector.l10n = l10n
 				add_child(_gm_selector)
 			if _gm_selector.instrument_selected.is_connected(_on_instrument_selected):
