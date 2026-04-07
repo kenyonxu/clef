@@ -246,6 +246,7 @@ func _ready() -> void:
 	mouse_default_cursor_shape = Control.CURSOR_ARROW
 	_legend_popup = PopupMenu.new()
 	_legend_popup.add_item(l10n.t("Switch Instrument"), 0)
+	_legend_popup.add_item(l10n.t("Select All Notes"), 1)
 	_legend_popup.id_pressed.connect(_on_legend_popup_id_pressed)
 	add_child(_legend_popup)
 	_file_dialog = FileDialog.new()
@@ -1327,8 +1328,18 @@ func _on_export_file_selected(fpath: String) -> void:
 	export_requested.emit(_notes, fpath)
 
 
+func _select_channel_notes(ch: int) -> void:
+	_selection.clear()
+	for i in range(_notes.size()):
+		if _notes[i].channel == ch:
+			_selection.append(i)
+	queue_redraw()
+	selection_changed.emit(_selection)
+
 func _on_legend_popup_id_pressed(id: int) -> void:
 	match id:
+		1:  # 选择该轨道全部音符
+			_select_channel_notes(_legend_context_channel)
 		0:  # 切换音色
 			if _legend_context_channel < 0:
 				return

@@ -41,6 +41,7 @@ func _build_edit_menu() -> void:
 	menu.add_separator()
 	menu.add_item(_roll.l10n.t("Mute selected notes"), 4)
 	menu.add_item(_roll.l10n.t("Invert mute"), 5)
+	menu.add_item(_roll.l10n.t("Unmute all notes"), 8)
 	menu.add_separator()
 	menu.add_item(_roll.l10n.t("Export edited MIDI"), 6)
 	menu.add_item(_roll.l10n.t("Export edited ABC"), 7)
@@ -55,6 +56,7 @@ func _build_feedback_menu() -> void:
 	menu.add_separator()
 	menu.add_item(_roll.l10n.t("Mute selected notes"), 11)
 	menu.add_item(_roll.l10n.t("Invert mute"), 12)
+	menu.add_item(_roll.l10n.t("Unmute all notes"), 14)
 	menu.add_separator()
 	menu.add_item(_roll.l10n.t("Generate Agent feedback"), 13)
 
@@ -67,6 +69,7 @@ func _handle_edit_menu_item(id: int) -> void:
 		3: _edit_velocity_popup()
 		4: _toggle_mute_selected()
 		5: _invert_mute_selected()
+		8: _unmute_all()
 		6: _roll._show_export_dialog()
 		7: _roll.abc_export_requested.emit()
 
@@ -76,6 +79,7 @@ func _handle_feedback_menu_item(id: int) -> void:
 		10: _open_annotation_popup()
 		11: _toggle_mute_selected()
 		12: _invert_mute_selected()
+		14: _unmute_all()
 		13: _roll._show_feedback_dialog()
 
 
@@ -141,6 +145,16 @@ func _invert_mute_selected() -> void:
 	_roll.commit_command(cmd)
 	_roll.queue_redraw()
 
+func _unmute_all() -> void:
+	if _roll._muted_indices.is_empty():
+		return
+	var before_state := _roll._muted_indices.duplicate()
+	_roll._muted_indices.clear()
+	var cmd := _roll.begin_command("unmute", _roll.l10n.t("Unmute all notes"))
+	cmd.before = {"muted_indices": before_state}
+	cmd.after = {"muted_indices": []}
+	_roll.commit_command(cmd)
+	_roll.queue_redraw()
 
 func _shift_selected_pitch(delta: int) -> void:
 	var sel := _roll._selection
