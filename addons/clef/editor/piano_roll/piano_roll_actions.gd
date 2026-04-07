@@ -96,6 +96,7 @@ func _delete_selected() -> void:
 		_roll._notes.remove_at(idx)
 	cmd.after = {"deleted_indices": sorted.duplicate()}
 	sel.clear()
+	_roll.selection_changed.emit(_roll._selection)
 	_roll.commit_command(cmd)
 
 

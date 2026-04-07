@@ -37,6 +37,9 @@ signal view_offset_changed(view_offset: float, zoom_level: float, pps: float, du
 ## 轨道变更（新增轨道时通知 ClefStation 同步）
 signal track_changed(channel: int, preset: int)
 
+## 选中状态变更（给 VelocityLane 用）
+signal selection_changed(indices: Array[int])
+
 ## 单条音符数据
 class RollNote:
 	var channel: int
@@ -275,6 +278,7 @@ func set_notes(notes: Array[RollNote], duration: float) -> void:
 	_undo_stack.clear()
 	_redo_stack.clear()
 	_selection.clear()
+	selection_changed.emit(_selection)
 	_annotations.clear()
 	_muted_indices.clear()
 	_hovered_note = -1
@@ -314,6 +318,10 @@ func set_channel_muted(channel: int, muted: bool) -> void:
 	queue_redraw()
 
 
+func is_channel_muted(channel: int) -> bool:
+	return _muted_channels.has(channel)
+
+
 ## 清除所有静音状态（加载新文件时调用）
 func clear_muted_channels() -> void:
 	_muted_channels.clear()
@@ -346,6 +354,7 @@ func clear_notes() -> void:
 	_undo_stack.clear()
 	_redo_stack.clear()
 	_selection.clear()
+	selection_changed.emit(_selection)
 	_annotations.clear()
 	_hovered_note = -1
 	_duration = 0.0
@@ -375,8 +384,10 @@ func set_mode(new_mode: Mode) -> void:
 		_playing = false
 	elif new_mode == Mode.PLAYING:
 		_selection.clear()
+		selection_changed.emit(_selection)
 	elif new_mode == Mode.FEEDBACK:
 		_selection.clear()
+		selection_changed.emit(_selection)
 	mode_changed.emit(new_mode)
 	editing_changed.emit(new_mode == Mode.EDITING)
 	if is_instance_valid(_actions):
@@ -558,6 +569,7 @@ func _shortcut_input(event: InputEvent) -> void:
 			_notes.append(new_note)
 			added_indices.append(_notes.size() - 1)
 			_selection.append(_notes.size() - 1)
+		selection_changed.emit(_selection)
 		cmd.before = {"added_indices": added_indices.duplicate()}
 		cmd.after = {}
 		commit_command(cmd)
@@ -708,6 +720,7 @@ func _handle_mouse_button(mb: InputEventMouseButton) -> void:
 func _handle_left_press(mb: InputEventMouseButton) -> void:
 	if _mode == Mode.PLAYING:
 		_selection.clear()
+		selection_changed.emit(_selection)
 		queue_redraw()
 		var t := _pixel_to_time(mb.position.x)
 		if _duration > 0.0 and t >= 0.0 and t <= _duration:
@@ -723,11 +736,13 @@ func _handle_left_press(mb: InputEventMouseButton) -> void:
 				_selection.remove_at(found)
 			else:
 				_selection.append(idx)
+			selection_changed.emit(_selection)
 		elif hit["index"] in _selection:
 			pass  # 点击已选中音符，保持多选状态
 		else:
 			_selection.clear()
 			_selection.append(hit["index"])
+			selection_changed.emit(_selection)
 		# 仅编辑模式开始拖拽
 		if _mode == Mode.EDITING:
 			_dragging = true
@@ -761,6 +776,7 @@ func _handle_left_press(mb: InputEventMouseButton) -> void:
 		else:
 			# 框选（原行为）
 			_selection.clear()
+			selection_changed.emit(_selection)
 			_box_selecting = true
 			_box_select_start = mb.position
 			_box_select_end = mb.position
@@ -781,6 +797,7 @@ func _handle_left_release(_mb: InputEventMouseButton) -> void:
 			commit_command(cmd)
 			_selection.clear()
 			_selection.append(idx)
+			selection_changed.emit(_selection)
 		else:
 			# single click -> default 1 beat note
 			var beat_dur := 0.5
@@ -793,6 +810,7 @@ func _handle_left_release(_mb: InputEventMouseButton) -> void:
 			commit_command(cmd)
 			_selection.clear()
 			_selection.append(idx)
+			selection_changed.emit(_selection)
 		_preview_note = null
 		queue_redraw()
 		note_edited.emit()
@@ -846,6 +864,7 @@ func _handle_left_release(_mb: InputEventMouseButton) -> void:
 				if sel_rect.intersects(Rect2(nx, ny, nw, nh)):
 					if not _selection.has(i):
 						_selection.append(i)
+		selection_changed.emit(_selection)
 		queue_redraw()
 
 
@@ -857,6 +876,7 @@ func _handle_right_click(mb: InputEventMouseButton) -> void:
 		if not _selection.has(hit["index"]):
 			_selection.clear()
 			_selection.append(hit["index"])
+			selection_changed.emit(_selection)
 			queue_redraw()
 		var mouse_screen := DisplayServer.mouse_get_position()
 		_context_menu.popup(Rect2i(mouse_screen + Vector2i(2, 2), Vector2i()))
