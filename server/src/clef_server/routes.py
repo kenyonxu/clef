@@ -121,7 +121,10 @@ async def cancel_session(session_id: str):
     session = _session_manager.get(session_id)
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
-    session.set_cancelled()
+    try:
+        session.set_cancelled()
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     return CancelResponse(session_id=session.session_id, status=session.status)
 
 
