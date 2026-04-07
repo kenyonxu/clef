@@ -39,3 +39,7 @@ pytest-of-kenyo/
 
 # Server config with real API keys
 server/config/providers.yaml
+
+# Frontend build output
+server/web/dist/
+server/web/node_modules/
