@@ -1,0 +1,304 @@
+"""Tests for tools.py -- AF @tool wrappers around existing Python scripts."""
+
+import json
+from pathlib import Path
+
+import pytest
+
+from clef_server.tools import (
+    TOOLS_REGISTRY,
+    _AGENT_TOOL_MAP,
+    abc_lint,
+    abc_to_midi,
+    get_tools_for_agent,
+    inject_expression,
+    merge_abc,
+    read_file,
+    snapshot,
+    validate_abc,
+    write_file,
+)
+
+
+# ── read_file / write_file ────────────────────────────────────────────────
+
+
+class TestReadFile:
+    def test_reads_existing_file(self, tmp_path: Path) -> None:
+        f = tmp_path / "hello.txt"
+        f.write_text("hello world", encoding="utf-8")
+        result = read_file(str(f))
+        assert result == "hello world"
+
+    def test_raises_on_missing_file(self) -> None:
+        with pytest.raises(FileNotFoundError, match="File not found"):
+            read_file("/nonexistent/path/file.txt")
+
+    def test_reads_unicode_content(self, tmp_path: Path) -> None:
+        f = tmp_path / "unicode.txt"
+        content = "MIDI channel 1 \u4e2d\u6587"
+        f.write_text(content, encoding="utf-8")
+        assert read_file(str(f)) == content
+
+
+class TestWriteFile:
+    def test_writes_file(self, tmp_path: Path) -> None:
+        f = tmp_path / "subdir" / "out.txt"
+        result = write_file(str(f), "content")
+        assert result["path"] == str(f)
+        assert f.read_text(encoding="utf-8") == "content"
+
+    def test_creates_parent_directories(self, tmp_path: Path) -> None:
+        f = tmp_path / "a" / "b" / "c" / "file.txt"
+        write_file(str(f), "nested")
+        assert f.exists()
+
+    def test_overwrites_existing_file(self, tmp_path: Path) -> None:
+        f = tmp_path / "overwrite.txt"
+        f.write_text("old", encoding="utf-8")
+        write_file(str(f), "new")
+        assert f.read_text(encoding="utf-8") == "new"
+
+
+# ── TOOLS_REGISTRY ────────────────────────────────────────────────────────
+
+
+class TestToolsRegistry:
+    def test_has_all_eight_tools(self) -> None:
+        expected = {
+            "read_file", "write_file", "validate_abc",
+            "abc_to_midi", "abc_lint", "merge_abc",
+            "inject_expression", "snapshot",
+        }
+        assert set(TOOLS_REGISTRY.keys()) == expected
+
+    def test_all_values_are_callable(self) -> None:
+        for name, func in TOOLS_REGISTRY.items():
+            assert callable(func), f"{name} is not callable"
+
+    def test_all_tools_have_is_tool_attribute(self) -> None:
+        for name, func in TOOLS_REGISTRY.items():
+            assert getattr(func, "_is_tool", False), f"{name} missing _is_tool"
+
+
+# ── get_tools_for_agent ──────────────────────────────────────────────────
+
+
+class TestGetToolsForAgent:
+    def test_clef_composer_tools(self) -> None:
+        tools = get_tools_for_agent("clef-composer")
+        names = {getattr(t, "name", t.__name__) for t in tools}
+        assert names == {"read_file", "write_file", "validate_abc", "abc_lint"}
+
+    def test_clef_harmonist_tools(self) -> None:
+        tools = get_tools_for_agent("clef-harmonist")
+        names = {getattr(t, "name", t.__name__) for t in tools}
+        assert names == {"read_file", "write_file", "validate_abc", "abc_lint"}
+
+    def test_clef_reviewer_no_write(self) -> None:
+        tools = get_tools_for_agent("clef-reviewer")
+        names = {getattr(t, "name", t.__name__) for t in tools}
+        assert "write_file" not in names
+        assert "read_file" in names
+        assert "validate_abc" in names
+
+    def test_clef_revision_read_write_only(self) -> None:
+        tools = get_tools_for_agent("clef-revision")
+        names = {getattr(t, "name", t.__name__) for t in tools}
+        assert names == {"read_file", "write_file"}
+
+    def test_clef_orchestrator_tools(self) -> None:
+        tools = get_tools_for_agent("clef-orchestrator")
+        names = {getattr(t, "name", t.__name__) for t in tools}
+        assert "abc_to_midi" in names
+        assert "inject_expression" in names
+
+    def test_unknown_agent_returns_empty(self) -> None:
+        tools = get_tools_for_agent("nonexistent-agent")
+        assert tools == []
+
+
+# ── abc_lint ──────────────────────────────────────────────────────────────
+
+
+class TestAbcLint:
+    def test_clean_abc_passes(self, sample_abc: str) -> None:
+        result = abc_lint(sample_abc)
+        assert "issues" in result
+        assert isinstance(result["count"], int)
+
+    def test_detects_double_barline(self) -> None:
+        abc = """X:1
+T:Test
+M:4/4
+L:1/4
+Q:1/4=120
+K:C
+V:1
+C E G || c |"""
+        result = abc_lint(abc)
+        assert result["count"] >= 1
+        rules = [i.get("rule") for i in result["issues"]]
+        assert "double_barline" in rules
+
+    def test_with_plan_path(self, tmp_path: Path, sample_abc: str, sample_plan: dict) -> None:
+        plan_file = tmp_path / "plan.json"
+        plan_file.write_text(json.dumps(sample_plan), encoding="utf-8")
+        result = abc_lint(sample_abc, plan_path=str(plan_file))
+        assert "issues" in result
+
+    def test_returns_zero_count_on_valid_input(self) -> None:
+        minimal = "X:1\nT:T\nM:4/4\nL:1/8\nQ:1/4=120\nK:C\nV:1\nC2 E2 G2 c2 |"
+        result = abc_lint(minimal)
+        assert result["count"] == 0
+
+
+# ── merge_abc ─────────────────────────────────────────────────────────────
+
+
+class TestMergeAbc:
+    def test_merges_voice_fragments(
+        self, tmp_path: Path, sample_plan: dict
+    ) -> None:
+        plan_file = tmp_path / "plan.json"
+        plan_file.write_text(json.dumps(sample_plan), encoding="utf-8")
+        output_file = tmp_path / "score.abc"
+
+        fragments = {
+            "V:1": '"C" C2 E2 G2 c2 |',
+            "V:2": 'C,2 E,2 G,2 C2 |',
+        }
+
+        result = merge_abc(str(plan_file), fragments, str(output_file))
+        assert "output" in result
+        assert output_file.exists()
+
+        content = output_file.read_text(encoding="utf-8")
+        assert "V:1" in content
+        assert "V:2" in content
+
+    def test_merge_with_orchestration(self, tmp_path: Path) -> None:
+        plan = {
+            "title": "Orch Test",
+            "key": "C",
+            "bpm": 120,
+            "time_signature": "4/4",
+            "orchestration": {
+                "melody": {"channel": 0, "instrument": 0, "name": "Piano"},
+                "harmony": {"channel": 1, "instrument": 0, "name": "Piano"},
+            },
+        }
+        plan_file = tmp_path / "plan.json"
+        plan_file.write_text(json.dumps(plan), encoding="utf-8")
+        output_file = tmp_path / "merged.abc"
+
+        fragments = {
+            "V:1": "C2 E2 G2 c2 |",
+            "V:2": "C,2 E,2 G,2 C2 |",
+        }
+
+        result = merge_abc(str(plan_file), fragments, str(output_file))
+        assert "output" in result
+        content = output_file.read_text(encoding="utf-8")
+        assert "%%MIDI channel 0" in content
+        assert "%%MIDI channel 1" in content
+
+
+# ── validate_abc (dependency-optional) ────────────────────────────────────
+
+
+class TestValidateAbc:
+    def test_returns_error_without_music21(
+        self, tmp_path: Path, sample_abc: str, sample_plan: dict
+    ) -> None:
+        abc_file = tmp_path / "test.abc"
+        abc_file.write_text(sample_abc, encoding="utf-8")
+        plan_file = tmp_path / "plan.json"
+        plan_file.write_text(json.dumps(sample_plan), encoding="utf-8")
+        output_file = tmp_path / "report.json"
+
+        result = validate_abc(str(abc_file), str(plan_file), str(output_file))
+
+        # If music21 IS installed, this will succeed; otherwise it returns an error dict
+        assert isinstance(result, dict)
+        if "error" in result:
+            assert result["has_failures"] is True
+            assert "music21" in result["error"]
+        else:
+            assert "report" in result
+
+    def test_returns_error_for_missing_file(self) -> None:
+        result = validate_abc("/nonexistent/file.abc", "/nonexistent/plan.json", "/tmp/out.json")
+        assert "error" in result
+        assert result["has_failures"] is True
+
+
+# ── abc_to_midi (dependency-optional) ────────────────────────────────────
+
+
+class TestAbcToMidi:
+    def test_returns_error_without_mido(self, tmp_path: Path, sample_abc: str) -> None:
+        abc_file = tmp_path / "test.abc"
+        abc_file.write_text(sample_abc, encoding="utf-8")
+        output_file = tmp_path / "test.mid"
+
+        result = abc_to_midi(str(abc_file), str(output_file))
+
+        assert isinstance(result, dict)
+        if "error" in result:
+            assert "mido" in result["error"].lower()
+        else:
+            assert "output" in result
+            assert output_file.exists()
+
+    def test_returns_error_for_missing_input(self) -> None:
+        result = abc_to_midi("/nonexistent/file.abc", "/tmp/out.mid")
+        assert "error" in result
+
+
+# ── inject_expression (dependency-optional) ──────────────────────────────
+
+
+class TestInjectExpression:
+    def test_returns_error_for_missing_files(self) -> None:
+        result = inject_expression(
+            "/nonexistent/base.mid",
+            "/nonexistent/plan.json",
+            "/tmp/out.mid",
+        )
+        assert "error" in result
+
+
+# ── snapshot (zero dependencies) ──────────────────────────────────────────
+
+
+class TestSnapshot:
+    def test_snapshot_creates_log(
+        self, tmp_path: Path, sample_plan: dict
+    ) -> None:
+        workdir = tmp_path / ".clef-work"
+        workdir.mkdir()
+        (workdir / "plan.json").write_text(json.dumps(sample_plan), encoding="utf-8")
+        output_file = workdir / "snapshot.abc"
+
+        result = snapshot(step="1a", output=str(output_file), note="Initial draft")
+        assert "snapshot" in result
+        assert "exit_code" in result
+        assert result["exit_code"] == 0
+
+    def test_snapshot_creates_backup(self, tmp_path: Path, sample_plan: dict) -> None:
+        workdir = tmp_path / ".clef-work"
+        workdir.mkdir()
+        (workdir / "plan.json").write_text(json.dumps(sample_plan), encoding="utf-8")
+        score = workdir / "score.abc"
+        score.write_text("X:1\nT:Test\nK:C\nV:1\nC |", encoding="utf-8")
+        output_file = workdir / "snapshot.abc"
+
+        result = snapshot(step="2", output=str(output_file), note="Step 2")
+        assert result["exit_code"] == 0
+
+        # Verify backup was created in history/
+        history_dir = workdir / "history"
+        assert history_dir.exists()
+        backups = list(history_dir.glob("score_v*.abc"))
+        assert len(backups) >= 1
