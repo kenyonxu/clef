@@ -328,20 +328,20 @@ func clear_muted_channels() -> void:
 	queue_redraw()
 
 
-	## 外部修改音符 velocity（带 undo 快照）
-	func set_note_velocity(note_index: int, new_velocity: int) -> void:
-		if note_index < 0 or note_index >= _notes.size():
-			return
-		var old_velocity := _notes[note_index].velocity
-		if old_velocity == new_velocity:
-			return
-		var cmd := begin_command("property", l10n.t("Velocity → %d") % new_velocity)
-		cmd.before = {"velocity_changes": [{"index": note_index, "velocity": old_velocity}]}
-		_notes[note_index].velocity = new_velocity
-		cmd.after = {"velocity_changes": [{"index": note_index, "velocity": new_velocity}]}
-		commit_command(cmd)
-		note_edited.emit()
-		queue_redraw()
+## 外部修改音符 velocity（带 undo 快照）
+func set_note_velocity(note_index: int, new_velocity: int) -> void:
+	if note_index < 0 or note_index >= _notes.size():
+		return
+	var old_velocity := _notes[note_index].velocity
+	if old_velocity == new_velocity:
+		return
+	var cmd := begin_command("property", l10n.t("Velocity → %d") % new_velocity)
+	cmd.before = {"velocity_changes": [{"index": note_index, "velocity": old_velocity}]}
+	_notes[note_index].velocity = new_velocity
+	cmd.after = {"velocity_changes": [{"index": note_index, "velocity": new_velocity}]}
+	commit_command(cmd)
+	note_edited.emit()
+	queue_redraw()
 ## 更新播放头位置
 func set_playback_position(position: float, force: bool = false) -> void:
 	if _mode == Mode.EDITING and not force and not _playing:
@@ -1406,6 +1406,7 @@ func _undo() -> void:
 	_apply_snapshot(cmd.before)
 	_redo_stack.append(cmd)
 	_notify_edit()
+	selection_changed.emit(_selection)
 
 func _redo() -> void:
 	if _redo_stack.is_empty():
@@ -1414,6 +1415,7 @@ func _redo() -> void:
 	_apply_snapshot(cmd.after)
 	_undo_stack.append(cmd)
 	_notify_edit()
+	selection_changed.emit(_selection)
 
 func _notify_edit() -> void:
 	queue_redraw()

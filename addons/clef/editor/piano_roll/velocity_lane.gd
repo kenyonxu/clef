@@ -17,6 +17,9 @@ var _selection: Array[int] = []
 var _slider_note_indices: Array[int] = []
 ## slider 控件池
 var _sliders: Array[VSlider] = []
+## 拖拽状态追踪
+var _dragging_slider_idx: int = -1
+var _drag_original_velocity: int = 0
 ## 防抖标记
 var _rebuild_pending: bool = false
 ## 视图参数（与 PianoRoll 同步）
@@ -107,9 +110,9 @@ func _rebuild_sliders() -> void:
 		stylebox.bg_color = base_color
 		stylebox.set_corner_radius_all(2)
 		slider.add_theme_stylebox_override("slider", stylebox)
-		var idx := i  # 捕获当前索引
-		slider.value_changed.connect(func(val: float) -> void:
-			_on_slider_changed(idx, int(val))
+		var note_idx_for_slider := i
+		slider.gui_input.connect(func(event: InputEvent) -> void:
+			_on_slider_input(event, note_idx_for_slider, slider)
 		)
 		add_child(slider)
 		_sliders.append(slider)
@@ -154,11 +157,20 @@ func _update_selection_highlight() -> void:
 		else:
 			slider.modulate = Color(0.7, 0.7, 0.7, 1.0)
 
-
-func _on_slider_changed(note_index: int, new_velocity: int) -> void:
-	if note_index >= 0 and note_index < _notes.size():
-		_notes[note_index].velocity = new_velocity
-	velocity_changed.emit(note_index, new_velocity)
+func _on_slider_input(event: InputEvent, note_index: int, slider: VSlider) -> void:
+	if event is InputEventMouseButton:
+		var mb := event as InputEventMouseButton
+		if mb.button_index == MOUSE_BUTTON_LEFT and mb.pressed:
+			# Drag start
+			_dragging_slider_idx = note_index
+			_drag_original_velocity = _notes[note_index].velocity if note_index >= 0 and note_index < _notes.size() else 0
+		elif mb.button_index == MOUSE_BUTTON_LEFT and not mb.pressed:
+			# Drag end — emit velocity change
+			if _dragging_slider_idx == note_index and note_index >= 0 and note_index < _notes.size():
+				var new_vel := int(slider.value)
+				if new_vel != _drag_original_velocity:
+					velocity_changed.emit(note_index, new_vel)
+			_dragging_slider_idx = -1
 
 
 func _notification(what: int) -> void:
