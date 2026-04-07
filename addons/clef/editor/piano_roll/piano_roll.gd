@@ -429,6 +429,9 @@ func is_feedback_mode() -> bool:
 func is_playing() -> bool:
 	return _playing
 
+func set_hovered_note(idx: int) -> void:
+	_hovered_note = idx
+	queue_redraw()
 
 # ─── 坐标映射 ─────────────────────────────────────────────
 
@@ -1167,6 +1170,7 @@ func _draw_notes() -> void:
 		# 悬停高亮
 		if i == _hovered_note:
 			draw_rect(Rect2(x, y, w, h), Color(1, 1, 1, 0.15))
+			draw_rect(Rect2(x, y, w, h), Color(0.3, 0.6, 1.0, 0.9), false, 1.5)
 
 	# creation preview note
 	if _preview_note != null:
@@ -1273,6 +1277,7 @@ func _handle_legend_click(click_x: float) -> void:
 	if ch >= 0 and _active_channel != ch:
 		_active_channel = ch
 		queue_redraw()
+		track_changed.emit(ch, _channel_instruments.get(ch, 0))
 
 
 var _gm_selector: Window = null

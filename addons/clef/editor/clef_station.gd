@@ -267,44 +267,55 @@ func _build_layout() -> void:
 	_piano_ruler.time_scrubbed.connect(func(t: float): _editor_player.seek(t); _piano_roll.set_playback_position(t, true))
 	_piano_roll.view_offset_changed.connect(_piano_ruler.setup)
 	_piano_roll.playback_position_changed.connect(_piano_ruler.set_playback_position)
-	_piano_roll.selection_changed.connect(_velocity_lane.set_selection)
-	_piano_roll.note_edited.connect(func() -> void:
-		_velocity_lane.set_notes(_piano_roll.get_notes())
-	)
-	_piano_roll.track_changed.connect(func(ch: int, _preset: int) -> void:
-		_velocity_lane.set_active_channel(ch)
-	)
-	_piano_roll.view_offset_changed.connect(func(vo: float, zl: float, pps: float, dur: float) -> void:
-		_velocity_lane.update_view(vo, zl, pps, dur)
-	)
 	center_vbox.add_child(_piano_ruler)
 
+	_piano_roll.size_flags_stretch_ratio = 2
 	center_vbox.add_child(_piano_roll)
 
 	# ── Velocity Lane ──
+	_velocity_lane = VelocityLane.new()
+	_velocity_lane.size_flags_stretch_ratio = 1
+	_velocity_lane.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_velocity_lane.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+
 	_velocity_toggle = Button.new()
 	_velocity_toggle.text = "▼ " + l10n.t("Velocity")
 	_velocity_toggle.flat = true
 	_velocity_toggle.custom_minimum_size = Vector2i(0, 24)
 	_velocity_toggle.pressed.connect(func() -> void:
-		_velocity_lane.visible = not _velocity_lane.visible
-		_velocity_toggle.text = ("▼ " if _velocity_lane.visible else "▶ ") + l10n.t("Velocity")
+			_velocity_lane.visible = not _velocity_lane.visible
+			_velocity_toggle.text = ("▼ " if _velocity_lane.visible else "▶ ") + l10n.t("Velocity")
 	)
 	center_vbox.add_child(_velocity_toggle)
-
-	_velocity_lane = VelocityLane.new()
-	_velocity_lane.custom_minimum_size = Vector2i(0, 80)
-	_velocity_lane.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	center_vbox.add_child(_velocity_lane)
+
+	# PianoRoll → VelocityLane 信号连接
+	_piano_roll.selection_changed.connect(_velocity_lane.set_selection)
+	_piano_roll.note_edited.connect(func() -> void:
+			_velocity_lane.set_notes(_piano_roll.get_notes())
+	)
+	_piano_roll.track_changed.connect(func(ch: int, _preset: int) -> void:
+			_velocity_lane.set_active_channel(ch)
+	)
+	_velocity_lane.note_hovered.connect(func(idx: int) -> void:
+			_piano_roll.set_hovered_note(idx)
+	)
+	_piano_roll.mode_changed.connect(func(mode: int) -> void:
+			_velocity_lane.set_edit_mode(mode)
+	)
+	_piano_roll.view_offset_changed.connect(func(vo: float, zl: float, pps: float, dur: float) -> void:
+			_velocity_lane.update_view(vo, zl, pps, dur)
+	)
 
 	# VelocityLane → PianoRoll: 通知 velocity 变更
 	_velocity_lane.velocity_changed.connect(func(note_index: int, new_velocity: int) -> void:
-		_on_velocity_changed(note_index, new_velocity)
+			_on_velocity_changed(note_index, new_velocity)
 	)
 
 	_mini_mixer = MiniMixer.new()
 	_mini_mixer.l10n = l10n
 	_mini_mixer.channel_mute_changed.connect(_piano_roll.set_channel_muted)
+	_mini_mixer.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	center_vbox.add_child(_mini_mixer)
 
 	_center_panel.add_child(center_vbox)

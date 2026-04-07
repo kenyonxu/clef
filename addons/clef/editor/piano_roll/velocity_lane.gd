@@ -5,10 +5,12 @@ extends Control
 
 
 signal velocity_changed(note_index: int, new_velocity: int)
+signal note_hovered(note_index: int)
 
 
 ## 活动通道
 var active_channel: int = 0
+var _mode: int = 0
 ## 音符数据引用（由外部通过 set_notes 设置）
 var _notes: Array[PianoRoll.RollNote] = []
 ## 当前选中音符索引集合
@@ -25,7 +27,7 @@ var _rebuild_pending: bool = false
 ## 视图参数（与 PianoRoll 同步）
 var _view_offset: float = 0.0
 var _zoom_level: float = 1.0
-var _pps: float = 100.0  ## pixels per second
+var _pps: float = 100.0
 var _duration: float = 0.0
 ## 左侧刻度区域宽度
 const _LABEL_WIDTH: float = 32.0
@@ -33,6 +35,7 @@ const _LABEL_WIDTH: float = 32.0
 
 func _ready() -> void:
 	size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	size_flags_vertical = Control.SIZE_EXPAND_FILL
 	clip_contents = true
 	mouse_filter = Control.MOUSE_FILTER_PASS
 
@@ -63,6 +66,14 @@ func set_active_channel(channel: int) -> void:
 	_rebuild_sliders()
 
 
+func set_edit_mode(mode: int) -> void:
+	_mode = mode
+	var editable := (mode == PianoRoll.Mode.EDITING)
+	for slider in _sliders:
+		if is_instance_valid(slider):
+			slider.mouse_filter = Control.MOUSE_FILTER_STOP if editable else Control.MOUSE_FILTER_IGNORE
+
+
 func update_view(view_offset: float, zoom_level: float, pps: float, duration: float) -> void:
 	_view_offset = view_offset
 	_zoom_level = zoom_level
@@ -78,7 +89,6 @@ func _deferred_reposition() -> void:
 	_reposition_sliders()
 
 
-## 清空所有 slider
 func clear_sliders() -> void:
 	for slider in _sliders:
 		if is_instance_valid(slider):
@@ -93,6 +103,7 @@ func _rebuild_sliders() -> void:
 	clear_sliders()
 	if _notes.is_empty():
 		return
+	var editable := (_mode == PianoRoll.Mode.EDITING)
 	for i in range(_notes.size()):
 		var note: PianoRoll.RollNote = _notes[i]
 		if note.channel != active_channel:
@@ -102,17 +113,26 @@ func _rebuild_sliders() -> void:
 		slider.max_value = 127
 		slider.step = 1
 		slider.value = note.velocity
-		slider.custom_minimum_size = Vector2i(4, 0)
-		slider.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		slider.scrollable = false
+		slider.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		slider.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+		slider.mouse_filter = Control.MOUSE_FILTER_STOP if editable else Control.MOUSE_FILTER_IGNORE
+		# 轨道：用 grabber_area 样式让填充部分更明显
 		var base_color := ChannelColors.COLORS[note.channel % 16]
-		var stylebox := StyleBoxFlat.new()
-		stylebox.bg_color = base_color
-		stylebox.set_corner_radius_all(2)
-		slider.add_theme_stylebox_override("slider", stylebox)
+		var track_sb := StyleBoxFlat.new()
+		track_sb.bg_color = base_color * 0.3
+		track_sb.set_content_margin_all(2)
+		track_sb.set_corner_radius_all(2)
+		slider.add_theme_stylebox_override("slider", track_sb)
 		var note_idx_for_slider := i
 		slider.gui_input.connect(func(event: InputEvent) -> void:
 			_on_slider_input(event, note_idx_for_slider, slider)
+		)
+		slider.mouse_entered.connect(func() -> void:
+			note_hovered.emit(note_idx_for_slider)
+		)
+		slider.mouse_exited.connect(func() -> void:
+			note_hovered.emit(-1)
 		)
 		add_child(slider)
 		_sliders.append(slider)
@@ -121,26 +141,56 @@ func _rebuild_sliders() -> void:
 	_update_selection_highlight()
 
 
+const _STACK_GAP: float = 2.0  ## 重叠 slider 之间的间距像素
+
 func _reposition_sliders() -> void:
-	var visible_width := size.x - _LABEL_WIDTH
-	if visible_width <= 0:
+	if size.x <= _LABEL_WIDTH:
 		return
+	var epps := _pps * _zoom_level
+	# 计算每个 slider 的基础位置和宽度
+	var rects: Array[Dictionary] = []
+	for j in range(_sliders.size()):
+		var note_idx: int = _slider_note_indices[j]
+		var note: PianoRoll.RollNote = _notes[note_idx]
+		var x := (note.start_time - _view_offset) * epps + _LABEL_WIDTH
+		var w := note.duration * epps
+		rects.append({"x": x, "w": w, "end": x + w})
+	# 为每个 slider 分配列号（同一组重叠的 slider 获得不同列号）
+	var columns: Array[int] = []
+	columns.resize(rects.size())
+	for j in range(rects.size()):
+		var col := 0
+		var used_cols: Dictionary = {}
+		for k in range(j):
+			if rects[j]["x"] < rects[k]["end"] and rects[j]["end"] > rects[k]["x"]:
+				used_cols[columns[k]] = true
+		while used_cols.has(col):
+			col += 1
+		columns[j] = col
+	# 计算每组重叠区域的列数，等分宽度
+	var slot_x: Array[float] = []
+	var slot_w: Array[float] = []
+	for j in range(rects.size()):
+		# 找到与 j 重叠的最大列号
+		var max_col := columns[j]
+		for k in range(j + 1, rects.size()):
+			if rects[j]["x"] < rects[k]["end"] and rects[j]["end"] > rects[k]["x"]:
+				max_col = maxi(max_col, columns[k])
+		var total_cols := max_col + 1
+		var col_w: float = (rects[j]["w"] - _STACK_GAP * float(total_cols - 1)) / float(total_cols)
+		slot_x.append(rects[j]["x"] + columns[j] * (col_w + _STACK_GAP))
+		slot_w.append(maxf(col_w, 4.0))
+	# 应用位置
 	for j in range(_sliders.size()):
 		var slider: VSlider = _sliders[j]
 		if not is_instance_valid(slider):
 			continue
-		var note_idx: int = _slider_note_indices[j]
-		var note: PianoRoll.RollNote = _notes[note_idx]
-		var x := (note.start_time - _view_offset) * _pps + _LABEL_WIDTH
-		var w := note.duration * _pps
-		# 超出可见区域则隐藏
-		if x + w < _LABEL_WIDTH or x > size.x:
+		if rects[j]["end"] < _LABEL_WIDTH or rects[j]["x"] > size.x:
 			slider.visible = false
 			continue
 		slider.visible = true
-		slider.position.x = x
-		slider.size.x = maxf(w, 4)
-		slider.size.y = size.y
+		slider.set_position(Vector2(slot_x[j], 0.0))
+		slider.set_size(Vector2(slot_w[j], size.y))
 
 
 func _update_selection_highlight() -> void:
@@ -157,15 +207,16 @@ func _update_selection_highlight() -> void:
 		else:
 			slider.modulate = Color(0.7, 0.7, 0.7, 1.0)
 
+
 func _on_slider_input(event: InputEvent, note_index: int, slider: VSlider) -> void:
+	if _mode != PianoRoll.Mode.EDITING:
+		return
 	if event is InputEventMouseButton:
 		var mb := event as InputEventMouseButton
 		if mb.button_index == MOUSE_BUTTON_LEFT and mb.pressed:
-			# Drag start
 			_dragging_slider_idx = note_index
 			_drag_original_velocity = _notes[note_index].velocity if note_index >= 0 and note_index < _notes.size() else 0
 		elif mb.button_index == MOUSE_BUTTON_LEFT and not mb.pressed:
-			# Drag end — emit velocity change
 			if _dragging_slider_idx == note_index and note_index >= 0 and note_index < _notes.size():
 				var new_vel := int(slider.value)
 				if new_vel != _drag_original_velocity:
