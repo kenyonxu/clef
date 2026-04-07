@@ -17,6 +17,8 @@ var _selection: Array[int] = []
 var _slider_note_indices: Array[int] = []
 ## slider 控件池
 var _sliders: Array[VSlider] = []
+## 防抖标记
+var _rebuild_pending: bool = false
 ## 视图参数（与 PianoRoll 同步）
 var _view_offset: float = 0.0
 var _zoom_level: float = 1.0
@@ -30,6 +32,15 @@ func _ready() -> void:
 	size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	clip_contents = true
 	mouse_filter = Control.MOUSE_FILTER_PASS
+
+
+func _draw() -> void:
+	draw_rect(Rect2(Vector2.ZERO, size), Color(0.08, 0.08, 0.12))
+	var font := ThemeDB.fallback_font
+	draw_string(font, Vector2(2, 14), "127", HORIZONTAL_ALIGNMENT_LEFT, -1, 9, Color(0.35, 0.35, 0.4))
+	draw_string(font, Vector2(2, size.y / 2.0 + 4), "64", HORIZONTAL_ALIGNMENT_LEFT, -1, 9, Color(0.35, 0.35, 0.4))
+	draw_string(font, Vector2(2, size.y - 2), "0", HORIZONTAL_ALIGNMENT_LEFT, -1, 9, Color(0.35, 0.35, 0.4))
+	draw_line(Vector2(_LABEL_WIDTH, size.y / 2.0), Vector2(size.x, size.y / 2.0), Color(0.2, 0.2, 0.28), 1.0, true)
 
 
 func set_notes(notes: Array[PianoRoll.RollNote]) -> void:
@@ -54,6 +65,13 @@ func update_view(view_offset: float, zoom_level: float, pps: float, duration: fl
 	_zoom_level = zoom_level
 	_pps = pps
 	_duration = duration
+	if not _rebuild_pending:
+		_rebuild_pending = true
+		call_deferred("_deferred_reposition")
+
+
+func _deferred_reposition() -> void:
+	_rebuild_pending = false
 	_reposition_sliders()
 
 
@@ -84,6 +102,11 @@ func _rebuild_sliders() -> void:
 		slider.custom_minimum_size = Vector2i(4, 0)
 		slider.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		slider.scrollable = false
+		var base_color := ChannelColors.COLORS[note.channel % 16]
+		var stylebox := StyleBoxFlat.new()
+		stylebox.bg_color = base_color
+		stylebox.set_corner_radius_all(2)
+		slider.add_theme_stylebox_override("slider", stylebox)
 		var idx := i  # 捕获当前索引
 		slider.value_changed.connect(func(val: float) -> void:
 			_on_slider_changed(idx, int(val))
