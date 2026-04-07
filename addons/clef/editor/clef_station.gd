@@ -23,6 +23,8 @@ var _edit_dirty: bool = false
 var _mode_buttons: Array[Button] = []
 var _transport_bar: TransportBar
 var _piano_roll: PianoRoll
+var _velocity_lane: VelocityLane
+var _velocity_toggle: Button
 var _mini_mixer: MiniMixer
 var _progress_timer: Timer = null
 var _last_midi_dir: String = ""
@@ -265,9 +267,40 @@ func _build_layout() -> void:
 	_piano_ruler.time_scrubbed.connect(func(t: float): _editor_player.seek(t); _piano_roll.set_playback_position(t, true))
 	_piano_roll.view_offset_changed.connect(_piano_ruler.setup)
 	_piano_roll.playback_position_changed.connect(_piano_ruler.set_playback_position)
+	_piano_roll.selection_changed.connect(_velocity_lane.set_selection)
+	_piano_roll.note_edited.connect(func() -> void:
+		_velocity_lane.set_notes(_piano_roll.get_notes())
+	)
+	_piano_roll.track_changed.connect(func(ch: int, _preset: int) -> void:
+		_velocity_lane.set_active_channel(ch)
+	)
+	_piano_roll.view_offset_changed.connect(func(vo: float, zl: float, pps: float, dur: float) -> void:
+		_velocity_lane.update_view(vo, zl, pps, dur)
+	)
 	center_vbox.add_child(_piano_ruler)
 
 	center_vbox.add_child(_piano_roll)
+
+	# ── Velocity Lane ──
+	_velocity_toggle = Button.new()
+	_velocity_toggle.text = "▼ " + l10n.t("Velocity")
+	_velocity_toggle.flat = true
+	_velocity_toggle.custom_minimum_size = Vector2i(0, 24)
+	_velocity_toggle.pressed.connect(func() -> void:
+		_velocity_lane.visible = not _velocity_lane.visible
+		_velocity_toggle.text = ("▼ " if _velocity_lane.visible else "▶ ") + l10n.t("Velocity")
+	)
+	center_vbox.add_child(_velocity_toggle)
+
+	_velocity_lane = VelocityLane.new()
+	_velocity_lane.custom_minimum_size = Vector2i(0, 80)
+	_velocity_lane.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	center_vbox.add_child(_velocity_lane)
+
+	# VelocityLane → PianoRoll: 通知 velocity 变更
+	_velocity_lane.velocity_changed.connect(func(note_index: int, new_velocity: int) -> void:
+		_on_velocity_changed(note_index, new_velocity)
+	)
 
 	_mini_mixer = MiniMixer.new()
 	_mini_mixer.l10n = l10n
@@ -514,6 +547,7 @@ func _update_piano_roll() -> void:
 			))
 	var duration: float = _editor_player.get_duration()
 	_piano_roll.set_notes(roll_notes, duration)
+	_velocity_lane.set_notes(_piano_roll.get_notes())
 	# 提取每个通道的乐器（TrackResource.instrument）
 	var channel_instruments: Dictionary = {}
 	for track in midi_res.tracks:
@@ -596,6 +630,13 @@ func _on_track_changed(channel: int, preset: int) -> void:
 	_mini_mixer.set_channel_instrument(channel, preset)
 	_edit_dirty = true
 	call_deferred("_flush_edit_sync")
+
+func _on_velocity_changed(note_index: int, new_velocity: int) -> void:
+	var notes := _piano_roll.get_notes()
+	if note_index >= 0 and note_index < notes.size():
+		notes[note_index].velocity = new_velocity
+		_piano_roll.queue_redraw()
+		_edit_dirty = true
 
 func _flush_edit_sync() -> void:
 	if not _edit_dirty:
