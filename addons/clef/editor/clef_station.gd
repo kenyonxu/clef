@@ -632,11 +632,7 @@ func _on_track_changed(channel: int, preset: int) -> void:
 	call_deferred("_flush_edit_sync")
 
 func _on_velocity_changed(note_index: int, new_velocity: int) -> void:
-	var notes := _piano_roll.get_notes()
-	if note_index >= 0 and note_index < notes.size():
-		notes[note_index].velocity = new_velocity
-		_piano_roll.queue_redraw()
-		_edit_dirty = true
+	_piano_roll.set_note_velocity(note_index, new_velocity)
 
 func _flush_edit_sync() -> void:
 	if not _edit_dirty:
