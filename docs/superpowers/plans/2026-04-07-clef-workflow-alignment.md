@@ -208,9 +208,16 @@ class ComposeOrchestrator:
         logger.info(f"Resuming session {self.session_id} from phase {phase}, feedback={user_feedback}")
 
         if phase == "parse":
-            await self._phase_sample(feedback=user_feedback)
+            # Parse confirm has no feedback loop — always advance to sample
+            await self._phase_sample()
         elif phase == "sample":
-            await self._phase_create()
+            # Sample feedback loop: feedback → re-run sample (≤10 rounds)
+            if user_feedback and self.session.sample_round < 10:
+                self.session.sample_round += 1
+                await self._phase_sample(feedback=user_feedback)
+            else:
+                self.session.sample_round = 0
+                await self._phase_create()
         elif phase == "review":
             if user_feedback:
                 await self._phase_iterate(extra_feedback=user_feedback)
@@ -223,8 +230,8 @@ class ComposeOrchestrator:
         idx = PHASE_ORDER.index(current)
         return PHASE_ORDER[idx + 1] if idx + 1 < len(PHASE_ORDER) else None
 
-    async def _advance_phase(self, from_phase: str) -> None:
-        """Move to next phase. If it's a confirm phase, stop. Otherwise run it."""
+    async def _advance_phase(self, from_phase: str, confirmation_data: dict | None = None) -> None:
+        """Move to next phase. If it's a confirm phase, stop and set awaiting_confirm."""
         next_phase = self._next_phase(from_phase)
         if next_phase is None:
             self.session.set_done(output_files=self._collect_outputs())
@@ -236,7 +243,11 @@ class ComposeOrchestrator:
         logger.info(f"Session {self.session_id}: entering phase {next_phase}")
 
         if phase_info["confirm"]:
-            # Will be confirmed by resume()
+            # FIX C3: Must set awaiting_confirm — frontend polls for this status
+            self.session.set_awaiting_confirm(confirmation_data=confirmation_data or {
+                "phase": next_phase,
+                "title": f"确认{PHASES[PHASE_ORDER.index(next_phase)]['label']}",
+            })
             return
         # Non-confirm phase: run it immediately
         method = getattr(self, f"_phase_{next_phase}")
@@ -264,9 +275,7 @@ async def _phase_parse(self, prompt: str) -> None:
     from clef_server.chat_completions_client import ChatCompletionsClient
     from agent_framework import Message
 
-    client = self.providers.get("deepseek")
-    if not client:
-        client = next(iter(self.providers.values()), None)
+    client = next(iter(self.providers.values()), None)  # FIX M4: use first available, don't hardcode "deepseek"
     if not client:
         raise RuntimeError("No LLM provider available")
 
@@ -412,6 +421,7 @@ async def _phase_sample(self, feedback: str | None = None) -> None:
         AgentExecutorResponse = None
         Message = None
 
+    self.session.current_phase = "sample"  # FIX H2: update current_phase
     self.session.record_phase("sample", "running")
 
     plan = json.loads((Path(self.workdir) / "plan.json").read_text(encoding="utf-8"))
@@ -458,8 +468,9 @@ async def _phase_sample(self, feedback: str | None = None) -> None:
 
     # Merge fragments
     from clef_server.tools import merge_abc, write_file, abc_to_midi
-    merged = merge_abc(plan_path=f"{self.workdir}/plan.json", fragments=fragments, output=f"{self.workdir}/score.abc")
-    Path(f"{self.workdir}/score.abc").write_text(merged, encoding="utf-8")
+    # FIX C1+C2: merge_abc returns dict and writes output file as side-effect. Don't assign to 'merged'.
+    merge_abc(f"{self.workdir}/plan.json", fragments, f"{self.workdir}/score.abc")
+    # score.abc is now written by merge_abc — read it back when needed
 
     # Melody gate review (max 3 rounds)
     melody_ok = True
@@ -480,8 +491,7 @@ async def _phase_sample(self, feedback: str | None = None) -> None:
                     for c in result.messages[0].contents:
                         if hasattr(c, "text"): abc_text += str(c)
                 fragments["melody"] = abc_text
-                merged = merge_abc(plan_path=f"{self.workdir}/plan.json", fragments=fragments, output=f"{self.workdir}/score.abc")
-                Path(f"{self.workdir}/score.abc").write_text(merged, encoding="utf-8")
+                merge_abc(f"{self.workdir}/plan.json", fragments, f"{self.workdir}/score.abc")  # FIX C1
         else:
             melody_ok = True
             break
@@ -649,7 +659,7 @@ async def _phase_create(self) -> None:
             fragments[voice_name] = abc_text
 
     # Merge all fragments
-    merge_abc(plan_path=f"{self.workdir}/plan.json", fragments=fragments, output=f"{self.workdir}/score.abc")
+    merge_abc(f"{self.workdir}/plan.json", fragments, f"{self.workdir}/score.abc")  # FIX C1: use positional args (param is 'plan', not 'plan_path')
 
     # Validate
     validate_abc(abc_file=f"{self.workdir}/score.abc", plan_file=f"{self.workdir}/plan.json", output=f"{self.workdir}/validation_report.json")
@@ -759,9 +769,7 @@ async def _phase_iterate(self, extra_feedback: str | None = None) -> None:
                 result = await ae.run(Message(role="user", contents=[instruction]))
                 completed_agents.add(agent_name)
 
-        # Merge and validate after each iteration
-        merge_abc(plan_path=f"{self.workdir}/plan.json", fragments={}, output=f"{self.workdir}/score.abc")
-        # Re-read fragments and merge properly (simplified: merge from score.abc fragments)
+        # FIX H7: Don't merge with empty fragments — agents write to score.abc via tools
         validate_abc(abc_file=f"{self.workdir}/score.abc", plan_file=f"{self.workdir}/plan.json", output=f"{self.workdir}/validation_report.json")
 
     self.session.record_phase("iterate", "done")
@@ -871,7 +879,7 @@ async def _phase_express(self) -> str:
     agent = create_agent(name="clef-orchestrator", config=config, providers=self.providers,
                          skills_dir=project_root / ".claude" / "skills",
                          plan=plan, workdir=self.workdir,
-                         score_abc=Path(f"{self.workdir}/base.mid").read_text(encoding="utf-8") if Path(f"{self.workdir}/base.mid").exists() else None)
+                         score_abc=None  # FIX C4: MIDI is binary, orchestrator agent reads via tools, not passed as string
     if AgentExecutor:
         ae = AgentExecutor(agent)
         result = await ae.run(Message(role="user", contents=["Generate expression plan for the score. Read base.mid and plan.json for context."]))
@@ -1083,6 +1091,7 @@ git commit -m "test(server): update integration tests for phased workflow"
 
 ```typescript
 export interface ConfirmationData {
+  session_id: string  // FIX H3: needed by ConfirmationPanel to call confirmSession
   phase: 'parse' | 'sample' | 'review'
   title: string
   plan?: Record<string, unknown>
@@ -1225,6 +1234,7 @@ The ConfirmationPanel reads `confirmationData` from the store and routes to the 
 
 ```tsx
 // server/web/src/components/ConfirmationPanel.tsx
+import { useState } from 'react'  // FIX H4: missing import
 import { useSessionStore } from '../stores/sessionStore'
 import { PlanConfirm } from './PlanConfirm'
 import { SampleConfirm } from './SampleConfirm'
@@ -1233,6 +1243,7 @@ import type { ConfirmationData } from '../api/types'
 
 export function ConfirmationPanel() {
   const confirmationData = useSessionStore((s) => s.confirmationData)
+  const currentSession = useSessionStore((s) => s.currentSession)  // FIX H3: get session_id from store
   const confirmSession = useSessionStore((s) => s.confirmSession)
   const [feedback, setFeedback] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -1243,21 +1254,21 @@ export function ConfirmationPanel() {
 
   const handleContinue = async () => {
     setIsSubmitting(true)
-    await confirmSession(confirmationData.session_id ?? '', 'continue', feedback || undefined)
+    await confirmSession(currentSession?.session_id ?? '',  // FIX H3: session_id from store, not confirmationData 'continue', feedback || undefined)
     setFeedback('')
     setIsSubmitting(false)
   }
 
   const handleCancel = async () => {
     setIsSubmitting(true)
-    await confirmSession(confirmationData.session_id ?? '', 'cancel')
+    await confirmSession(currentSession?.session_id ?? '',  // FIX H3: session_id from store, not confirmationData 'cancel')
     setFeedback('')
     setIsSubmitting(false)
   }
 
   const handleModify = async () => {
     setIsSubmitting(true)
-    await confirmSession(confirmationData.session_id ?? '', 'continue', feedback)
+    await confirmSession(currentSession?.session_id ?? '',  // FIX H3: session_id from store, not confirmationData 'continue', feedback)
     setFeedback('')
     setIsSubmitting(false)
   }
@@ -1452,6 +1463,8 @@ function ScoreBar({ label, score }: { label: string; score: number }) {
   )
 }
 
+interface ReviewConfirmProps { data: ConfirmationData }  // FIX H5: was missing
+
 export function ReviewConfirm({ data }: ReviewConfirmProps) {
   const review = data.review
   const scores = review?.scores ?? {}
@@ -1556,3 +1569,88 @@ git commit -m "feat(web): integrate ConfirmationPanel into Workspace"
 **2. Placeholder scan:** No TBD, TODO, or "similar to" references found.
 
 **3. Type consistency:** Phase IDs are strings throughout (not numbers). `ConfirmationData.phase` matches the PHASES constant IDs. `StatusResponse` new fields align between server and frontend.
+
+---
+
+## Review Fixes (20 issues found, applied below)
+
+### CRITICAL (runtime crashes) — MUST fix during implementation
+
+**C1. `merge_abc` parameter name: `plan_path` → `plan`**
+The plan code uses `merge_abc(plan_path=...)` but `tools.py` defines the parameter as `plan`. Every call in Tasks 3, 4, 5 must use positional arg: `merge_abc(f"{workdir}/plan.json", fragments, output)`.
+
+**C2. `merge_abc` returns `dict`, not `str`**
+Do NOT assign `merged = merge_abc(...)`. Instead call it for side-effect (writes output file), then read the output:
+```python
+merge_abc(f"{workdir}/plan.json", fragments, f"{workdir}/score.abc")
+score_abc = Path(f"{workdir}/score.abc").read_text(encoding="utf-8")
+```
+
+**C3. `_advance_phase` must call `set_awaiting_confirm` for confirm phases**
+When `phase_info["confirm"]` is True, set awaiting_confirm with appropriate data:
+```python
+if phase_info["confirm"]:
+    self.session.set_awaiting_confirm(confirmation_data={
+        "phase": next_phase,
+        "title": f"确认{PHASES[PHASE_ORDER.index(next_phase)]['label']}",
+    })
+    return
+```
+The preceding phase method must set the actual confirmation_data before calling `_advance_phase`.
+
+**C4. `_phase_express` reads binary MIDI as text — will crash**
+Replace `Path(...).read_text(encoding="utf-8")` for base.mid with `Path(...).exists()` check only. The orchestrator agent reads the MIDI itself via tools.
+
+**C5. `resume()` missing sample feedback loop**
+When `phase == "sample"` and feedback is provided, re-run `_phase_sample`:
+```python
+elif phase == "sample":
+    if user_feedback and self.session.sample_round < 10:
+        self.session.sample_round += 1
+        await self._phase_sample(feedback=user_feedback)
+    else:
+        self.session.sample_round = 0
+        await self._phase_create()
+```
+
+**C6. No `awaiting_confirm` set after iterate→review transition**
+At the end of `_phase_iterate`, before calling `_advance_phase("iterate")`, collect review data and store it. Override `_advance_phase` to accept optional confirmation_data, or set it in `_phase_iterate` directly.
+
+### HIGH (logic bugs)
+
+**H1. Feedback at parse confirmation should re-parse, not jump to sample**
+Parse confirm only has confirm/cancel (per design spec). Remove feedback handling from parse branch in `resume()`:
+```python
+if phase == "parse":
+    await self._phase_sample()  # always go to sample
+```
+
+**H2. `current_phase` must be updated in `_phase_sample`**
+Add `self.session.current_phase = "sample"` at start of `_phase_sample`.
+
+**H3. `ConfirmationData` must include `session_id`**
+Add `session_id: string` to the TypeScript type. ConfirmationPanel gets it from store, not confirmation_data.
+
+**H4. `ConfirmationPanel` missing `useState` import**
+Add `import { useState } from 'react'` at top of file.
+
+**H5. `ReviewConfirm` missing `ReviewConfirmProps` interface**
+Add `interface ReviewConfirmProps { data: ConfirmationData }` before the component.
+
+**H6. `to_dict()` must include new fields**
+Add `current_phase`, `confirmation_data`, `phase_history`, `sample_round`, `iteration_count` to `to_dict()`.
+
+**H7. Phase 3 empty merge after iteration**
+Remove the empty `merge_abc(fragments={}, ...)` call. Instead, agents write directly to score.abc during iteration tasks.
+
+### MEDIUM
+
+**M1. `_call_reviewer`/`_call_leader` must guard `AgentExecutor=None`** — check at top of method, return None if unavailable.
+**M2. Validate plan.json after LLM parse** — check required fields (key, bpm, sections, orchestration) exist.
+**M3. `WorkflowStep.id` type change** — update `StepCard` to use `string` id, remove numeric assumptions.
+**M4. Don't hardcode "deepseek"** — use first available provider: `next(iter(self.providers.values()))`.
+
+### LOW
+
+**L1. Extract shared `ScoreBar` component** — use a shared `components/ScoreBar.tsx`.
+**L2. `_advance_phase` confirmation_data** — pass from calling phase via method parameter.
