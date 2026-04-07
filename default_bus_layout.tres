@@ -19,7 +19,7 @@ threshold = -24.0
 pan = 1.0
 
 [sub_resource type="AudioEffectPanner" id="AudioEffectPanner_g28q7"]
-pan = -0.007874016
+pan = -0.08661418
 
 [sub_resource type="AudioEffectPanner" id="AudioEffectPanner_n8wo2"]
 pan = 1.0
@@ -38,7 +38,7 @@ pan = 1.0
 pan = 0.007874016
 
 [sub_resource type="AudioEffectPanner" id="AudioEffectPanner_y2dp7"]
-pan = -0.27559054
+pan = -0.30708662
 
 [sub_resource type="AudioEffectPanner" id="AudioEffectPanner_dapn3"]
 pan = 0.007874016
