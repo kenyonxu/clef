@@ -1,6 +1,8 @@
 """FastAPI routes — 7 REST endpoints + SSE streaming."""
 
+import asyncio
 import json
+import logging
 import tempfile
 import uuid
 from pathlib import Path
@@ -9,6 +11,8 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from clef_server.sessions import SessionManager
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 _session_manager = SessionManager()
@@ -47,6 +51,48 @@ class SessionsResponse(BaseModel):
     sessions: list[dict]
 
 
+# === Workflow Execution ===
+
+async def _run_workflow(session_id: str, prompt: str, plan: dict | None, workdir: str) -> None:
+    """Run the compose workflow in the background, updating session state."""
+    session = _session_manager.get(session_id)
+    if not session:
+        logger.error(f"Session {session_id} not found")
+        return
+
+    try:
+        session.set_running()
+        logger.info(f"Session {session_id}: workflow started")
+
+        from clef_server.config import load_provider_config, load_agent_configs
+        from clef_server.providers import create_providers
+        from clef_server.workflow import build_compose_workflow, ComposeRequest
+
+        project_root = Path(workdir).parent.parent.parent
+        provider_config = load_provider_config(
+            project_root / "server" / "config" / "providers.yaml"
+        )
+        providers = create_providers(provider_config)
+
+        workflow = build_compose_workflow(
+            providers=providers,
+            plan=plan,
+            workdir=workdir,
+        )
+
+        request = ComposeRequest(user_prompt=prompt, workdir=workdir, plan=plan)
+        result = await workflow.run(request)
+        outputs = result.get_outputs()
+
+        output_files = [f for f in outputs if isinstance(f, str)]
+        session.set_done(output_files=output_files)
+        logger.info(f"Session {session_id}: workflow done, outputs={output_files}")
+
+    except Exception as e:
+        logger.exception(f"Session {session_id}: workflow failed")
+        session.set_failed(error=str(e))
+
+
 # === Endpoints ===
 
 @router.post("/compose", response_model=ComposeResponse)
@@ -60,6 +106,7 @@ async def create_compose(req: ComposeRequest):
         workdir=workdir,
         plan=req.plan,
     )
+    asyncio.create_task(_run_workflow(session_id, req.prompt, req.plan, workdir))
     return ComposeResponse(session_id=session.session_id, status=session.status)
 
 

@@ -1,26 +1,11 @@
 """Shared test fixtures."""
 
 import asyncio
-import sys
 from pathlib import Path
-from types import ModuleType
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
 
 import pytest
-
-# ── Mock agent_framework packages when not installed ────────────────────────
-if "agent_framework" not in sys.modules:
-    _af_mod = ModuleType("agent_framework")
-    _af_anthropic = ModuleType("agent_framework.anthropic")
-    _af_openai = ModuleType("agent_framework.openai")
-    _af_mod.AnthropicClient = MagicMock()
-    _af_mod.OpenAIChatClient = MagicMock()
-    _af_anthropic.AnthropicClient = _af_mod.AnthropicClient
-    _af_openai.OpenAIChatClient = _af_mod.OpenAIChatClient
-    sys.modules.setdefault("agent_framework", _af_mod)
-    sys.modules.setdefault("agent_framework.anthropic", _af_anthropic)
-    sys.modules.setdefault("agent_framework.openai", _af_openai)
 
 # 项目根目录（clef-dev/）
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent

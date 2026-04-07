@@ -1,4 +1,4 @@
-"""Tests for workflow.py — compose workflow graph construction."""
+"""Tests for workflow.py -- compose workflow graph construction."""
 
 from pathlib import Path
 from unittest.mock import MagicMock, patch, AsyncMock
@@ -7,13 +7,10 @@ import pytest
 
 from clef_server.workflow import (
     MergeExecutor,
-    ParseExecutor,
-    PlanExecutor,
+    PromptBuilderExecutor,
     InjectExecutor,
-    ReviewCollectorExecutor,
     VoiceFragmentExtractor,
     ComposeRequest,
-    PlanResult,
     VoiceFragment,
     MergedScore,
     build_compose_workflow,
@@ -22,20 +19,17 @@ from clef_server.workflow import (
 
 
 class TestExecutorIDs:
-    def test_parse_executor_id(self):
-        assert ParseExecutor(workdir="/tmp", id="parse").id == "parse"
-
-    def test_plan_executor_id(self):
-        assert PlanExecutor(id="plan").id == "plan"
+    def test_prompt_builder_executor_id(self):
+        assert PromptBuilderExecutor(workdir="/tmp", id="prompt_builder").id == "prompt_builder"
 
     def test_merge_executor_id(self):
-        assert MergeExecutor(id="merge").id == "merge"
+        assert MergeExecutor(workdir="/tmp", id="merge").id == "merge"
 
     def test_inject_executor_id(self):
-        assert InjectExecutor(id="inject").id == "inject"
+        assert InjectExecutor(workdir="/tmp", id="inject").id == "inject"
 
-    def test_review_collector_executor_id(self):
-        assert ReviewCollectorExecutor(id="review_collector").id == "review_collector"
+    def test_voice_fragment_extractor_id(self):
+        assert VoiceFragmentExtractor(agent_name="clef-composer", id="extract_clef-composer").id == "extract_clef-composer"
 
 
 class TestMergeExecutorVoiceLabel:
@@ -58,10 +52,6 @@ class TestDataClasses:
         assert req.user_prompt == "test"
         assert req.plan is None
 
-    def test_plan_result(self):
-        result = PlanResult(plan={"key": "C"}, workdir="/tmp")
-        assert result.plan["key"] == "C"
-
     def test_voice_fragment(self):
         frag = VoiceFragment(agent_name="clef-composer", abc_content="V:1\nK:C\nC D|")
         assert frag.agent_name == "clef-composer"
@@ -71,8 +61,44 @@ class TestDataClasses:
         assert score.score_abc.startswith("V:1")
 
 
+class TestPromptBuilder:
+    def test_build_prompt_with_plan(self):
+        prompt = PromptBuilderExecutor._build_prompt(
+            user_prompt="Write a happy song",
+            plan={"title": "Happy", "key": "C"},
+            workdir="/tmp/work",
+        )
+        assert "Happy" in prompt
+        assert "Write a happy song" in prompt
+        assert "/tmp/work" in prompt
+
+    def test_build_prompt_without_plan_keys(self):
+        prompt = PromptBuilderExecutor._build_prompt(
+            user_prompt="test",
+            plan={},
+            workdir="",
+        )
+        assert "test" in prompt
+
+
 class TestBuildComposeWorkflow:
-    def test_returns_workflow(self):
+    @patch("clef_server.workflow.AgentExecutor")
+    @patch("clef_server.workflow.create_agent")
+    @patch("clef_server.workflow.WorkflowBuilder")
+    def test_returns_workflow(self, MockBuilder, mock_create_agent, MockAE):
+        """Verify build_compose_workflow wires the correct graph structure."""
+        mock_create_agent.return_value = MagicMock()
+        mock_wf = MagicMock()
+        MockBuilder.return_value = (
+            MagicMock()
+            .add_fan_out_edges.return_value
+            .add_edge.return_value
+            .add_edge.return_value
+            .add_edge.return_value
+            .add_fan_in_edges.return_value
+            .add_edge.return_value
+            .build.return_value
+        )
         mock_providers = {"deepseek": MagicMock(), "anthropic": MagicMock()}
         wf = build_compose_workflow(
             providers=mock_providers,
@@ -81,3 +107,4 @@ class TestBuildComposeWorkflow:
             skills_dir=Path("/tmp/skills"),
         )
         assert wf is not None
+        assert mock_create_agent.call_count == 3

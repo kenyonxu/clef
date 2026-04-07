@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 import pytest
+from agent_framework import FunctionTool
 
 from clef_server.tools import (
     TOOLS_REGISTRY,
@@ -78,7 +79,7 @@ class TestToolsRegistry:
 
     def test_all_tools_have_is_tool_attribute(self) -> None:
         for name, func in TOOLS_REGISTRY.items():
-            assert getattr(func, "_is_tool", False), f"{name} missing _is_tool"
+            assert isinstance(func, FunctionTool), f"{name} is not a FunctionTool"
 
 
 # ── get_tools_for_agent ──────────────────────────────────────────────────
@@ -87,29 +88,29 @@ class TestToolsRegistry:
 class TestGetToolsForAgent:
     def test_clef_composer_tools(self) -> None:
         tools = get_tools_for_agent("clef-composer")
-        names = {getattr(t, "name", t.__name__) for t in tools}
+        names = {t.name for t in tools}
         assert names == {"read_file", "write_file", "validate_abc", "abc_lint"}
 
     def test_clef_harmonist_tools(self) -> None:
         tools = get_tools_for_agent("clef-harmonist")
-        names = {getattr(t, "name", t.__name__) for t in tools}
+        names = {t.name for t in tools}
         assert names == {"read_file", "write_file", "validate_abc", "abc_lint"}
 
     def test_clef_reviewer_no_write(self) -> None:
         tools = get_tools_for_agent("clef-reviewer")
-        names = {getattr(t, "name", t.__name__) for t in tools}
+        names = {t.name for t in tools}
         assert "write_file" not in names
         assert "read_file" in names
         assert "validate_abc" in names
 
     def test_clef_revision_read_write_only(self) -> None:
         tools = get_tools_for_agent("clef-revision")
-        names = {getattr(t, "name", t.__name__) for t in tools}
+        names = {t.name for t in tools}
         assert names == {"read_file", "write_file"}
 
     def test_clef_orchestrator_tools(self) -> None:
         tools = get_tools_for_agent("clef-orchestrator")
-        names = {getattr(t, "name", t.__name__) for t in tools}
+        names = {t.name for t in tools}
         assert "abc_to_midi" in names
         assert "inject_expression" in names
 

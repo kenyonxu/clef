@@ -1,7 +1,13 @@
-"""Compose workflow — AF graph workflow for multi-agent music composition.
+"""Compose workflow -- AF graph workflow for multi-agent music composition.
 
 MVP workflow (Phase 1):
-  parse → plan → [fan-out: composer, harmonist, rhythmist] → merge → review → express
+  prompt_builder → [fan-out: composer, harmonist, rhythmist] → extractors → [fan-in: merge] → inject
+
+Type flow:
+  PromptBuilder(ComposeRequest) → str (fan-out) → AgentExecutor(str) → AgentExecutorResponse
+  AgentExecutorResponse → VoiceFragmentExtractor → VoiceFragment
+  list[VoiceFragment] → MergeExecutor → str (merged ABC)
+  str → InjectExecutor → workflow output (midi path)
 """
 
 import json
@@ -19,12 +25,15 @@ COMPOSE_WORKFLOW_ID = "clef-compose"
 try:
     from agent_framework import (
         AgentExecutor,
+        AgentExecutorResponse,
         Executor,
         Message,
         WorkflowBuilder,
         WorkflowContext,
         handler,
     )
+    from agent_framework._workflows._agent_executor import AgentExecutorResponse as _AER
+    AgentExecutorResponse = _AER
     from typing_extensions import Never
 except ImportError:
 
@@ -40,7 +49,11 @@ except ImportError:
         def __call__(self, *_args, **_kwargs):
             return self
 
-    Executor = object
+    class _FallbackExecutor:
+        def __init__(self, id: str, **kwargs):
+            self.id = id
+
+    Executor = _FallbackExecutor
 
     class _WorkflowContext:
         """Minimal fallback that supports subscript for type hints."""
@@ -50,24 +63,20 @@ except ImportError:
     WorkflowContext = _WorkflowContext
     WorkflowBuilder = _FakeWorkflowBuilder
     AgentExecutor = None
+    AgentExecutorResponse = None
     Message = object
     handler = lambda f: f
     Never = None
 
 
 # === Data types for inter-executor communication ===
+# These flow between custom executors only, never directly into AgentExecutor.
 
 @dataclass
 class ComposeRequest:
     user_prompt: str
     workdir: str
     plan: dict | None = None
-
-
-@dataclass
-class PlanResult:
-    plan: dict
-    workdir: str
 
 
 @dataclass
@@ -85,63 +94,80 @@ class MergedScore:
 
 # === Deterministic Executors ===
 
-class ParseExecutor(Executor):
-    def __init__(self, workdir: str, id: str = "parse"):
-        self.id = id
+class PromptBuilderExecutor(Executor):
+    """Receives ComposeRequest, builds a prompt string, fan-outs to 3 agents.
+
+    Output: str -- a prompt string containing the plan JSON and user instructions,
+    suitable for AgentExecutor's from_str handler.
+    """
+
+    def __init__(self, workdir: str, id: str = "prompt_builder"):
+        super().__init__(id=id)
         self._workdir = workdir
 
     @handler
-    async def process(self, message: ComposeRequest, ctx: WorkflowContext[PlanResult]) -> None:
+    async def build(self, message: ComposeRequest, ctx: WorkflowContext[str]) -> None:
         plan = message.plan or {"title": message.user_prompt, "status": "parsed"}
-        await ctx.send_message(PlanResult(plan=plan, workdir=message.workdir))
+        prompt = self._build_prompt(message.user_prompt, plan, message.workdir)
+        await ctx.send_message(prompt)
 
-
-class PlanExecutor(Executor):
-    def __init__(self, id: str = "plan"):
-        self.id = id
-
-    @handler
-    async def process(self, message: PlanResult, ctx: WorkflowContext[PlanResult]) -> None:
-        await ctx.send_message(message)
+    @staticmethod
+    def _build_prompt(user_prompt: str, plan: dict, workdir: str) -> str:
+        parts = [
+            f"# Composition Request\n\n{user_prompt}\n",
+            f"# Plan\n\n```json\n{json.dumps(plan, ensure_ascii=False, indent=2)}\n```\n",
+            f"# Working Directory\n\n{workdir}\n",
+        ]
+        return "\n".join(parts)
 
 
 class VoiceFragmentExtractor(Executor):
+    """Receives AgentExecutorResponse, extracts ABC text into VoiceFragment.
+
+    This is the adapter that bridges AF's AgentExecutorResponse to our
+    internal VoiceFragment dataclass.
+    """
+
     def __init__(self, agent_name: str, workdir: str = "", id: str = "extract_fragment"):
-        self.id = id
+        super().__init__(id=id)
         self._agent_name = agent_name
         self._workdir = workdir
 
     @handler
-    async def process(self, message: Any, ctx: WorkflowContext[VoiceFragment]) -> None:
-        abc_content = message.agent_response.text if hasattr(message, 'agent_response') else str(message)
+    async def extract(self, message: Any, ctx: WorkflowContext[VoiceFragment]) -> None:
+        abc_content = message.agent_response.text if hasattr(message, "agent_response") else str(message)
         await ctx.send_message(VoiceFragment(agent_name=self._agent_name, abc_content=abc_content))
 
 
 class MergeExecutor(Executor):
-    def __init__(self, id: str = "merge"):
-        self.id = id
+    """Receives list[VoiceFragment] (fan-in), merges into one ABC, outputs str.
+
+    The merged ABC string is sent downstream as plain str for the next executor.
+    """
+
+    def __init__(self, workdir: str = "", id: str = "merge"):
+        super().__init__(id=id)
+        self._workdir = workdir
 
     @handler
-    async def process(self, message: list[VoiceFragment], ctx: WorkflowContext[MergedScore]) -> None:
+    async def merge(self, message: list[VoiceFragment], ctx: WorkflowContext[str]) -> None:
         from clef_server.tools import merge_abc, write_file
 
         plan: dict = {}
-        workdir = ""
         fragments: dict[str, str] = {}
 
         for frag in message:
             voice_label = self._extract_voice_label(frag.abc_content, frag.agent_name)
             fragments[voice_label] = frag.abc_content
-            if not workdir and frag.agent_name:
-                workdir = getattr(frag, "_workdir", "")
 
+        workdir = self._workdir
         plan_path = f"{workdir}/plan.json"
         write_file(path=plan_path, content=json.dumps(plan, ensure_ascii=False))
         output_path = f"{workdir}/score.abc"
         merge_abc(plan=plan_path, fragments=fragments, output=output_path)
 
         score_abc = Path(output_path).read_text(encoding="utf-8") if Path(output_path).exists() else ""
-        await ctx.send_message(MergedScore(score_abc=score_abc, plan=plan, workdir=workdir))
+        await ctx.send_message(score_abc)
 
     @staticmethod
     def _extract_voice_label(abc: str, agent_name: str) -> str:
@@ -156,26 +182,22 @@ class MergeExecutor(Executor):
         return name_to_voice.get(agent_name, "V:1")
 
 
-class ReviewCollectorExecutor(Executor):
-    def __init__(self, id: str = "review_collector"):
-        self.id = id
-
-    @handler
-    async def process(self, message: Any, ctx: WorkflowContext[MergedScore]) -> None:
-        text = message.agent_response.text if hasattr(message, 'agent_response') else str(message)
-        await ctx.send_message(MergedScore(score_abc=text, plan={}, workdir=""))
-
-
 class InjectExecutor(Executor):
-    def __init__(self, id: str = "inject"):
-        self.id = id
+    """Receives str (merged ABC), converts to MIDI, yields workflow output.
+
+    Uses WorkflowContext[Never, str] -- only yields output, never sends downstream.
+    """
+
+    def __init__(self, workdir: str = "", id: str = "inject"):
+        super().__init__(id=id)
+        self._workdir = workdir
 
     @handler
-    async def process(self, message: MergedScore, ctx: WorkflowContext) -> None:
+    async def inject(self, message: str, ctx: WorkflowContext) -> None:
         from clef_server.tools import write_file, abc_to_midi
 
-        workdir = message.workdir
-        score_abc = message.score_abc
+        workdir = self._workdir
+        score_abc = message
 
         score_path = f"{workdir}/score.abc"
         write_file(path=score_path, content=score_abc)
@@ -220,11 +242,9 @@ def build_compose_workflow(
     }
 
     # Build the workflow graph
-    parse_exec = ParseExecutor(workdir=workdir, id="parse")
-    plan_exec = PlanExecutor(id="plan")
-    merge_exec = MergeExecutor(id="merge")
-    review_exec = ReviewCollectorExecutor(id="review_collector")
-    inject_exec = InjectExecutor(id="inject")
+    prompt_builder = PromptBuilderExecutor(workdir=workdir, id="prompt_builder")
+    merge_exec = MergeExecutor(workdir=workdir, id="merge")
+    inject_exec = InjectExecutor(workdir=workdir, id="inject")
 
     # Create agent executors (mocked in tests)
     agent_executors: dict = {}
@@ -242,7 +262,7 @@ def build_compose_workflow(
             ae = AgentExecutor(agent)
             agent_executors[name] = ae
         except (RuntimeError, ImportError):
-            # AF not available — create mock executors for testing
+            # AF not available -- create mock executors for testing
             class MockAgentExecutor(Executor):
                 def __init__(self, name_: str, id_: str):
                     self.id = id_
@@ -255,22 +275,24 @@ def build_compose_workflow(
         )
 
     workflow = (
-        WorkflowBuilder(start_executor=parse_exec, name=COMPOSE_WORKFLOW_ID)
-        .add_edge(parse_exec, plan_exec)
-        .add_fan_out_edges(plan_exec, [
+        WorkflowBuilder(start_executor=prompt_builder, name=COMPOSE_WORKFLOW_ID)
+        # fan-out: prompt → 3 agents
+        .add_fan_out_edges(prompt_builder, [
             agent_executors["clef-composer"],
             agent_executors["clef-harmonist"],
             agent_executors["clef-rhythmist"],
         ])
+        # agent outputs → extractors
         .add_edge(agent_executors["clef-composer"], extractors["clef-composer"])
         .add_edge(agent_executors["clef-harmonist"], extractors["clef-harmonist"])
         .add_edge(agent_executors["clef-rhythmist"], extractors["clef-rhythmist"])
+        # fan-in: extractors → merge
         .add_fan_in_edges(
             [extractors["clef-composer"], extractors["clef-harmonist"], extractors["clef-rhythmist"]],
             merge_exec,
         )
-        .add_edge(merge_exec, review_exec)
-        .add_edge(review_exec, inject_exec)
+        # merge → inject
+        .add_edge(merge_exec, inject_exec)
         .build()
     )
 
