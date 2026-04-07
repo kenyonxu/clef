@@ -9,6 +9,7 @@ from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
+from typing import Literal
 
 from clef_server.sessions import SessionManager
 from clef_server.orchestrator import get_session_manager
@@ -58,8 +59,8 @@ class SessionsResponse(BaseModel):
 
 
 class ConfirmRequest(BaseModel):
-    action: str = Field(..., description="'continue' or 'cancel'")
-    feedback: str | None = Field(None, description="Optional user feedback text")
+    action: Literal["continue", "cancel"] = Field(..., description="'continue' or 'cancel'")
+    feedback: str | None = Field(None, description="Optional user feedback text", max_length=2000)
 
 
 # === Workflow Execution ===

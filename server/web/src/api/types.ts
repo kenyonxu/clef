@@ -3,13 +3,39 @@ export interface AgentProgress {
   status: WorkflowStepStatus
 }
 
+export interface ConfirmationData {
+  phase: 'parse' | 'sample' | 'review'
+  title: string
+  plan?: Record<string, unknown>
+  sample_file?: string
+  review?: ReviewData
+  iterations?: number
+  sample_round?: number
+  output_file?: string
+}
+
+export interface ReviewData {
+  verdict?: 'pass' | 'revise'
+  scores?: Record<string, number>
+  summary?: string
+}
+
+export interface PhaseStep {
+  id: string
+  name: string
+  label: string
+  status: WorkflowStepStatus
+  confirm: boolean
+}
+
 export interface WorkflowStep {
-  id: number
+  id: string
   name: string
   label: string
   status: WorkflowStepStatus
   agents?: AgentProgress[]
   error?: string
+  confirm?: boolean
 }
 
 export type WorkflowStepStatus = 'pending' | 'running' | 'done' | 'failed'
@@ -42,9 +68,13 @@ export interface StatusResponse {
   session_id: string
   status: SessionStatus
   user_prompt: string
-  workflow_steps?: WorkflowStep[]
+  workflow_steps?: PhaseStep[]
   output_files: string[]
   error?: string
+  current_phase?: string
+  confirmation_data?: ConfirmationData
+  sample_round?: number
+  iteration_count?: number
 }
 
 export interface CancelResponse {
