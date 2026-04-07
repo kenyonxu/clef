@@ -1,7 +1,11 @@
 """FastAPI application factory."""
 
+from pathlib import Path
+
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
 
 from clef_server.routes import create_router
 
@@ -51,11 +55,26 @@ def create_app() -> FastAPI:
         version="0.1.0",
     )
 
-    @app.get("/", response_class=HTMLResponse)
-    async def root():
-        return _HOME_HTML
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["http://localhost:5173"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
+    # Register API routes first (they take priority over StaticFiles mount)
     app.include_router(create_router())
+
+    # Production: serve SPA from dist/ if it exists
+    dist_dir = Path(__file__).resolve().parent.parent.parent / "web" / "dist"
+    if dist_dir.exists():
+        app.mount("/", StaticFiles(directory=str(dist_dir), html=True), name="spa")
+    else:
+        @app.get("/", response_class=HTMLResponse)
+        async def root():
+            return _HOME_HTML
+
     return app
 
 

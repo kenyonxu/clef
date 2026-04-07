@@ -15,6 +15,13 @@ VALID_TRANSITIONS = {
     "cancelled": set(),
 }
 
+WORKFLOW_STEPS = [
+    {"id": 0, "name": "parse", "label": "Requirement Parsing"},
+    {"id": 1, "name": "plan", "label": "Plan Generation"},
+    {"id": 2, "name": "create", "label": "Full Creation"},
+    {"id": 3, "name": "inject", "label": "Expression Injection"},
+]
+
 
 @dataclass
 class ComposeSession:
@@ -25,6 +32,8 @@ class ComposeSession:
     plan: dict | None = None
     output_files: list[str] = field(default_factory=list)
     error: str | None = None
+    step_status: dict[int, str] = field(default_factory=lambda: {0: "pending", 1: "pending", 2: "pending", 3: "pending"})
+    current_step: int = 0
     created_at: float = field(default_factory=time.time)
     updated_at: float = field(default_factory=time.time)
 
@@ -56,6 +65,33 @@ class ComposeSession:
     def set_cancelled(self) -> None:
         self._transition("cancelled")
 
+    def update_step(self, step_id: int, status: str, *, error: str | None = None) -> None:
+        """Update a workflow step's status."""
+        self.step_status[step_id] = status
+        self.updated_at = time.time()
+        if error:
+            self.step_errors = getattr(self, 'step_errors', {})
+            self.step_errors[step_id] = error
+
+    def advance_step(self, step_id: int) -> None:
+        """Mark step as done and advance to next."""
+        self.step_status[step_id] = "done"
+        if step_id + 1 < len(WORKFLOW_STEPS):
+            self.current_step = step_id + 1
+            self.step_status[step_id + 1] = "running"
+        self.updated_at = time.time()
+
+    def get_workflow_steps(self) -> list[dict]:
+        """Return workflow steps with current status."""
+        steps = []
+        for s in WORKFLOW_STEPS:
+            status = self.step_status.get(s["id"], "pending")
+            step = {**s, "status": status}
+            if hasattr(self, 'step_errors') and s["id"] in self.step_errors:
+                step["error"] = self.step_errors[s["id"]]
+            steps.append(step)
+        return steps
+
     def to_dict(self) -> dict:
         return {
             "session_id": self.session_id,
@@ -64,6 +100,7 @@ class ComposeSession:
             "workdir": self.workdir,
             "output_files": self.output_files,
             "error": self.error,
+            "workflow_steps": self.get_workflow_steps(),
             "created_at": self.created_at,
             "updated_at": self.updated_at,
         }

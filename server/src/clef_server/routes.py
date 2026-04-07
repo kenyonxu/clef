@@ -38,6 +38,7 @@ class StatusResponse(BaseModel):
     session_id: str
     status: str
     user_prompt: str = ""
+    workflow_steps: list[dict] = []
     output_files: list[str] = []
     error: str | None = None
 
@@ -121,6 +122,7 @@ async def get_status(session_id: str):
         session_id=session.session_id,
         status=session.status,
         user_prompt=session.user_prompt,
+        workflow_steps=session.get_workflow_steps(),
         output_files=session.output_files,
         error=session.error,
     )
