@@ -1,6 +1,6 @@
 """Tests for ComposeSession workflow step tracking."""
 
-from clef_server.sessions import ComposeSession, WORKFLOW_STEPS
+from clef_server.sessions import ComposeSession, PHASES, PHASE_ORDER
 
 
 class TestWorkflowSteps:
@@ -11,33 +11,41 @@ class TestWorkflowSteps:
             user_prompt="test prompt",
         )
         steps = session.get_workflow_steps()
-        assert len(steps) == 4
+        assert len(steps) == 6
         assert all(s["status"] == "pending" for s in steps)
 
-    def test_advance_step_marks_done_and_next_running(self):
+    def test_record_phase_updates_status(self):
         session = ComposeSession(
             session_id="clef-test",
             workdir="/tmp/test",
         )
         session.set_running()
-        session.update_step(0, "running")
+        session.record_phase("parse", "running")
 
         steps = session.get_workflow_steps()
         assert steps[0]["status"] == "running"
+        assert steps[0]["id"] == "parse"
         assert steps[1]["status"] == "pending"
 
-        session.advance_step(0)
-        steps = session.get_workflow_steps()
-        assert steps[0]["status"] == "done"
-        assert steps[1]["status"] == "running"
-
-    def test_failed_step_sets_error(self):
+    def test_record_phase_done_marks_completed(self):
         session = ComposeSession(
             session_id="clef-test",
             workdir="/tmp/test",
         )
         session.set_running()
-        session.update_step(1, "failed", error="Plan generation failed")
+        session.record_phase("parse", "running")
+        session.record_phase("parse", "done")
+
+        steps = session.get_workflow_steps()
+        assert steps[0]["status"] == "done"
+
+    def test_failed_phase_sets_error(self):
+        session = ComposeSession(
+            session_id="clef-test",
+            workdir="/tmp/test",
+        )
+        session.set_running()
+        session.record_phase("sample", "failed", error="Plan generation failed")
 
         steps = session.get_workflow_steps()
         assert steps[1]["status"] == "failed"
@@ -50,15 +58,23 @@ class TestWorkflowSteps:
             user_prompt="test",
         )
         session.set_running()
-        session.update_step(0, "done")
-        session.update_step(1, "running")
+        session.record_phase("parse", "done")
+        session.record_phase("sample", "running")
 
         data = session.to_dict()
         assert "workflow_steps" in data
         assert data["workflow_steps"][0]["status"] == "done"
         assert data["workflow_steps"][1]["status"] == "running"
 
-    def test_workflow_steps_constant(self):
-        assert len(WORKFLOW_STEPS) == 4
-        assert WORKFLOW_STEPS[0]["name"] == "parse"
-        assert WORKFLOW_STEPS[3]["name"] == "inject"
+    def test_phases_constant(self):
+        assert len(PHASES) == 6
+        assert PHASES[0]["id"] == "parse"
+        assert PHASES[5]["id"] == "express"
+
+    def test_phase_order_constant(self):
+        assert len(PHASE_ORDER) == 6
+        assert PHASE_ORDER == ["parse", "sample", "create", "iterate", "review", "express"]
+
+    def test_confirm_phases(self):
+        confirm_ids = {p["id"] for p in PHASES if p.get("confirm")}
+        assert confirm_ids == {"parse", "sample", "review"}

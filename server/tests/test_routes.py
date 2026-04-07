@@ -85,5 +85,11 @@ class TestConfirmEndpoint:
     async def test_confirm_not_awaiting(self, client: AsyncClient):
         create_resp = await client.post("/compose", json={"prompt": "test"})
         session_id = create_resp.json()["session_id"]
-        resp = await client.post(f"/confirm/{session_id}")
+        resp = await client.post(f"/confirm/{session_id}", json={"action": "continue"})
         assert resp.status_code == 400
+
+    async def test_confirm_missing_body(self, client: AsyncClient):
+        create_resp = await client.post("/compose", json={"prompt": "test"})
+        session_id = create_resp.json()["session_id"]
+        resp = await client.post(f"/confirm/{session_id}")
+        assert resp.status_code == 422

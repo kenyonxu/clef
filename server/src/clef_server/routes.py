@@ -11,11 +11,12 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from clef_server.sessions import SessionManager
+from clef_server.orchestrator import get_session_manager
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
-_session_manager = SessionManager()
+_session_manager = get_session_manager()
 
 
 def create_router() -> APIRouter:
@@ -41,6 +42,10 @@ class StatusResponse(BaseModel):
     workflow_steps: list[dict] = []
     output_files: list[str] = []
     error: str | None = None
+    current_phase: str = ""
+    confirmation_data: dict | None = None
+    sample_round: int = 0
+    iteration_count: int = 0
 
 
 class CancelResponse(BaseModel):
@@ -52,42 +57,31 @@ class SessionsResponse(BaseModel):
     sessions: list[dict]
 
 
+class ConfirmRequest(BaseModel):
+    action: str = Field(..., description="'continue' or 'cancel'")
+    feedback: str | None = Field(None, description="Optional user feedback text")
+
+
 # === Workflow Execution ===
 
 async def _run_workflow(session_id: str, prompt: str, plan: dict | None, workdir: str) -> None:
-    """Run the compose workflow in the background, updating session state."""
+    """Start the compose workflow via orchestrator."""
     session = _session_manager.get(session_id)
     if not session:
         logger.error(f"Session {session_id} not found")
         return
 
     try:
-        session.set_running()
-        logger.info(f"Session {session_id}: workflow started")
-
-        from clef_server.config import load_provider_config, load_agent_configs
+        from clef_server.config import load_provider_config
         from clef_server.providers import create_providers
-        from clef_server.workflow import build_compose_workflow, ComposeRequest
+        from clef_server.orchestrator import ComposeOrchestrator
 
         server_root = Path(__file__).resolve().parent.parent.parent
-        provider_config = load_provider_config(
-            server_root / "config" / "providers.yaml"
-        )
+        provider_config = load_provider_config(server_root / "config" / "providers.yaml")
         providers = create_providers(provider_config)
 
-        workflow = build_compose_workflow(
-            providers=providers,
-            plan=plan,
-            workdir=workdir,
-        )
-
-        request = ComposeRequest(user_prompt=prompt, workdir=workdir, plan=plan)
-        result = await workflow.run(request)
-        outputs = result.get_outputs()
-
-        output_files = [f for f in outputs if isinstance(f, str)]
-        session.set_done(output_files=output_files)
-        logger.info(f"Session {session_id}: workflow done, outputs={output_files}")
+        orchestrator = ComposeOrchestrator(session_id=session_id, providers=providers, workdir=workdir)
+        await orchestrator.start(prompt)
 
     except Exception as e:
         logger.exception(f"Session {session_id}: workflow failed")
@@ -125,6 +119,10 @@ async def get_status(session_id: str):
         workflow_steps=session.get_workflow_steps(),
         output_files=session.output_files,
         error=session.error,
+        current_phase=session.current_phase,
+        confirmation_data=session.confirmation_data,
+        sample_round=session.sample_round,
+        iteration_count=session.iteration_count,
     )
 
 
@@ -157,14 +155,34 @@ async def get_result(session_id: str):
 
 
 @router.post("/confirm/{session_id}")
-async def confirm_sample(session_id: str):
+async def confirm_session(session_id: str, req: ConfirmRequest):
     session = _session_manager.get(session_id)
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
     if session.status != "awaiting_confirm":
-        raise HTTPException(status_code=400, detail="Session is not awaiting confirmation")
-    session.set_running()
-    return {"session_id": session.session_id, "status": "running"}
+        raise HTTPException(status_code=400, detail=f"Session is '{session.status}', not awaiting confirmation")
+
+    if req.action == "cancel":
+        session.set_cancelled()
+        return {"session_id": session.session_id, "status": session.status}
+
+    # action == "continue"
+    try:
+        from clef_server.config import load_provider_config
+        from clef_server.providers import create_providers
+        from clef_server.orchestrator import ComposeOrchestrator
+
+        server_root = Path(__file__).resolve().parent.parent.parent
+        provider_config = load_provider_config(server_root / "config" / "providers.yaml")
+        providers = create_providers(provider_config)
+
+        orchestrator = ComposeOrchestrator(session_id=session_id, providers=providers, workdir=session.workdir)
+        await orchestrator.resume(req.feedback)
+    except Exception as e:
+        logger.exception(f"Session {session_id}: resume failed")
+        session.set_failed(error=str(e))
+
+    return {"session_id": session.session_id, "status": session.status, "current_phase": session.current_phase}
 
 
 @router.post("/cancel/{session_id}", response_model=CancelResponse)

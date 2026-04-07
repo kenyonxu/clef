@@ -109,11 +109,15 @@ class ComposeSession:
         phases = []
         for p in PHASES:
             status = "pending"
+            error = None
             for entry in reversed(self.phase_history):
                 if entry["phase"] == p["id"]:
                     status = entry["status"]
+                    error = entry.get("error")
                     break
             step = {**p, "status": status}
+            if error is not None:
+                step["error"] = error
             phases.append(step)
         return phases
 
