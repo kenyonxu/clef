@@ -242,7 +242,7 @@ class ComposeOrchestrator:
         ]
 
         response = await client.get_response(messages)
-        content = response.messages[0].contents[0] if response.messages else ""
+        content = str(response.messages[0].contents[0]) if response.messages else ""
         content = content.strip()
         if content.startswith("```"):
             content = content.split("\n", 1)[-1].rstrip("`")
