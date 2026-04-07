@@ -15,12 +15,24 @@ VALID_TRANSITIONS = {
     "cancelled": set(),
 }
 
+# Legacy 4-step numeric workflow — kept for backward compatibility (routes.py)
 WORKFLOW_STEPS = [
     {"id": 0, "name": "parse", "label": "Requirement Parsing"},
     {"id": 1, "name": "plan", "label": "Plan Generation"},
     {"id": 2, "name": "create", "label": "Full Creation"},
     {"id": 3, "name": "inject", "label": "Expression Injection"},
 ]
+
+PHASES = [
+    {"id": "parse",   "label": "需求解析 + 规划",  "confirm": True},
+    {"id": "sample",  "label": "方向小样",         "confirm": True},
+    {"id": "create",  "label": "完整创作",         "confirm": False},
+    {"id": "iterate", "label": "质量迭代",         "confirm": False},
+    {"id": "review",  "label": "试听审核",         "confirm": True},
+    {"id": "express", "label": "表现力注入",       "confirm": False},
+]
+
+PHASE_ORDER = ["parse", "sample", "create", "iterate", "review", "express"]
 
 
 @dataclass
@@ -32,6 +44,11 @@ class ComposeSession:
     plan: dict | None = None
     output_files: list[str] = field(default_factory=list)
     error: str | None = None
+    current_phase: str = "parse"
+    confirmation_data: dict | None = None
+    phase_history: list[dict] = field(default_factory=list)
+    sample_round: int = 0
+    iteration_count: int = 0
     step_status: dict[int, str] = field(default_factory=lambda: {0: "pending", 1: "pending", 2: "pending", 3: "pending"})
     current_step: int = 0
     created_at: float = field(default_factory=time.time)
@@ -50,8 +67,9 @@ class ComposeSession:
     def set_running(self) -> None:
         self._transition("running")
 
-    def set_awaiting_confirm(self) -> None:
+    def set_awaiting_confirm(self, confirmation_data: dict | None = None) -> None:
         self._transition("awaiting_confirm")
+        self.confirmation_data = confirmation_data
 
     def set_done(self, output_files: list[str] | None = None) -> None:
         if output_files:
@@ -64,6 +82,11 @@ class ComposeSession:
 
     def set_cancelled(self) -> None:
         self._transition("cancelled")
+
+    def record_phase(self, phase_id: str, status: str, *, error: str | None = None) -> None:
+        entry = {"phase": phase_id, "status": status, "error": error, "timestamp": time.time()}
+        self.phase_history.append(entry)
+        self.updated_at = time.time()
 
     def update_step(self, step_id: int, status: str, *, error: str | None = None) -> None:
         """Update a workflow step's status."""
@@ -82,15 +105,17 @@ class ComposeSession:
         self.updated_at = time.time()
 
     def get_workflow_steps(self) -> list[dict]:
-        """Return workflow steps with current status."""
-        steps = []
-        for s in WORKFLOW_STEPS:
-            status = self.step_status.get(s["id"], "pending")
-            step = {**s, "status": status}
-            if hasattr(self, 'step_errors') and s["id"] in self.step_errors:
-                step["error"] = self.step_errors[s["id"]]
-            steps.append(step)
-        return steps
+        """Return workflow phases with current status derived from phase_history."""
+        phases = []
+        for p in PHASES:
+            status = "pending"
+            for entry in reversed(self.phase_history):
+                if entry["phase"] == p["id"]:
+                    status = entry["status"]
+                    break
+            step = {**p, "status": status}
+            phases.append(step)
+        return phases
 
     def to_dict(self) -> dict:
         return {
@@ -101,6 +126,11 @@ class ComposeSession:
             "output_files": self.output_files,
             "error": self.error,
             "workflow_steps": self.get_workflow_steps(),
+            "current_phase": self.current_phase,
+            "confirmation_data": self.confirmation_data,
+            "phase_history": self.phase_history,
+            "sample_round": self.sample_round,
+            "iteration_count": self.iteration_count,
             "created_at": self.created_at,
             "updated_at": self.updated_at,
         }

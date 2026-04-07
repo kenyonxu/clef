@@ -51,6 +51,46 @@ class TestComposeSession:
         assert d["status"] == "created"
         assert "created_at" in d
 
+    def test_phases_constant(self):
+        from clef_server.sessions import PHASES, PHASE_ORDER
+        assert len(PHASES) == 6
+        assert PHASES[0]["id"] == "parse"
+        assert PHASE_ORDER[0] == "parse"
+        assert sum(1 for p in PHASES if p["confirm"]) == 3
+
+    def test_set_awaiting_confirm_with_data(self, tmp_path: Path):
+        session = ComposeSession(session_id="s1", workdir=str(tmp_path))
+        session.set_running()
+        session.set_awaiting_confirm({"phase": "parse", "plan": {"key": "C"}})
+        assert session.status == "awaiting_confirm"
+        assert session.confirmation_data["plan"]["key"] == "C"
+
+    def test_record_phase(self, tmp_path: Path):
+        session = ComposeSession(session_id="s1", workdir=str(tmp_path))
+        session.record_phase("parse", "done")
+        session.record_phase("sample", "done")
+        assert len(session.phase_history) == 2
+        assert session.phase_history[0]["phase"] == "parse"
+
+    def test_get_workflow_steps_from_phases(self, tmp_path: Path):
+        session = ComposeSession(session_id="s1", workdir=str(tmp_path))
+        session.record_phase("parse", "done")
+        steps = session.get_workflow_steps()
+        assert steps[0]["status"] == "done"
+        assert steps[1]["status"] == "pending"
+
+    def test_to_dict_includes_new_fields(self, tmp_path: Path):
+        session = ComposeSession(session_id="s1", workdir=str(tmp_path))
+        session.set_running()
+        session.record_phase("parse", "running")
+        d = session.to_dict()
+        assert "current_phase" in d
+        assert "confirmation_data" in d
+        assert "phase_history" in d
+        assert "sample_round" in d
+        assert "iteration_count" in d
+        assert d["current_phase"] == "parse"
+
 
 class TestSessionManager:
     def test_create_session(self):
