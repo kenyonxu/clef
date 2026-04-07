@@ -68,9 +68,9 @@ async def _run_workflow(session_id: str, prompt: str, plan: dict | None, workdir
         from clef_server.providers import create_providers
         from clef_server.workflow import build_compose_workflow, ComposeRequest
 
-        project_root = Path(workdir).parent.parent.parent
+        server_root = Path(__file__).resolve().parent.parent.parent
         provider_config = load_provider_config(
-            project_root / "server" / "config" / "providers.yaml"
+            server_root / "config" / "providers.yaml"
         )
         providers = create_providers(provider_config)
 
@@ -105,8 +105,10 @@ async def create_compose(req: ComposeRequest):
         user_prompt=req.prompt,
         workdir=workdir,
         plan=req.plan,
+        session_id=session_id,
     )
-    asyncio.create_task(_run_workflow(session_id, req.prompt, req.plan, workdir))
+    task = asyncio.create_task(_run_workflow(session_id, req.prompt, req.plan, workdir))
+    task.add_done_callback(lambda t: t.exception() and logger.error(f"Workflow task failed: {t.exception()}"))
     return ComposeResponse(session_id=session.session_id, status=session.status)
 
 

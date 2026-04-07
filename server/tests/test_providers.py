@@ -32,7 +32,7 @@ class TestCreateProviders:
                 ),
             },
         )
-        with patch("clef_server.providers.OpenAIChatClient") as mock_cls:
+        with patch("clef_server.providers.ChatCompletionsClient") as mock_cls:
             providers = create_providers(config)
             mock_cls.assert_called_once_with(
                 model="deepseek-chat",
@@ -48,7 +48,7 @@ class TestCreateProviders:
                 "glm": OpenAICompatConfig(model_id="glm-4", base_url="https://open.bigmodel.cn/api/paas/v4", api_key="k2"),
             },
         )
-        with patch("clef_server.providers.OpenAIChatClient") as mock_cls:
+        with patch("clef_server.providers.ChatCompletionsClient") as mock_cls:
             providers = create_providers(config)
             assert mock_cls.call_count == 2
             assert "deepseek" in providers
@@ -56,5 +56,14 @@ class TestCreateProviders:
 
     def test_empty_config_returns_empty(self):
         config = ProviderConfig()
+        providers = create_providers(config)
+        assert providers == {}
+
+    def test_skips_openai_compat_without_api_key(self):
+        config = ProviderConfig(
+            openai_compat={
+                "deepseek": OpenAICompatConfig(model_id="deepseek-chat", base_url="https://api.deepseek.com/v1", api_key=""),
+            },
+        )
         providers = create_providers(config)
         assert providers == {}

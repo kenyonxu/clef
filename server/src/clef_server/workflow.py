@@ -217,24 +217,26 @@ def build_compose_workflow(
     workdir: str = "",
     skills_dir: Path | None = None,
 ) -> Any:
+    project_root = Path(__file__).resolve().parent.parent.parent.parent
     if skills_dir is None:
-        skills_dir = Path(__file__).resolve().parent.parent.parent.parent / ".claude" / "skills"
+        skills_dir = project_root / ".claude" / "skills"
 
+    agents_dir = project_root / ".claude" / "agents"
     agent_configs: dict[str, AgentConfig] = {
         "clef-composer": AgentConfig(
-            prompt_md=Path(".claude/agents/clef-composer.md"),
+            prompt_md=agents_dir / "clef-composer.md",
             model_alias="deepseek", temperature=0.8,
             skills=["melody", "orchestration", "abc"],
             tools=["read_file", "write_file", "validate_abc", "abc_lint"],
         ),
         "clef-harmonist": AgentConfig(
-            prompt_md=Path(".claude/agents/clef-harmonist.md"),
+            prompt_md=agents_dir / "clef-harmonist.md",
             model_alias="deepseek", temperature=0.8,
             skills=["harmony", "abc"],
             tools=["read_file", "write_file", "validate_abc", "abc_lint"],
         ),
         "clef-rhythmist": AgentConfig(
-            prompt_md=Path(".claude/agents/clef-rhythmist.md"),
+            prompt_md=agents_dir / "clef-rhythmist.md",
             model_alias="deepseek", temperature=0.7,
             skills=["rhythm", "abc"],
             tools=["read_file", "write_file", "validate_abc", "abc_lint"],

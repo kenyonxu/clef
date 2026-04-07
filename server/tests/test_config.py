@@ -30,9 +30,9 @@ class TestExpandEnvVars:
         result = _expand_env_vars("plain_string")
         assert result == "plain_string"
 
-    def test_missing_env_var_raises(self):
-        with pytest.raises(ValueError, match="MISSING_KEY"):
-            _expand_env_vars("${MISSING_KEY}")
+    def test_missing_env_var_returns_empty(self):
+        result = _expand_env_vars("${MISSING_KEY}")
+        assert result == ""
 
     def test_missing_env_var_with_default(self, monkeypatch):
         monkeypatch.delenv("MISSING_KEY", raising=False)
@@ -50,6 +50,9 @@ class TestProviderConfig:
         assert config.anthropic.default_model == "claude-sonnet-4-20250514"
         assert "deepseek" in config.openai_compat
         assert config.openai_compat["deepseek"].model_id == "deepseek-chat"
+        assert config.openai_compat["deepseek"].api_key == "test-ds-key"
+        assert config.openai_compat["glm"].model_id == "glm-4"
+        assert config.openai_compat["glm"].api_key == "test-glm-key"
 
     def test_load_provider_config_missing_file(self):
         with pytest.raises(FileNotFoundError):

@@ -1,11 +1,14 @@
 """Configuration loading — YAML files + environment variable expansion."""
 
+import logging
 import os
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
 import yaml
+
+logger = logging.getLogger(__name__)
 
 
 def _expand_env_vars(value: str) -> str:
@@ -17,7 +20,8 @@ def _expand_env_vars(value: str) -> str:
             return os.environ.get(var_name, default)
         env_val = os.environ.get(var_name)
         if env_val is None:
-            raise ValueError(f"Environment variable {var_name} is not set")
+            logger.warning(f"Environment variable {var_name} is not set, using empty string")
+            return ""
         return env_val
 
     return re.sub(r"\$\{([^}]+)\}", _replace, value)

@@ -1,16 +1,16 @@
-# LLM Provider 配置模板
-# 复制为 providers.yaml 并填入 API Key
+# LLM Provider configuration template
+# Copy to providers.yaml and fill in API keys
 
 anthropic:
-  api_key: ${ANTHROPIC_API_KEY}
+  api_key: ${ANTHROPIC_API_KEY:-}
   default_model: claude-sonnet-4-20250514
 
 openai_compat:
   deepseek:
     model_id: deepseek-chat
-    base_url: https://api.deepseek.com/v1
-    api_key: ${DEEPSEEK_API_KEY}
+    base_url: ${DEEPSEEK_BASE_URL:-https://api.deepseek.com/v1/chat/completions}
+    api_key: ${DEEPSEEK_API_KEY:-}
   glm:
     model_id: glm-4
-    base_url: https://open.bigmodel.cn/api/paas/v4
-    api_key: ${GLM_API_KEY}
+    base_url: ${GLM_BASE_URL:-https://open.bigmodel.cn/api/paas/v4/chat/completions}
+    api_key: ${GLM_API_KEY:-}

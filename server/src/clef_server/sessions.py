@@ -75,8 +75,9 @@ class SessionManager:
     def __init__(self):
         self._sessions: dict[str, ComposeSession] = {}
 
-    def create(self, user_prompt: str, workdir: str, plan: dict | None = None) -> ComposeSession:
-        session_id = f"clef-{uuid.uuid4().hex[:8]}"
+    def create(self, user_prompt: str, workdir: str, plan: dict | None = None, session_id: str | None = None) -> ComposeSession:
+        if session_id is None:
+            session_id = f"clef-{uuid.uuid4().hex[:8]}"
         session = ComposeSession(
             session_id=session_id,
             workdir=workdir,

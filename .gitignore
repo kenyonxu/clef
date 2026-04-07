@@ -36,3 +36,6 @@ Desktop.ini
 # Python dependencies (vendored)
 music21/
 pytest-of-kenyo/
+
+# Server config with real API keys
+server/config/providers.yaml
