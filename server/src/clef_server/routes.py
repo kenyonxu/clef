@@ -167,21 +167,30 @@ async def confirm_session(session_id: str, req: ConfirmRequest):
         session.set_cancelled()
         return {"session_id": session.session_id, "status": session.status}
 
-    # action == "continue"
-    try:
-        from clef_server.config import load_provider_config
-        from clef_server.providers import create_providers
-        from clef_server.orchestrator import ComposeOrchestrator
+    # action == "continue" — run resume in background task (phases take minutes)
+    feedback = req.feedback
+    workdir = session.workdir
 
-        server_root = Path(__file__).resolve().parent.parent.parent
-        provider_config = load_provider_config(server_root / "config" / "providers.yaml")
-        providers = create_providers(provider_config)
+    async def _resume_workflow() -> None:
+        try:
+            from clef_server.config import load_provider_config
+            from clef_server.providers import create_providers
+            from clef_server.orchestrator import ComposeOrchestrator
 
-        orchestrator = ComposeOrchestrator(session_id=session_id, providers=providers, workdir=session.workdir)
-        await orchestrator.resume(req.feedback)
-    except Exception as e:
-        logger.exception(f"Session {session_id}: resume failed")
-        session.set_failed(error=str(e))
+            server_root = Path(__file__).resolve().parent.parent.parent
+            provider_config = load_provider_config(server_root / "config" / "providers.yaml")
+            providers = create_providers(provider_config)
+
+            orchestrator = ComposeOrchestrator(session_id=session_id, providers=providers, workdir=workdir)
+            await orchestrator.resume(feedback)
+        except Exception as e:
+            logger.exception(f"Session {session_id}: resume failed")
+            sess = _session_manager.get(session_id)
+            if sess:
+                sess.set_failed(error=str(e))
+
+    task = asyncio.create_task(_resume_workflow())
+    task.add_done_callback(lambda t: t.exception() and logger.error(f"Resume task failed: {t.exception()}"))
 
     return {"session_id": session.session_id, "status": session.status, "current_phase": session.current_phase}
 

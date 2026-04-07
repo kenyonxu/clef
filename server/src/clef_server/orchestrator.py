@@ -487,7 +487,10 @@ class ComposeOrchestrator:
 
         # C1/C2: merge_abc takes positional (plan, fragments, output), returns dict (side-effect)
         from clef_server.tools import merge_abc
-        merge_abc(str(plan_path), fragments, str(score_path))
+        merge_result = merge_abc(str(plan_path), fragments, str(score_path))
+        if "error" in merge_result:
+            logger.error("merge_abc failed: %s", merge_result["error"])
+            raise RuntimeError(f"merge_abc failed: {merge_result['error']}")
 
         # Step 2: Melody gate — review melody only up to 3 times
         melody_agent = self.VOICE_AGENT_MAP.get("melody", "clef-composer")
@@ -507,12 +510,18 @@ class ComposeOrchestrator:
             )
             abc_text = self._extract_abc(response)
             fragments[melody_label] = abc_text
-            merge_abc(str(plan_path), fragments, str(score_path))
+            merge_result = merge_abc(str(plan_path), fragments, str(score_path))
+            if "error" in merge_result:
+                logger.error("merge_abc (melody gate) failed: %s", merge_result["error"])
+                raise RuntimeError(f"merge_abc (melody gate) failed: {merge_result['error']}")
 
         # Step 3: Convert sample to MIDI
         sample_mid = Path(self.workdir) / "sample.mid"
         from clef_server.tools import abc_to_midi
-        abc_to_midi(str(score_path), str(sample_mid))
+        midi_result = abc_to_midi(str(score_path), str(sample_mid))
+        if "error" in midi_result:
+            logger.error("abc_to_midi failed: %s", midi_result["error"])
+            raise RuntimeError(f"abc_to_midi failed: {midi_result['error']}")
 
         # Step 4: Full review for confirmation data
         full_review = await self._call_reviewer(plan, melody_only=False)
@@ -564,17 +573,25 @@ class ComposeOrchestrator:
 
         # Merge all fragments
         from clef_server.tools import merge_abc
-        merge_abc(str(plan_path), fragments, str(score_path))
+        merge_result = merge_abc(str(plan_path), fragments, str(score_path))
+        if "error" in merge_result:
+            logger.error("merge_abc failed: %s", merge_result["error"])
+            raise RuntimeError(f"merge_abc failed: {merge_result['error']}")
 
         # Validate
         report_path = Path(self.workdir) / "validation_report.json"
         from clef_server.tools import validate_abc
-        validate_abc(str(score_path), str(plan_path), str(report_path))
+        validate_result = validate_abc(str(score_path), str(plan_path), str(report_path))
+        if "error" in validate_result:
+            logger.error("validate_abc failed: %s", validate_result["error"])
 
         # Convert to MIDI
         base_mid = Path(self.workdir) / "base.mid"
         from clef_server.tools import abc_to_midi
-        abc_to_midi(str(score_path), str(base_mid))
+        midi_result = abc_to_midi(str(score_path), str(base_mid))
+        if "error" in midi_result:
+            logger.error("abc_to_midi failed: %s", midi_result["error"])
+            raise RuntimeError(f"abc_to_midi failed: {midi_result['error']}")
 
         self.session.record_phase("create", "done")
         logger.info("Session %s: Phase 2 (create) done", self.session_id)
