@@ -16,13 +16,6 @@ from clef_server.sessions import PHASES, PHASE_ORDER, SessionManager
 
 logger = logging.getLogger(__name__)
 
-# AF Agent/AgentExecutor — graceful fallback when not installed
-try:
-    from agent_framework import Agent, AgentExecutor
-except ImportError:
-    Agent = None
-    AgentExecutor = None
-
 # Re-export for convenience
 __all__ = ["ComposeOrchestrator", "PHASE_ORDER"]
 
@@ -271,6 +264,35 @@ class ComposeOrchestrator:
     # Agent execution helpers
     # ------------------------------------------------------------------
 
+    # Agent definitions: prompt file, model alias, skills
+    _AGENT_DEFS: dict[str, dict[str, Any]] = {
+        "clef-composer": {
+            "prompt_md": "clef-composer.md",
+            "model_alias": "deepseek",
+            "skills": ["melody", "orchestration", "abc"],
+        },
+        "clef-harmonist": {
+            "prompt_md": "clef-harmonist.md",
+            "model_alias": "deepseek",
+            "skills": ["harmony", "abc"],
+        },
+        "clef-rhythmist": {
+            "prompt_md": "clef-rhythmist.md",
+            "model_alias": "deepseek",
+            "skills": ["rhythm", "abc"],
+        },
+        "clef-reviewer": {
+            "prompt_md": "clef-reviewer.md",
+            "model_alias": "deepseek",
+            "skills": ["structure", "orchestration", "abc"],
+        },
+        "clef-orchestrator": {
+            "prompt_md": "clef-orchestrator.md",
+            "model_alias": "deepseek",
+            "skills": ["orchestration", "abc"],
+        },
+    }
+
     async def _run_agent(
         self,
         agent_name: str,
@@ -278,76 +300,57 @@ class ComposeOrchestrator:
         plan: dict | None = None,
         score_abc: str | None = None,
     ) -> str:
-        """Create an agent and run it, returning the text response.
+        """Run an agent by building its system prompt and calling LLM directly.
 
-        Falls back to a placeholder string if agent_framework is not installed.
+        Bypasses AF AgentExecutor (which requires WorkflowContext) and
+        uses ChatCompletionsClient with the agent's instructions + skills.
         """
-        if Agent is None or AgentExecutor is None:
-            logger.warning("agent_framework not installed; returning placeholder for %s", agent_name)
+        agent_def = self._AGENT_DEFS.get(agent_name)
+        if not agent_def:
+            logger.warning("Unknown agent %s, returning placeholder", agent_name)
             return f"[placeholder ABC for {agent_name}]"
 
         try:
-            from clef_server.agents import create_agent
-            from clef_server.config import AgentConfig
+            from clef_server.agents import _build_instructions
+            from clef_server.middleware import ClefContextMiddleware
 
-            # Build minimal config from agents.yaml defaults
-            skills_dir = self.project_root / ".claude" / "skills" / "clef-compose"
-            agent_configs = {
-                "clef-composer": AgentConfig(
-                    prompt_md=self.project_root / ".claude" / "agents" / "clef-composer.md",
-                    model_alias="deepseek", temperature=0.8,
-                    skills=["melody", "orchestration", "abc"],
-                    tools=["read_file", "write_file", "validate_abc", "abc_lint"],
-                ),
-                "clef-harmonist": AgentConfig(
-                    prompt_md=self.project_root / ".claude" / "agents" / "clef-harmonist.md",
-                    model_alias="deepseek", temperature=0.8,
-                    skills=["harmony", "abc"],
-                    tools=["read_file", "write_file", "validate_abc", "abc_lint"],
-                ),
-                "clef-rhythmist": AgentConfig(
-                    prompt_md=self.project_root / ".claude" / "agents" / "clef-rhythmist.md",
-                    model_alias="deepseek", temperature=0.7,
-                    skills=["rhythm", "abc"],
-                    tools=["read_file", "write_file", "validate_abc", "abc_lint"],
-                ),
-                "clef-reviewer": AgentConfig(
-                    prompt_md=self.project_root / ".claude" / "agents" / "clef-reviewer.md",
-                    model_alias="anthropic", temperature=0.3,
-                    skills=["structure", "orchestration", "abc"],
-                    tools=["read_file", "validate_abc", "abc_lint"],
-                ),
-                "clef-orchestrator": AgentConfig(
-                    prompt_md=self.project_root / ".claude" / "agents" / "clef-orchestrator.md",
-                    model_alias="anthropic", temperature=0.5,
-                    skills=["orchestration", "abc"],
-                    tools=["read_file", "write_file", "abc_to_midi", "inject_expression"],
-                ),
-            }
-
-            config = agent_configs.get(agent_name)
-            if config is None:
-                logger.warning("Unknown agent %s, returning placeholder", agent_name)
+            # Build system prompt from agent markdown + skills + context
+            prompt_path = self.project_root / ".claude" / "agents" / agent_def["prompt_md"]
+            if not prompt_path.exists():
+                logger.warning("Agent prompt not found: %s", prompt_path)
                 return f"[placeholder ABC for {agent_name}]"
 
-            agent = create_agent(
-                name=agent_name,
-                config=config,
-                providers=self.providers,
+            skills_dir = self.project_root / ".claude" / "skills" / "clef-compose"
+            middleware = ClefContextMiddleware(
+                skills=agent_def["skills"],
                 skills_dir=skills_dir,
+            )
+            instructions = _build_instructions(
+                prompt_md=prompt_path,
+                middleware=middleware,
                 plan=plan,
                 score_abc=score_abc,
                 workdir=self.workdir,
             )
-            executor = AgentExecutor(agent)
-            response = await executor.run(Message(role="user", contents=[message]))
+
+            # Get LLM client (resolve model_alias, fall back to first available)
+            model_alias = agent_def["model_alias"]
+            client = self.providers.get(model_alias) or next(iter(self.providers.values()), None)
+            if not client:
+                raise RuntimeError(f"No LLM client available for {agent_name} (alias={model_alias})")
+
+            # Call LLM with system prompt + user message
+            messages = [
+                Message(role="system", contents=[instructions]),
+                Message(role="user", contents=[message]),
+            ]
+            response = await client.get_response(messages)
+
             # Extract text from response
-            if hasattr(response, "messages") and response.messages:
-                content = response.messages[0].contents
-                if isinstance(content, list) and len(content) > 0:
-                    return str(content[0])
-                return str(content)
-            return str(response)
+            content = ""
+            if response.messages and response.messages[0].contents:
+                content = str(response.messages[0].contents[0])
+            return content
         except Exception as exc:
             logger.error("Agent %s execution failed: %s", agent_name, exc)
             raise RuntimeError(f"Agent {agent_name} failed: {exc}") from exc
