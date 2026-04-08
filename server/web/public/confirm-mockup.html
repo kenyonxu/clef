@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>Clef Web — 确认点 UI 原型</title>
+<style>
+  :root {
+    --bg-base: #121212; --bg-elevated: #181818; --bg-highlight: #282828;
+    --bg-surface: #1ed760; --text-primary: #ffffff; --text-secondary: #b3b3b3;
+    --text-muted: #727272; --border: #333; --brand: #1ed760; --error: #e91429;
+    --warn: #f59b23; --pass: #1ed760; --fail: #e91429;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--bg-base); color: var(--text-primary); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 24px; }
+  h1 { font-size: 20px; margin-bottom: 24px; color: var(--brand); }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+  .card { background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+  .card h2 { font-size: 14px; color: var(--text-secondary); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .card h3 { font-size: 16px; margin-bottom: 12px; }
+  .phase-tag { display: inline-block; background: var(--bg-highlight); color: var(--brand); padding: 2px 8px; border-radius: 500px; font-size: 11px; font-weight: 700; margin-bottom: 12px; }
+
+  /* Plan display */
+  .plan-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+  .plan-item { background: var(--bg-highlight); border-radius: 8px; padding: 8px 12px; }
+  .plan-item .label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; }
+  .plan-item .value { font-size: 14px; font-weight: 600; margin-top: 2px; }
+
+  /* Sections */
+  .section-list { margin-top: 12px; }
+  .section-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .section-id { color: var(--brand); font-weight: 700; width: 28px; }
+  .section-name { flex: 1; }
+  .section-energy { color: var(--text-muted); font-size: 11px; }
+
+  /* Review scores */
+  .score-bar { display: flex; align-items: center; gap: 8px; margin: 4px 0; font-size: 13px; }
+  .score-label { width: 80px; color: var(--text-secondary); }
+  .score-track { flex: 1; height: 6px; background: var(--bg-highlight); border-radius: 3px; position: relative; }
+  .score-fill { height: 100%; border-radius: 3px; }
+  .score-value { width: 32px; text-align: right; font-weight: 600; font-size: 12px; }
+
+  /* File preview */
+  .file-preview { background: var(--bg-highlight); border-radius: 8px; padding: 12px; margin-bottom: 12px; display: flex; align-items: center; gap: 10px; }
+  .file-icon { font-size: 24px; }
+  .file-info .file-name { font-size: 13px; font-weight: 600; }
+  .file-info .file-size { font-size: 11px; color: var(--text-muted); }
+  .play-btn { background: var(--brand); color: #000; border: none; border-radius: 500px; padding: 4px 16px; font-size: 12px; font-weight: 700; cursor: pointer; }
+
+  /* Verdict badge */
+  .verdict { display: inline-block; padding: 2px 10px; border-radius: 500px; font-size: 11px; font-weight: 700; }
+  .verdict.pass { background: rgba(30,215,96,0.15); color: var(--pass); }
+  .verdict.revise { background: rgba(233,20,41,0.15); color: var(--fail); }
+
+  /* Feedback input */
+  .feedback-area { margin-top: 12px; }
+  .feedback-area textarea {
+    width: 100%; background: var(--bg-highlight); border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 12px; color: var(--text-primary); font-size: 13px;
+    resize: none; outline: none;
+  }
+  .feedback-area textarea:focus { border-color: var(--brand); }
+  .feedback-area .hint { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
+  /* Action buttons */
+  .actions { display: flex; gap: 8px; margin-top: 16px; }
+  .btn { border: none; border-radius: 500px; padding: 8px 20px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; cursor: pointer; transition: opacity 0.2s; }
+  .btn:hover { opacity: 0.85; }
+  .btn-primary { background: var(--brand); color: #000; }
+  .btn-danger { background: transparent; color: var(--error); border: 1px solid var(--error); }
+  .btn-secondary { background: var(--bg-highlight); color: var(--text-secondary); }
+
+  /* Iteration info */
+  .iter-info { display: flex; gap: 16px; margin-bottom: 12px; font-size: 12px; color: var(--text-muted); }
+  .iter-info span { display: flex; align-items: center; gap: 4px; }
+</style>
+</head>
+<body>
+<h1>Clef Web — 确认点 UI 原型</h1>
+<div class="grid">
+
+  <!-- 确认点 1: Plan -->
+  <div class="card">
+    <span class="phase-tag">Phase 0</span>
+    <h2>确认点 1</h2>
+    <h3>确认音乐规划</h3>
+    <div class="plan-grid">
+      <div class="plan-item"><div class="label">标题</div><div class="value">Boss Battle</div></div>
+      <div class="plan-item"><div class="label">调性</div><div class="value">D Major</div></div>
+      <div class="plan-item"><div class="label">BPM</div><div class="value">140</div></div>
+      <div class="plan-item"><div class="label">拍号</div><div class="value">4/4</div></div>
+      <div class="plan-item"><div class="label">曲式</div><div class="value">ABA</div></div>
+      <div class="plan-item"><div class="label">时长</div><div class="value">28s (112 beats)</div></div>
+      <div class="plan-item"><div class="label">小样长度</div><div class="value">8 bars</div></div>
+      <div class="plan-item"><div class="label">生成顺序</div><div class="value">harmony → melody</div></div>
+    </div>
+    <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px;">配器方案</div>
+    <div class="section-row"><span style="width:60px;color:var(--text-muted)">V:1</span> Flute (ch0) <span style="color:var(--text-muted);font-size:11px;margin-left:auto">C5-G6</span></div>
+    <div class="section-row"><span style="width:60px;color:var(--text-muted)">V:2</span> Strings (ch1) <span style="color:var(--text-muted);font-size:11px;margin-left:auto">G3-E4</span></div>
+    <div class="section-row"><span style="width:60px;color:var(--text-muted)">V:3</span> Bass (ch2) <span style="color:var(--text-muted);font-size:11px;margin-left:auto">E2-B2</span></div>
+    <div class="section-row"><span style="width:60px;color:var(--text-muted)">V:4</span> Drums (ch9)</div>
+    <div style="font-size: 12px; color: var(--text-secondary); margin: 8px 0;">段落结构</div>
+    <div class="section-row"><span class="section-id">A</span><span class="section-name">主题引入</span><span class="section-energy">8 bars · energy 4</span></div>
+    <div class="section-row"><span class="section-id">B</span><span class="section-name">发展高潮</span><span class="section-energy">6 bars · energy 8</span></div>
+    <div class="section-row"><span class="section-id">A'</span><span class="section-name">主题再现</span><span class="section-energy">8 bars · energy 5</span></div>
+    <div class="feedback-area">
+      <textarea rows="2" placeholder="调整建议（可选）..."></textarea>
+      <div class="hint">如需修改规划，在此输入反馈</div>
+    </div>
+    <div class="actions">
+      <button class="btn btn-danger">取消</button>
+      <button class="btn btn-primary" style="margin-left:auto">确认规划</button>
+    </div>
+  </div>
+
+  <!-- 确认点 2: Sample -->
+  <div class="card">
+    <span class="phase-tag">Phase 1</span>
+    <h2>确认点 2</h2>
+    <h3>试听方向小样</h3>
+    <div class="file-preview">
+      <div class="file-icon">🎵</div>
+      <div class="file-info">
+        <div class="file-name">boss_battle_sample.mid</div>
+        <div class="file-size">8 bars · 13.7s · 2.1 KB</div>
+      </div>
+      <button class="play-btn" style="margin-left:auto">▶ 试听</button>
+    </div>
+    <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px;">审核报告</div>
+    <div class="score-bar"><span class="score-label">旋律</span><div class="score-track"><div class="score-fill" style="width:78%;background:var(--pass)"></div></div><span class="score-value" style="color:var(--pass)">7.8</span></div>
+    <div class="score-bar"><span class="score-label">和声</span><div class="score-track"><div class="score-fill" style="width:82%;background:var(--pass)"></div></div><span class="score-value" style="color:var(--pass)">8.2</span></div>
+    <div class="score-bar"><span class="score-label">节奏</span><div class="score-track"><div class="score-fill" style="width:70%;background:var(--warn)"></div></div><span class="score-value" style="color:var(--warn)">7.0</span></div>
+    <div class="score-bar"><span class="score-label">音域</span><div class="score-track"><div class="score-fill" style="width:90%;background:var(--pass)"></div></div><span class="score-value" style="color:var(--pass)">9.0</span></div>
+    <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
+      <span class="verdict pass">PASS</span>
+      <span style="font-size:11px;color:var(--text-muted)">旋律动机清晰，和声进行合理</span>
+    </div>
+    <div class="feedback-area">
+      <textarea rows="2" placeholder="反馈（可选）：如“旋律太保守”“鼓点可以更激烈”..."></textarea>
+      <div class="hint">反馈后将重新生成方向小样（剩余 9 轮）</div>
+    </div>
+    <div class="actions">
+      <button class="btn btn-danger">取消</button>
+      <button class="btn btn-secondary">修改方向</button>
+      <button class="btn btn-primary" style="margin-left:auto">继续完整创作</button>
+    </div>
+  </div>
+
+  <!-- 确认点 3: Final -->
+  <div class="card">
+    <span class="phase-tag">Phase 3→4</span>
+    <h2>确认点 3</h2>
+    <h3>审核最终作品</h3>
+    <div class="iter-info">
+      <span>迭代 2/3 轮</span>
+      <span>总分 8.1</span>
+      <span class="verdict pass">PASS</span>
+    </div>
+    <div class="file-preview">
+      <div class="file-icon">🎶</div>
+      <div class="file-info">
+        <div class="file-name">boss_battle_final.mid</div>
+        <div class="file-size">22 bars · 37.7s · 5.8 KB</div>
+      </div>
+      <button class="play-btn" style="margin-left:auto">▶ 试听</button>
+    </div>
+    <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">最终审核</div>
+    <div class="score-bar"><span class="score-label">旋律</span><div class="score-track"><div class="score-fill" style="width:85%;background:var(--pass)"></div></div><span class="score-value" style="color:var(--pass)">8.5</span></div>
+    <div class="score-bar"><span class="score-label">和声</span><div class="score-track"><div class="score-fill" style="width:88%;background:var(--pass)"></div></div><span class="score-value" style="color:var(--pass)">8.8</span></div>
+    <div class="score-bar"><span class="score-label">节奏</span><div class="score-track"><div class="score-fill" style="width:75%;background:var(--warn)"></div></div><span class="score-value" style="color:var(--warn)">7.5</span></div>
+    <div class="score-bar"><span class="score-label">音域</span><div class="score-track"><div class="score-fill" style="width:90%;background:var(--pass)"></div></div><span class="score-value" style="color:var(--pass)">9.0</span></div>
+    <div class="score-bar"><span class="score-label">声部平衡</span><div class="score-track"><div class="score-fill" style="width:80%;background:var(--pass)"></div></div><span class="score-value" style="color:var(--pass)">8.0</span></div>
+    <div style="font-size:11px;color:var(--text-muted);margin-top:6px">继续后将执行表现力注入（力度/弯音/颤音）并输出最终 MIDI</div>
+    <div class="feedback-area">
+      <textarea rows="2" placeholder="反馈（可选）：如“B段高潮不够”“低音太弱”..."></textarea>
+      <div class="hint">反馈后将回到质量迭代阶段</div>
+    </div>
+    <div class="actions">
+      <button class="btn btn-danger">取消</button>
+      <button class="btn btn-secondary">继续迭代</button>
+      <button class="btn btn-primary" style="margin-left:auto">确认 · 注入表现力</button>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

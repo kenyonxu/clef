@@ -1,0 +1,17 @@
+%%abc-version 2.1
+X:1
+T:Celtic Dawn Town
+M:4/4
+L:1/8
+Q:1/4=85
+K:D
+%%MIDI channel 1
+V:1
+%%MIDI program 73
+|: "D" d'2 f' g'2 f' | e' d' B A2 B | d'2 f' g'2 a' | b' a' g' f'2 e' |
+"G" d'2 f' g'2 f' | e' d' B A2 B | c'2 e' d'2 f' | "A" e' d' c' B2 A :|
+%%MIDI channel 2
+V:2
+%%MIDI program 46
+"D" [FisA]2 [FisA]2 | "G" [GBd]2 [GBd]2 | "A" [Ace]2 [Ace]2 | "D" [DFisA]2 [DFisA]2 |
+"G" [GBd]2 [GBd]2 | "D" [FisA]2 [FisA]2 | "A" [Ace]2 [Ace]2 | "D" [DFisA]2 [DFisA]2 |
