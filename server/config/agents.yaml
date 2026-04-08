@@ -1,45 +1,71 @@
-# Agent 定义 — 每个 Agent 的 prompt/model/tools/skills 映射
-# prompt_md 路径相对于项目根目录（clef-dev/）
-
 agents:
   clef-composer:
-    prompt_md: .claude/agents/clef-composer.md
     model_alias: deepseek
+    prompt_md: .claude\agents\clef-composer.md
+    skills:
+    - melody
+    - orchestration
+    - abc
     temperature: 0.8
-    skills: [melody, orchestration, abc]
-    tools: [read_file, write_file, validate_abc, abc_lint]
-
+    tools:
+    - read_file
+    - write_file
+    - validate_abc
+    - abc_lint
   clef-harmonist:
-    prompt_md: .claude/agents/clef-harmonist.md
     model_alias: deepseek
+    prompt_md: .claude\agents\clef-harmonist.md
+    skills:
+    - harmony
+    - abc
     temperature: 0.8
-    skills: [harmony, abc]
-    tools: [read_file, write_file, validate_abc, abc_lint]
-
-  clef-rhythmist:
-    prompt_md: .claude/agents/clef-rhythmist.md
-    model_alias: deepseek
-    temperature: 0.7
-    skills: [rhythm, abc]
-    tools: [read_file, write_file, validate_abc, abc_lint]
-
-  clef-reviewer:
-    prompt_md: .claude/agents/clef-reviewer.md
-    model_alias: anthropic
-    temperature: 0.3
-    skills: [structure, orchestration, abc]
-    tools: [read_file, validate_abc, abc_lint]
-
-  clef-revision:
-    prompt_md: .claude/agents/clef-revision.md
-    model_alias: deepseek
-    temperature: 0.2
-    skills: [abc]
-    tools: [read_file, write_file]
-
+    tools:
+    - read_file
+    - write_file
+    - validate_abc
+    - abc_lint
   clef-orchestrator:
-    prompt_md: .claude/agents/clef-orchestrator.md
-    model_alias: anthropic
+    model_alias: glm
+    prompt_md: .claude\agents\clef-orchestrator.md
+    skills:
+    - orchestration
+    - abc
     temperature: 0.5
-    skills: [orchestration, abc]
-    tools: [read_file, write_file, abc_to_midi, inject_expression]
+    tools:
+    - read_file
+    - write_file
+    - abc_to_midi
+    - inject_expression
+  clef-reviewer:
+    model_alias: glm
+    prompt_md: .claude\agents\clef-reviewer.md
+    skills:
+    - structure
+    - orchestration
+    - abc
+    temperature: 0.3
+    tools:
+    - read_file
+    - validate_abc
+    - abc_lint
+  clef-revision:
+    model_alias: deepseek
+    prompt_md: .claude\agents\clef-revision.md
+    skills:
+    - abc
+    temperature: 0.2
+    tools:
+    - read_file
+    - write_file
+  clef-rhythmist:
+    model_alias: deepseek
+    prompt_md: .claude\agents\clef-rhythmist.md
+    skills:
+    - rhythm
+    - abc
+    temperature: 0.7
+    tools:
+    - read_file
+    - write_file
+    - validate_abc
+    - abc_lint

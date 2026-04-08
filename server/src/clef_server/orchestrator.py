@@ -42,7 +42,7 @@ class ComposeOrchestrator:
     invoke ``resume()`` to continue.
     """
 
-    # Maximum retry / iteration counts
+    # Maximum retry / iteration counts (defaults, overridden by settings)
     MAX_MELODY_GATE_RETRIES = 3
     MAX_ITERATION_ROUNDS = 3
 
@@ -57,12 +57,19 @@ class ComposeOrchestrator:
         session_id: str,
         providers: dict[str, Any],
         workdir: str,
+        settings: dict[str, Any] | None = None,
     ) -> None:
         self.session_id = session_id
         self.providers = providers
         self.workdir = workdir
         # Resolve project root (where .claude/agents/ lives)
         self.project_root = Path(__file__).resolve().parent.parent.parent.parent
+        # Settings-driven workflow params (shadow class constants)
+        _s = settings or {}
+        self.max_iteration_rounds = _s.get("max_iterations", self.MAX_ITERATION_ROUNDS)
+        self.max_melody_gate_retries = self.MAX_MELODY_GATE_RETRIES  # not configurable via settings
+        self.review_threshold = _s.get("review_threshold", 7)
+        self.skip_review = _s.get("skip_review", False)
 
     # ------------------------------------------------------------------
     # Session access (always fresh from the manager)
@@ -85,26 +92,39 @@ class ComposeOrchestrator:
         self.session.set_running()
         await self._phase_parse(prompt)
 
-    async def resume(self, user_feedback: str | None = None) -> None:
+    async def resume(
+        self,
+        user_feedback: str | None = None,
+        action: str = "continue",
+        saved_confirmation_data: dict | None = None,
+    ) -> None:
         """Resume from a confirmation checkpoint.
 
-        Reads ``session.confirmation_data["phase"]`` to determine where to
-        continue.  For the ``parse`` phase, we always advance to ``sample``
-        regardless of feedback (the plan is accepted or regenerated inside
-        ``_phase_sample``).
+        Args:
+            user_feedback: Optional text feedback from the user.
+            action: "continue" (advance) or "revise" (iterate).
+            saved_confirmation_data: Snapshot from before the route cleared it.
         """
-        phase = self.session.confirmation_data.get("phase") if self.session.confirmation_data else None
+        data = saved_confirmation_data
+        phase = data.get("phase") if data else None
         if phase is None:
-            raise RuntimeError("Session is not awaiting confirmation")
+            raise RuntimeError("No saved confirmation data for resume")
 
-        self.session.set_running()
+        # Explicit "revise" action: always iterate regardless of phase
+        if action == "revise":
+            if phase == "sample":
+                await self._phase_sample(feedback=user_feedback)
+            elif phase == "review":
+                await self._phase_iterate(extra_feedback=user_feedback)
+            else:
+                await self._phase_sample(feedback=None)
+            return
 
-        # H1: parse confirmation always advances to sample, no feedback loop
+        # action == "continue"
         if phase == "parse":
             await self._phase_sample(feedback=None)
             return
 
-        # Review phase: user feedback triggers iteration, no feedback advances to express
         if phase == "review":
             if user_feedback:
                 await self._phase_iterate(extra_feedback=user_feedback)
@@ -186,6 +206,43 @@ class ComposeOrchestrator:
             await self._advance_phase(next_id)
 
     # ------------------------------------------------------------------
+    # MIDI program injection
+    # ------------------------------------------------------------------
+
+    def _inject_midi_programs(self, score_path: Path, plan: dict) -> None:
+        """Inject %%MIDI program directives into score.abc based on plan.json.
+
+        Maps each voice (V:1..V:4) to its orchestration part and injects
+        the midi_program number. Skips voices that already have a program directive.
+        """
+        orch = plan.get("orchestration", {})
+        voice_map = {
+            1: orch.get("melody", {}),
+            2: orch.get("harmony", {}),
+            3: orch.get("bass", {}),
+            4: orch.get("drums", {}),
+        }
+
+        text = score_path.read_text(encoding="utf-8")
+        lines = text.split("\n")
+        new_lines: list[str] = []
+        injected_voices: set[int] = set()
+
+        for line in lines:
+            stripped = line.strip()
+            if stripped.startswith("%%MIDI program"):
+                continue
+            new_lines.append(line)
+            for voice_num, part in voice_map.items():
+                if stripped == f"V:{voice_num}" and voice_num not in injected_voices:
+                    prog = part.get("midi_program")
+                    if prog is not None:
+                        new_lines.append(f"%%MIDI program {prog}")
+                        injected_voices.add(voice_num)
+
+        score_path.write_text("\n".join(new_lines), encoding="utf-8")
+
+    # ------------------------------------------------------------------
     # Output collection
     # ------------------------------------------------------------------
 
@@ -223,7 +280,7 @@ class ComposeOrchestrator:
             "- form: string (e.g. 'ABA', 'AB', 'AABA')\n"
             "- sections: array of {id, name, measures, start_beat, energy_level, dynamics, balance_intent, melody_strategy}\n"
             "- orchestration: object with melody/harmony/bass/drums sub-objects, "
-            "each having name, channel, instrument, range, register\n"
+            "each having name, channel, instrument, range, register, midi_program (GM program number 0-127)\n"
             "- generation_order: array like ['harmony', 'melody']\n"
             "- demo_length_bars: integer (2-16)\n\n"
             "Respond ONLY with valid JSON. No markdown, no explanation."
@@ -251,6 +308,14 @@ class ComposeOrchestrator:
             json.dumps(plan, ensure_ascii=False, indent=2),
             encoding="utf-8",
         )
+
+        # Rename workdir to use title instead of prompt snippet
+        title = plan.get("title", "")
+        if title:
+            from clef_server.config import rename_workdir_with_title
+            new_workdir = rename_workdir_with_title(self.workdir, title)
+            self.workdir = new_workdir
+            self.session.workdir = new_workdir
 
         self.session.record_phase("parse", "done")
         self.session.set_awaiting_confirm(confirmation_data={
@@ -492,10 +557,12 @@ class ComposeOrchestrator:
             logger.error("merge_abc failed: %s", merge_result["error"])
             raise RuntimeError(f"merge_abc failed: {merge_result['error']}")
 
+        self._inject_midi_programs(score_path, plan)
+
         # Step 2: Melody gate — review melody only up to 3 times
         melody_agent = self.VOICE_AGENT_MAP.get("melody", "clef-composer")
         melody_label = self.VOICE_MAP.get("melody", "V:1")
-        for _ in range(self.MAX_MELODY_GATE_RETRIES):
+        for _ in range(self.max_melody_gate_retries):
             review = await self._call_reviewer(plan, melody_only=True)
             if review.get("verdict") != "revise":
                 break
@@ -514,6 +581,7 @@ class ComposeOrchestrator:
             if "error" in merge_result:
                 logger.error("merge_abc (melody gate) failed: %s", merge_result["error"])
                 raise RuntimeError(f"merge_abc (melody gate) failed: {merge_result['error']}")
+            self._inject_midi_programs(score_path, plan)
 
         # Step 3: Convert sample to MIDI
         sample_mid = Path(self.workdir) / "sample.mid"
@@ -578,6 +646,8 @@ class ComposeOrchestrator:
             logger.error("merge_abc failed: %s", merge_result["error"])
             raise RuntimeError(f"merge_abc failed: {merge_result['error']}")
 
+        self._inject_midi_programs(score_path, plan)
+
         # Validate
         report_path = Path(self.workdir) / "validation_report.json"
         from clef_server.tools import validate_abc
@@ -611,7 +681,7 @@ class ComposeOrchestrator:
         plan = json.loads(plan_path.read_text(encoding="utf-8"))
         score_path = Path(self.workdir) / "score.abc"
 
-        for round_num in range(1, self.MAX_ITERATION_ROUNDS + 1):
+        for round_num in range(1, self.max_iteration_rounds + 1):
             self.session.iteration_count = round_num
 
             # Full review
@@ -660,28 +730,33 @@ class ComposeOrchestrator:
                 completed_agents.add(agent_name)
 
             # Validate after each iteration round
+            self._inject_midi_programs(score_path, plan)
             report_path = Path(self.workdir) / f"validation_report_iter{round_num}.json"
             from clef_server.tools import validate_abc
             validate_abc(str(score_path), str(plan_path), str(report_path))
 
         # C6: Set confirmation_data with review + iteration count before advancing
-        final_review = await self._call_reviewer(plan, melody_only=False)
-        confirmation_data = {
-            "phase": "review",
-            "title": "试听审核",
-            "review": final_review,
-            "iteration_count": self.session.iteration_count,
-            "output_file": "output/final.mid",
-        }
-
         self.session.record_phase("iterate", "done")
         logger.info(
             "Session %s: Phase 3 (iterate) done, %d rounds",
             self.session_id, self.session.iteration_count,
         )
 
-        # Advance to review (confirm phase)
-        await self._advance_phase("iterate", confirmation_data=confirmation_data)
+        if self.skip_review:
+            # Fast test mode — skip review, go directly to express
+            logger.info("Session %s: skip_review=True, skipping review phase", self.session_id)
+            await self._phase_express()
+        else:
+            final_review = await self._call_reviewer(plan, melody_only=False)
+            confirmation_data = {
+                "phase": "review",
+                "title": "试听审核",
+                "review": final_review,
+                "iteration_count": self.session.iteration_count,
+                "output_file": "output/final.mid",
+            }
+            # Advance to review (confirm phase)
+            await self._advance_phase("iterate", confirmation_data=confirmation_data)
 
     # ------------------------------------------------------------------
     # Phase 4: Express (表现力注入)

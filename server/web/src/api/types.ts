@@ -1,6 +1,7 @@
 export interface AgentProgress {
   name: string
-  status: WorkflowStepStatus
+  status?: WorkflowStepStatus
+  model?: string
 }
 
 export interface ConfirmationData {
@@ -94,13 +95,81 @@ export interface ResultResponse {
 
 export interface ChatMessage {
   id: string
-  type: 'user' | 'system' | 'error'
+  type: 'user' | 'system' | 'error' | 'confirmation'
   content: string
   timestamp: number
+  confirmationData?: ConfirmationData
+  isActive?: boolean
 }
 
 export interface OutputFile {
   filename: string
   path: string
   size?: number
+}
+
+// === Settings ===
+
+export interface Settings {
+  output_dir: string
+  max_iterations: number
+  review_threshold: number
+  skip_review: boolean
+}
+
+export interface SettingsUpdate {
+  output_dir?: string
+  max_iterations?: number
+  review_threshold?: number
+  skip_review?: boolean
+}
+
+export interface ProviderInfo {
+  alias: string
+  model_id: string
+  base_url: string
+  api_key_masked: string
+  is_configured: boolean
+}
+
+export interface ProviderList {
+  anthropic: ProviderInfo | null
+  openai_compat: ProviderInfo[]
+}
+
+export interface ProviderUpdate {
+  anthropic_api_key?: string
+  anthropic_model?: string
+  openai_compat?: Record<string, { model_id: string; base_url: string; api_key: string }>
+  remove_openai_compat?: string[]
+}
+
+export interface AgentInfo {
+  name: string
+  model_alias: string
+  temperature: number
+  skills: string[]
+  tools: string[]
+}
+
+export interface AgentList {
+  agents: AgentInfo[]
+}
+
+export interface AgentUpdate {
+  agents: Record<string, { model_alias: string; temperature: number }>
+}
+
+export interface DependencyStatus {
+  name: string
+  installed: boolean
+}
+
+export interface Diagnostics {
+  version: string
+  uptime_seconds: number
+  temp_workdir: string
+  temp_session_count: number
+  temp_disk_usage_mb: number
+  dependencies: DependencyStatus[]
 }

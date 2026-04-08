@@ -14,7 +14,7 @@ import json
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from clef_server.agents import create_agent
 from clef_server.config import AgentConfig
@@ -94,21 +94,31 @@ class MergedScore:
 
 # === Deterministic Executors ===
 
+def _noop_step(step_id: int, status: str, *, error: str | None = None) -> None:
+    """Default no-op callback when no on_step is provided."""
+
+
 class PromptBuilderExecutor(Executor):
     """Receives ComposeRequest, builds a prompt string, fan-outs to 3 agents.
 
-    Output: str -- a prompt string containing the plan JSON and user instructions,
-    suitable for AgentExecutor's from_str handler.
+    Steps reported:
+      0 (parse) → running at start, done after build
+      1 (plan)   → done after build (parse+plan happen together in MVP)
     """
 
-    def __init__(self, workdir: str, id: str = "prompt_builder"):
+    def __init__(self, workdir: str, id: str = "prompt_builder",
+                 on_step: Callable | None = None):
         super().__init__(id=id)
         self._workdir = workdir
+        self._on_step = on_step or _noop_step
 
     @handler
     async def build(self, message: ComposeRequest, ctx: WorkflowContext[str]) -> None:
+        self._on_step(0, "running")
         plan = message.plan or {"title": message.user_prompt, "status": "parsed"}
         prompt = self._build_prompt(message.user_prompt, plan, message.workdir)
+        self._on_step(0, "done")
+        self._on_step(1, "done")
         await ctx.send_message(prompt)
 
     @staticmethod
@@ -142,15 +152,19 @@ class VoiceFragmentExtractor(Executor):
 class MergeExecutor(Executor):
     """Receives list[VoiceFragment] (fan-in), merges into one ABC, outputs str.
 
-    The merged ABC string is sent downstream as plain str for the next executor.
+    Steps reported:
+      2 (create) → running at start, done after merge
     """
 
-    def __init__(self, workdir: str = "", id: str = "merge"):
+    def __init__(self, workdir: str = "", id: str = "merge",
+                 on_step: Callable | None = None):
         super().__init__(id=id)
         self._workdir = workdir
+        self._on_step = on_step or _noop_step
 
     @handler
     async def merge(self, message: list[VoiceFragment], ctx: WorkflowContext[str]) -> None:
+        self._on_step(2, "running")
         from clef_server.tools import merge_abc, write_file
 
         plan: dict = {}
@@ -167,6 +181,7 @@ class MergeExecutor(Executor):
         merge_abc(plan=plan_path, fragments=fragments, output=output_path)
 
         score_abc = Path(output_path).read_text(encoding="utf-8") if Path(output_path).exists() else ""
+        self._on_step(2, "done")
         await ctx.send_message(score_abc)
 
     @staticmethod
@@ -185,15 +200,21 @@ class MergeExecutor(Executor):
 class InjectExecutor(Executor):
     """Receives str (merged ABC), converts to MIDI, yields workflow output.
 
+    Steps reported:
+      3 (inject) → running at start, done after conversion
+
     Uses WorkflowContext[Never, str] -- only yields output, never sends downstream.
     """
 
-    def __init__(self, workdir: str = "", id: str = "inject"):
+    def __init__(self, workdir: str = "", id: str = "inject",
+                 on_step: Callable | None = None):
         super().__init__(id=id)
         self._workdir = workdir
+        self._on_step = on_step or _noop_step
 
     @handler
     async def inject(self, message: str, ctx: WorkflowContext) -> None:
+        self._on_step(3, "running")
         from clef_server.tools import write_file, abc_to_midi
 
         workdir = self._workdir
@@ -206,6 +227,7 @@ class InjectExecutor(Executor):
         Path(f"{workdir}/output").mkdir(parents=True, exist_ok=True)
         abc_to_midi(input_abc=score_path, output_mid=midi_path)
 
+        self._on_step(3, "done")
         await ctx.yield_output(midi_path)
 
 
@@ -216,6 +238,7 @@ def build_compose_workflow(
     plan: dict | None = None,
     workdir: str = "",
     skills_dir: Path | None = None,
+    on_step: Callable | None = None,
 ) -> Any:
     project_root = Path(__file__).resolve().parent.parent.parent.parent
     if skills_dir is None:
@@ -244,9 +267,9 @@ def build_compose_workflow(
     }
 
     # Build the workflow graph
-    prompt_builder = PromptBuilderExecutor(workdir=workdir, id="prompt_builder")
-    merge_exec = MergeExecutor(workdir=workdir, id="merge")
-    inject_exec = InjectExecutor(workdir=workdir, id="inject")
+    prompt_builder = PromptBuilderExecutor(workdir=workdir, id="prompt_builder", on_step=on_step)
+    merge_exec = MergeExecutor(workdir=workdir, id="merge", on_step=on_step)
+    inject_exec = InjectExecutor(workdir=workdir, id="inject", on_step=on_step)
 
     # Create agent executors (mocked in tests)
     agent_executors: dict = {}

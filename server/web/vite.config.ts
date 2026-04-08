@@ -12,6 +12,7 @@ export default defineConfig({
       '/confirm': 'http://localhost:8900',
       '/cancel': 'http://localhost:8900',
       '/sessions': 'http://localhost:8900',
+      '/settings': 'http://localhost:8900',
       '/api': 'http://localhost:8900',
       '/docs': 'http://localhost:8900',
       '/redoc': 'http://localhost:8900',

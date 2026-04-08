@@ -124,7 +124,6 @@ export function Workspace() {
             <StepCard
               key={step.id}
               step={step}
-              isExpanded={step.name === 'create'}
             />
           ))}
         </div>

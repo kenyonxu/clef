@@ -3,6 +3,7 @@ import { apiClient } from '../api/client'
 import type {
   Session,
   WorkflowStep,
+  ConfirmationData,
   ChatMessage,
   OutputFile,
   ComposeResponse,
@@ -16,9 +17,14 @@ interface SessionState {
   workflowSteps: WorkflowStep[]
   messages: ChatMessage[]
   outputFiles: OutputFile[]
+  confirmationData: ConfirmationData | null
+  currentPhase: string | null
+  sampleRound: number
+  iterationCount: number
 
   submitPrompt: (prompt: string) => Promise<void>
   pollOnce: (sessionId: string) => Promise<void>
+  confirmSession: (sessionId: string, action: 'continue' | 'revise' | 'cancel', feedback?: string) => Promise<void>
   cancelSession: (sessionId: string) => Promise<void>
   loadSessions: () => Promise<void>
 }
@@ -32,12 +38,16 @@ function fileFromPath(path: string): OutputFile {
   return { filename, path }
 }
 
-export const useSessionStore = create<SessionState>((set) => ({
+export const useSessionStore = create<SessionState>((set, get) => ({
   currentSession: null,
   sessions: [],
   workflowSteps: [],
   messages: [],
   outputFiles: [],
+  confirmationData: null,
+  currentPhase: null,
+  sampleRound: 0,
+  iterationCount: 0,
 
   submitPrompt: async (prompt: string) => {
     set((s) => ({
@@ -45,6 +55,10 @@ export const useSessionStore = create<SessionState>((set) => ({
         ...s.messages,
         { id: createMessageId(), type: 'user', content: prompt, timestamp: Date.now() },
       ],
+      confirmationData: null,
+      currentPhase: 'parse',
+      sampleRound: 0,
+      iterationCount: 0,
     }))
 
     try {
@@ -75,13 +89,63 @@ export const useSessionStore = create<SessionState>((set) => ({
   pollOnce: async (sessionId: string) => {
     try {
       const data = await apiClient.get<StatusResponse>(`/status/${sessionId}`)
+      const prevConfirmation = get().confirmationData
       set({
         currentSession: data,
         workflowSteps: data.workflow_steps ?? [],
         outputFiles: data.output_files.map(fileFromPath),
+        confirmationData: data.confirmation_data ?? null,
+        currentPhase: data.current_phase ?? null,
+        sampleRound: data.sample_round ?? 0,
+        iterationCount: data.iteration_count ?? 0,
       })
+      if (data.confirmation_data && !prevConfirmation) {
+        set((s) => ({
+          messages: [
+            ...s.messages,
+            {
+              id: createMessageId(),
+              type: 'confirmation' as const,
+              content: data.confirmation_data!.title,
+              timestamp: Date.now(),
+              confirmationData: data.confirmation_data!,
+              isActive: true,
+            },
+          ],
+        }))
+      }
+      if (!data.confirmation_data && prevConfirmation) {
+        set((s) => ({
+          messages: s.messages.map((m) =>
+            m.type === 'confirmation' && m.isActive
+              ? { ...m, isActive: false }
+              : m
+          ),
+        }))
+      }
     } catch {
       // Silently ignore poll errors -- will retry on next interval
+    }
+  },
+
+  confirmSession: async (sessionId: string, action: 'continue' | 'revise' | 'cancel', feedback?: string) => {
+    try {
+      set((s) => ({
+        messages: s.messages.map((m) =>
+          m.type === 'confirmation' && m.isActive
+            ? { ...m, isActive: false }
+            : m
+        ),
+      }))
+      await apiClient.post(`/confirm/${sessionId}`, { action, feedback })
+      await get().pollOnce(sessionId)
+    } catch (err) {
+      set((s) => ({
+        messages: [
+          ...s.messages,
+          { id: createMessageId(), type: 'error', content: err instanceof Error ? err.message : 'Confirm failed', timestamp: Date.now() },
+        ],
+      }))
     }
   },
 

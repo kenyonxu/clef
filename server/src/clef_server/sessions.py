@@ -24,12 +24,12 @@ WORKFLOW_STEPS = [
 ]
 
 PHASES = [
-    {"id": "parse",   "label": "需求解析 + 规划",  "confirm": True},
-    {"id": "sample",  "label": "方向小样",         "confirm": True},
-    {"id": "create",  "label": "完整创作",         "confirm": False},
-    {"id": "iterate", "label": "质量迭代",         "confirm": False},
-    {"id": "review",  "label": "试听审核",         "confirm": True},
-    {"id": "express", "label": "表现力注入",       "confirm": False},
+    {"id": "parse",   "label": "需求解析 + 规划",  "confirm": True,  "agents": []},
+    {"id": "sample",  "label": "方向小样",         "confirm": True,  "agents": ["clef-composer", "clef-harmonist", "clef-rhythmist"]},
+    {"id": "create",  "label": "完整创作",         "confirm": False, "agents": ["clef-composer", "clef-harmonist", "clef-rhythmist"]},
+    {"id": "iterate", "label": "质量迭代",         "confirm": False, "agents": ["clef-reviewer", "clef-revision"]},
+    {"id": "review",  "label": "试听审核",         "confirm": True,  "agents": ["clef-reviewer"]},
+    {"id": "express", "label": "表现力注入",       "confirm": False, "agents": ["clef-orchestrator"]},
 ]
 
 PHASE_ORDER = ["parse", "sample", "create", "iterate", "review", "express"]

@@ -1,16 +1,21 @@
 import type { ChatMessage as ChatMessageType } from '../api/types'
+import { ConfirmationCard } from './ConfirmationCard'
 
 interface ChatMessageProps {
   message: ChatMessageType
 }
 
-const MESSAGE_STYLES: Record<ChatMessageType['type'], string> = {
+const MESSAGE_STYLES: Record<string, string> = {
   user: 'bg-surface-mid text-white ml-auto',
   system: 'bg-surface text-silver',
   error: 'bg-error/10 text-error',
 }
 
 export function ChatMessage({ message }: ChatMessageProps) {
+  if (message.type === 'confirmation') {
+    return <ConfirmationCard message={message} />
+  }
+
   const time = new Date(message.timestamp).toLocaleTimeString('zh-CN', {
     hour: '2-digit',
     minute: '2-digit',

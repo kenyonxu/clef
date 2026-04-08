@@ -11,6 +11,13 @@ from clef_server.config import (
     ProviderConfig,
     load_agent_configs,
     load_provider_config,
+    load_settings,
+    save_settings,
+    sanitize_prompt_for_filename,
+    generate_workdir,
+    save_provider_config,
+    load_provider_config_raw,
+    save_agent_configs,
     _expand_env_vars,
 )
 
@@ -78,3 +85,75 @@ class TestAgentConfigs:
         )
         assert cfg.prompt_md == Path("test.md")
         assert cfg.temperature == 0.8
+
+
+class TestSettings:
+    def test_load_settings_missing_file_returns_defaults(self, tmp_path):
+        settings = load_settings(tmp_path)
+        assert settings["max_iterations"] == 3
+        assert settings["output_dir"] == ""
+        assert settings["skip_review"] is False
+
+    def test_save_and_load_settings_roundtrip(self, tmp_path):
+        custom = {"output_dir": "E:\\Music\\Clef", "max_iterations": 5}
+        save_settings(tmp_path, custom)
+        loaded = load_settings(tmp_path)
+        assert loaded["output_dir"] == "E:\\Music\\Clef"
+        assert loaded["max_iterations"] == 5
+        assert loaded["review_threshold"] == 7  # default fills in
+
+    def test_sanitize_prompt(self):
+        assert sanitize_prompt_for_filename("Hello World") == "Hello World"
+        assert sanitize_prompt_for_filename('A<>B*C?D') == "ABCD"
+        assert sanitize_prompt_for_filename("") == "untitled"
+        long = "x" * 50
+        result = sanitize_prompt_for_filename(long, max_length=20)
+        assert len(result) <= 20
+
+    def test_generate_workdir_legacy(self):
+        settings = {"output_dir": ""}
+        result = generate_workdir(settings, "clef-abc123", "test")
+        assert "clef-work" in result
+        assert "clef-abc123" in result
+
+    def test_generate_workdir_custom(self):
+        settings = {"output_dir": "E:\\Music\\Clef"}
+        result = generate_workdir(settings, "clef-abc123", "Boss Battle")
+        assert result.startswith("E:\\Music\\Clef")
+        assert "Boss Battle" in result
+        assert "untitled" not in result
+
+
+class TestProviderWriteBack:
+    def test_save_provider_config_roundtrip(self, tmp_path):
+        path = tmp_path / "providers.yaml"
+        raw = {
+            "anthropic": {"api_key": "${ANTHROPIC_API_KEY}", "default_model": "claude-sonnet-4-20250514"},
+            "openai_compat": {
+                "deepseek": {"model_id": "test-model", "base_url": "https://api.test.com", "api_key": "${DS_KEY}"},
+            },
+        }
+        save_provider_config(path, raw)
+        loaded = load_provider_config_raw(path)
+        assert loaded["anthropic"]["default_model"] == "claude-sonnet-4-20250514"
+        assert loaded["openai_compat"]["deepseek"]["model_id"] == "test-model"
+
+
+class TestAgentWriteBack:
+    def test_save_agent_configs_preserves_all_fields(self, tmp_path):
+        path = tmp_path / "agents.yaml"
+        configs = {
+            "clef-composer": AgentConfig(
+                prompt_md=".claude/agents/clef-composer.md",
+                model_alias="anthropic",
+                temperature=0.9,
+                skills=["melody", "abc"],
+                tools=["read_file"],
+            ),
+        }
+        save_agent_configs(path, configs)
+        loaded = load_agent_configs(path)
+        assert loaded["clef-composer"].model_alias == "anthropic"
+        assert loaded["clef-composer"].temperature == 0.9
+        assert loaded["clef-composer"].skills == ["melody", "abc"]
+        assert loaded["clef-composer"].tools == ["read_file"]

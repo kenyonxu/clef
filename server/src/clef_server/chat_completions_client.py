@@ -5,6 +5,7 @@ which many providers don't support. This client uses the standard Chat Completio
 API (/v1/chat/completions) instead.
 """
 
+import asyncio
 import logging
 from typing import Any
 
@@ -75,14 +76,32 @@ class ChatCompletionsClient:
         }
 
         try:
-            async with httpx.AsyncClient(timeout=120.0) as client:
-                resp = await client.post(
-                    f"{self._base_url}/chat/completions",
-                    json=payload,
-                    headers=headers,
-                )
-                resp.raise_for_status()
-                data = resp.json()
+            timeout = httpx.Timeout(connect=30.0, read=300.0, write=30.0, pool=30.0)
+            max_retries = 3
+            last_error: Exception | None = None
+            for attempt in range(max_retries):
+                try:
+                    async with httpx.AsyncClient(timeout=timeout) as client:
+                        resp = await client.post(
+                            f"{self._base_url}/chat/completions",
+                            json=payload,
+                            headers=headers,
+                        )
+                        resp.raise_for_status()
+                        data = resp.json()
+                        break
+                except (
+                    httpx.ReadTimeout,
+                    httpx.ConnectTimeout,
+                    httpx.ConnectError,
+                    httpx.RemoteProtocolError,
+                ) as e:
+                    last_error = e
+                    logger.warning(f"Transient error on attempt {attempt + 1}/{max_retries}: {e}")
+                    if attempt < max_retries - 1:
+                        await asyncio.sleep(2 ** attempt)
+                    else:
+                        raise
 
         except httpx.HTTPStatusError as e:
             status = e.response.status_code
