@@ -90,6 +90,14 @@ class ChatCompletionsClient:
                         resp.raise_for_status()
                         data = resp.json()
                         break
+                except httpx.HTTPStatusError as e:
+                    status = e.response.status_code
+                    if status in (429, 502, 503) and attempt < max_retries - 1:
+                        last_error = e
+                        logger.warning(f"Server error {status} on attempt {attempt + 1}/{max_retries}, retrying...")
+                        await asyncio.sleep(2 ** attempt)
+                        continue
+                    raise
                 except (
                     httpx.ReadTimeout,
                     httpx.ConnectTimeout,

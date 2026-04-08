@@ -25,7 +25,12 @@ SAMPLE_PLAN_JSON = json.dumps({
     "bpm": 120,
     "time_signature": "4/4",
     "form": "ABA",
-    "sections": [],
+    "total_bars": 32,
+    "sections": [
+        {"id": "A", "name": "Verse", "measures": 12},
+        {"id": "B", "name": "Chorus", "measures": 8},
+        {"id": "A2", "name": "Verse 2", "measures": 12},
+    ],
     "orchestration": {
         "melody": {"name": "Piano", "channel": 0, "instrument": "Acoustic Grand Piano", "range": [60, 84], "register": [60, 79]},
         "harmony": {"name": "Piano", "channel": 1, "instrument": "Acoustic Grand Piano", "range": [48, 72], "register": [55, 72]},
@@ -376,13 +381,17 @@ SAMPLE_PLAN = {
     "bpm": 120,
     "time_signature": "4/4",
     "form": "AB",
-    "sections": [],
+    "total_bars": 24,
+    "sections": [
+        {"id": "A", "name": "Section A", "measures": 12},
+        {"id": "B", "name": "Section B", "measures": 12},
+    ],
     "orchestration": {
         "melody": {"name": "Flute", "channel": 0, "instrument": "flute", "range": "C5-G6", "register": "C5-G6"},
         "harmony": {"name": "Strings", "channel": 1, "instrument": "strings", "range": "G3-E4", "register": "G3-E4"},
     },
     "generation_order": ["harmony", "melody"],
-    "demo_length_bars": 4,
+    "demo_length_bars": 8,
 }
 
 

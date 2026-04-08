@@ -129,6 +129,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   },
 
   confirmSession: async (sessionId: string, action: 'continue' | 'revise' | 'cancel', feedback?: string) => {
+    const activeMessages = get().messages.filter((m) => m.type === 'confirmation' && m.isActive)
     try {
       set((s) => ({
         messages: s.messages.map((m) =>
@@ -140,6 +141,14 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       await apiClient.post(`/confirm/${sessionId}`, { action, feedback })
       await get().pollOnce(sessionId)
     } catch (err) {
+      // Restore isActive so user can retry
+      const activeIds = new Set(activeMessages.map((m) => m.id))
+      set((s) => ({
+        messages: s.messages.map((m) =>
+          activeIds.has(m.id) ? { ...m, isActive: true } : m
+        ),
+        confirmationData: get().confirmationData ?? activeMessages[0]?.confirmationData ?? null,
+      }))
       set((s) => ({
         messages: [
           ...s.messages,

@@ -11,10 +11,47 @@ from pathlib import Path
 from typing import Any
 
 from agent_framework import Message
+from pydantic import BaseModel, Field, model_validator
 
 from clef_server.sessions import PHASES, PHASE_ORDER, SessionManager
 
 logger = logging.getLogger(__name__)
+
+
+# --- Plan schema validation ---
+
+class _PlanSection(BaseModel):
+    id: str
+    name: str
+    measures: int = Field(gt=0)
+
+
+class _PlanOrchestration(BaseModel):
+    melody: dict = Field(default_factory=dict)
+    harmony: dict = Field(default_factory=dict)
+    bass: dict = Field(default_factory=dict)
+    drums: dict = Field(default_factory=dict)
+
+
+class _PlanSchema(BaseModel):
+    """Minimal validation for LLM-generated plan.json."""
+    title: str = Field(min_length=1)
+    key: str = Field(min_length=1)
+    scale: str
+    bpm: int = Field(gt=30, lt=300)
+    time_signature: str
+    form: str
+    total_bars: int = Field(gt=0, default=32)
+    sections: list[_PlanSection] = Field(min_length=1)
+    orchestration: _PlanOrchestration
+    generation_order: list[str] = Field(default_factory=lambda: ["harmony", "melody"])
+
+    @model_validator(mode="after")
+    def sync_total_bars(self) -> "_PlanSchema":
+        calculated = sum(s.measures for s in self.sections)
+        if calculated > 0:
+            self.total_bars = calculated
+        return self
 
 # Re-export for convenience
 __all__ = ["ComposeOrchestrator", "PHASE_ORDER"]
@@ -123,6 +160,10 @@ class ComposeOrchestrator:
         # action == "continue"
         if phase == "parse":
             await self._phase_sample(feedback=None)
+            return
+
+        if phase == "sample":
+            await self._advance_phase("sample")
             return
 
         if phase == "review":
@@ -304,13 +345,15 @@ class ComposeOrchestrator:
         except json.JSONDecodeError as e:
             raise RuntimeError(f"LLM returned invalid plan JSON: {e}") from e
 
-        # Validate and fix total_bars from sections
-        sections = plan.get("sections", [])
-        calculated_total = sum(s.get("measures", 0) for s in sections)
-        if calculated_total > 0:
-            plan["total_bars"] = calculated_total
-        else:
-            plan["total_bars"] = plan.get("total_bars", 32)
+        # Validate plan against schema
+        try:
+            validated = _PlanSchema.model_validate(plan)
+            plan = validated.model_dump()
+        except Exception as e:
+            raise RuntimeError(f"LLM plan failed schema validation: {e}") from e
+
+        # Override total_bars from user-specified duration if present
+        plan = self._apply_duration_constraint(plan, prompt)
 
         # Calculate demo_length_bars proportionally (not LLM-generated)
         plan["demo_length_bars"] = self._calculate_demo_bars(plan["total_bars"])
@@ -437,16 +480,30 @@ class ComposeOrchestrator:
         """Extract ABC notation from agent response text.
 
         Handles markdown code fences (```abc ... ```) or raw ABC content.
+        Also trims trailing rest-only bars.
         """
         text = text.strip()
         # Try fenced block first
         fence_match = re.search(r"```(?:abc)?\s*\n(.*?)```", text, re.DOTALL)
         if fence_match:
-            return fence_match.group(1).strip()
+            text = fence_match.group(1).strip()
         # Fallback: treat entire text as ABC if it looks like ABC
-        if text.startswith("X:") or text.startswith("T:"):
-            return text
+        elif not (text.startswith("X:") or text.startswith("T:")):
+            pass  # use text as-is
+
+        # Trim trailing rest-only bars
+        text = self._trim_trailing_rests(text)
         return text
+
+    @staticmethod
+    def _is_placeholder(text: str) -> bool:
+        """Check if extracted ABC is a placeholder (not real music)."""
+        lower = text.lower().strip()
+        return (
+            "placeholder" in lower
+            or len(lower) < 10
+            or not any(c in lower for c in "|abcdefg'")
+        )
 
     def _extract_json(self, text: str) -> dict:
         """Extract JSON from agent response, handling markdown fencing."""
@@ -462,6 +519,80 @@ class ComposeOrchestrator:
     # ------------------------------------------------------------------
     # Prompt builders & helpers
     # ------------------------------------------------------------------
+
+    @staticmethod
+    def _apply_duration_constraint(plan: dict, user_prompt: str) -> dict:
+        """If the user prompt specifies a duration, override total_bars and redistribute sections.
+
+        Supports patterns like "45秒", "30秒左右", "1分钟", "1分30秒", "90s".
+        """
+        # Extract duration in seconds from prompt
+        seconds = 0.0
+        # Match "X分Y秒" or "X分钟Y秒"
+        m = re.search(r"(\d+)\s*(?:分|分钟)\s*(?:(\d+)\s*秒)?", user_prompt)
+        if m:
+            seconds = int(m.group(1)) * 60
+            if m.group(2):
+                seconds += int(m.group(2))
+        else:
+            # Match "X秒" or "Xs"
+            m = re.search(r"(\d+)\s*(?:秒|s)", user_prompt)
+            if m:
+                seconds = float(m.group(1))
+
+        if seconds <= 0:
+            return plan
+
+        bpm = plan.get("bpm", 120)
+        ts = plan.get("time_signature", "4/4")
+        beats_per_bar = float(ts.split("/")[0]) if "/" in ts else 4.0
+        target_bars = round(seconds * bpm / 60.0 / beats_per_bar)
+        target_bars = max(8, target_bars)  # minimum 8 bars
+
+        if target_bars == plan.get("total_bars"):
+            return plan
+
+        logger.info(
+            "Duration constraint: user wants ~%.0fs, adjusting total_bars %d → %d (bpm=%d, %s)",
+            seconds, plan.get("total_bars"), target_bars, bpm, ts,
+        )
+
+        # Redistribute sections proportionally
+        sections = plan.get("sections", [])
+        if not sections:
+            return plan
+
+        old_total = sum(s.get("measures", 1) for s in sections)
+        remaining = target_bars
+        for i, sec in enumerate(sections):
+            if i == len(sections) - 1:
+                sec["measures"] = max(2, remaining)
+            else:
+                ratio = sec.get("measures", 1) / max(old_total, 1)
+                new_measures = max(2, round(ratio * target_bars))
+                sec["measures"] = new_measures
+                remaining -= new_measures
+
+        plan["total_bars"] = target_bars
+        return plan
+
+    @staticmethod
+    def _trim_trailing_rests(abc_text: str) -> str:
+        """Remove trailing rest-only bars from ABC voice content.
+
+        Detects lines consisting solely of rests (z2, z4, z8, etc.) and bars (|)
+        at the end of the text and strips them.
+        """
+        lines = abc_text.rstrip().split("\n")
+        # Work backwards, strip trailing lines that are only rests/pipes
+        while lines:
+            stripped = lines[-1].strip()
+            # A rest-only bar line contains only: z notes, |, spaces
+            if re.match(r'^[\s|z\d/]*$', stripped) and 'z' in stripped:
+                lines.pop()
+            else:
+                break
+        return "\n".join(lines)
 
     @staticmethod
     def _calculate_demo_bars(total_bars: int) -> int:
@@ -483,7 +614,7 @@ class ComposeOrchestrator:
 
         for line in lines:
             stripped = line.strip()
-            voice_match = re.match(r'^(V:\d[\+\d]*)\s*$', stripped)
+            voice_match = re.match(r'^(V:\d[\+\d]*)', stripped)
             if voice_match:
                 if current_voice and current_lines:
                     blocks[current_voice] = "\n".join(current_lines).strip()
@@ -639,9 +770,13 @@ class ComposeOrchestrator:
             avg = sum(result["scores"].values()) / max(len(result["scores"]), 1)
             result["summary"] = f"Overall: {avg:.1f}/10"
 
-        result["overall_score"] = raw.get("overall_score") or (
-            sum(result["scores"].values()) / max(len(result["scores"]), 1)
-        )
+        raw_overall = raw.get("overall_score")
+        if raw_overall is not None:
+            result["overall_score"] = raw_overall
+        else:
+            result["overall_score"] = (
+                sum(result["scores"].values()) / max(len(result["scores"]), 1)
+            )
         return result
 
     # ------------------------------------------------------------------
@@ -796,8 +931,21 @@ class ComposeOrchestrator:
 
             message = self._build_create_message(voice, plan)
 
-            response = await self._run_agent(agent_name, message, plan=plan)
-            abc_text = self._extract_abc(response)
+            # Retry up to 2 times if agent returns placeholder
+            for attempt in range(3):
+                response = await self._run_agent(agent_name, message, plan=plan)
+                abc_text = self._extract_abc(response)
+                if not self._is_placeholder(abc_text):
+                    break
+                logger.warning(
+                    "Agent %s returned placeholder for %s (attempt %d/3), retrying",
+                    agent_name, voice, attempt + 1,
+                )
+            else:
+                raise RuntimeError(
+                    f"Agent {agent_name} failed to generate {voice} after 3 attempts"
+                )
+
             fragments[voice_label] = abc_text
 
         # Merge all fragments
@@ -865,14 +1013,33 @@ class ComposeOrchestrator:
 
             # Sort by depends_on for execution order
             completed_agents: set[str] = set()
-            tasks_sorted = sorted(tasks, key=lambda t: t.get("depends_on", ""))
+            tasks_sorted = sorted(tasks, key=lambda t: str(t.get("depends_on", "")))
             for task in tasks_sorted:
-                dep = task.get("depends_on", "")
-                if dep and dep not in completed_agents:
+                raw_dep = task.get("depends_on", "")
+                # Normalize: LLM may return string, list, or null
+                if isinstance(raw_dep, list):
+                    deps = [str(d) for d in raw_dep if d]
+                else:
+                    deps = [str(raw_dep)] if raw_dep else []
+                # Normalize dep names (e.g. "composer" → "clef-composer")
+                deps = [d if d.startswith("clef-") else f"clef-{d}" for d in deps]
+                if any(d not in completed_agents for d in deps):
                     continue  # skip if dependency not yet completed
 
                 agent_name = task.get("agent", "clef-composer")
+                # Normalize: LLM may return "composer" instead of "clef-composer"
+                if not agent_name.startswith("clef-"):
+                    agent_name = f"clef-{agent_name}"
+                if agent_name not in self._AGENT_DEFS:
+                    logger.warning("Unknown agent %r from leader, skipping task", agent_name)
+                    continue
                 instruction = task.get("instruction", "Revise based on review feedback.")
+
+                # Append review issues so the agent has full context
+                review_issues = review.get("issues", [])
+                if review_issues:
+                    issues_text = "\n".join(f"- {i}" for i in review_issues)
+                    instruction += f"\n\nReview issues to address:\n{issues_text}"
 
                 current_score = score_path.read_text(encoding="utf-8") if score_path.exists() else ""
                 response = await self._run_agent(
@@ -904,6 +1071,9 @@ class ComposeOrchestrator:
                     raise RuntimeError(f"merge_abc (iteration) failed: {merge_result['error']}")
 
                 completed_agents.add(agent_name)
+
+                # Refresh score for next task in this round
+                current_score = score_path.read_text(encoding="utf-8") if score_path.exists() else ""
 
             # Validate + export versioned MIDI after each iteration round
             self._inject_midi_programs(score_path, plan)
@@ -994,7 +1164,12 @@ class ComposeOrchestrator:
         output_path = output_dir / f"final_r{iter_count}.mid"
 
         from clef_server.tools import inject_expression
-        inject_expression(str(base_mid), str(expr_plan_path), str(output_path))
+        inject_result = inject_expression(str(base_mid), str(expr_plan_path), str(output_path))
+        if isinstance(inject_result, dict) and "error" in inject_result:
+            logger.error("inject_expression failed: %s", inject_result["error"])
+            self.session.record_phase("express", "done", error=inject_result["error"])
+            self.session.set_done()
+            return
 
         self.session.record_phase("express", "done")
         self.session.set_done(output_files=[str(output_path.relative_to(Path(self.workdir)))])

@@ -152,12 +152,21 @@ def save_settings(server_root: Path, settings: dict[str, Any]) -> None:
         json.dump(settings, f, indent=2, ensure_ascii=False)
 
 
+_WINDOWS_RESERVED = frozenset({
+    "CON", "PRN", "AUX", "NUL",
+    *(f"COM{i}" for i in range(1, 10)),
+    *(f"LPT{i}" for i in range(1, 10)),
+})
+
+
 def sanitize_prompt_for_filename(prompt: str, max_length: int = 20) -> str:
     """Extract a filesystem-safe name from user prompt."""
     cleaned = prompt.strip()[:max_length]
     cleaned = re.sub(r'[<>:"/\\|?*\x00-\x1f]', '', cleaned)
     cleaned = cleaned.strip('. ')
-    return cleaned or "untitled"
+    if not cleaned or cleaned in _WINDOWS_RESERVED or cleaned in {".", ".."}:
+        return "untitled"
+    return cleaned
 
 
 def rename_workdir_with_title(workdir: str, title: str) -> str:
@@ -197,10 +206,13 @@ def generate_workdir(settings: dict[str, Any], session_id: str, prompt: str) -> 
     """
     output_dir = settings.get("output_dir", "").strip()
     if not output_dir:
+        if not re.match(r'^[a-zA-Z0-9_\-]+$', session_id):
+            raise ValueError(f"Invalid session_id: {session_id}")
         return str(Path(tempfile.gettempdir()) / "clef-work" / session_id)
-    resolved = Path(output_dir).resolve()
-    if not resolved.is_absolute():
+    raw_path = Path(output_dir)
+    if not raw_path.is_absolute():
         raise ValueError("output_dir must be an absolute path")
+    resolved = raw_path.resolve()
     task_name = sanitize_prompt_for_filename(prompt)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     subdir = f"{task_name}_{timestamp}"
