@@ -278,11 +278,13 @@ class ComposeOrchestrator:
             "- bpm: integer\n"
             "- time_signature: string (e.g. '4/4')\n"
             "- form: string (e.g. 'ABA', 'AB', 'AABA')\n"
-            "- sections: array of {id, name, measures, start_beat, energy_level, dynamics, balance_intent, melody_strategy}\n"
+            "- total_bars: integer (total number of bars, MUST equal sum of all sections' measures)\n"
+            "- sections: array of {id, name, measures (REQUIRED integer), start_beat, energy_level, dynamics, balance_intent, melody_strategy}. "
+            "Each section MUST have a 'measures' field specifying the number of bars.\n"
             "- orchestration: object with melody/harmony/bass/drums sub-objects, "
             "each having name, channel, instrument, range, register, midi_program (GM program number 0-127)\n"
-            "- generation_order: array like ['harmony', 'melody']\n"
-            "- demo_length_bars: integer (2-16)\n\n"
+            "- generation_order: array like ['harmony', 'melody']\n\n"
+            "VALIDATION: Verify that sum(sections[].measures) == total_bars. If not, adjust.\n\n"
             "Respond ONLY with valid JSON. No markdown, no explanation."
         )
 
@@ -301,6 +303,17 @@ class ComposeOrchestrator:
             plan = json.loads(content)
         except json.JSONDecodeError as e:
             raise RuntimeError(f"LLM returned invalid plan JSON: {e}") from e
+
+        # Validate and fix total_bars from sections
+        sections = plan.get("sections", [])
+        calculated_total = sum(s.get("measures", 0) for s in sections)
+        if calculated_total > 0:
+            plan["total_bars"] = calculated_total
+        else:
+            plan["total_bars"] = plan.get("total_bars", 32)
+
+        # Calculate demo_length_bars proportionally (not LLM-generated)
+        plan["demo_length_bars"] = self._calculate_demo_bars(plan["total_bars"])
 
         # Persist plan.json to workdir
         plan_path = Path(self.workdir) / "plan.json"
@@ -447,6 +460,92 @@ class ComposeOrchestrator:
             return {"raw": text, "verdict": "pass"}
 
     # ------------------------------------------------------------------
+    # Prompt builders & helpers
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _calculate_demo_bars(total_bars: int) -> int:
+        """Calculate demo_length_bars as ~30% of total_bars, clamped to [8, 64]."""
+        if total_bars <= 0:
+            return 8
+        return max(8, min(64, round(total_bars * 0.3)))
+
+    @staticmethod
+    def _parse_voice_blocks(score_text: str) -> dict[str, str]:
+        """Extract voice blocks from a merged score.abc.
+
+        Returns {"V:1": "C D E F|...", "V:2": "[FAc] ...", ...}
+        """
+        blocks: dict[str, str] = {}
+        lines = score_text.split("\n")
+        current_voice: str | None = None
+        current_lines: list[str] = []
+
+        for line in lines:
+            stripped = line.strip()
+            voice_match = re.match(r'^(V:\d[\+\d]*)\s*$', stripped)
+            if voice_match:
+                if current_voice and current_lines:
+                    blocks[current_voice] = "\n".join(current_lines).strip()
+                current_voice = voice_match.group(1)
+                current_lines = []
+            elif current_voice:
+                current_lines.append(line)
+
+        if current_voice and current_lines:
+            blocks[current_voice] = "\n".join(current_lines).strip()
+
+        return blocks
+
+    def _build_create_message(self, voice: str, plan: dict) -> str:
+        """Build a detailed prompt for the create phase, including section structure."""
+        voice_label = self.VOICE_MAP.get(voice, f"V:{voice}")
+        total_bars = plan.get("total_bars", 0)
+        sections = plan.get("sections", [])
+        orch = plan.get("orchestration", {})
+
+        # Build section summary
+        section_lines = []
+        for sec in sections:
+            section_lines.append(
+                f"  - {sec.get('name', sec.get('id', '?'))}: "
+                f"{sec.get('measures', '?')} bars, "
+                f"energy={sec.get('energy_level', 'mid')}, "
+                f"melody_strategy={sec.get('melody_strategy', 'new')}"
+            )
+        sections_text = "\n".join(section_lines)
+
+        # Get voice-specific orchestration info
+        role_map = {"melody": "melody", "harmony": "harmony", "rhythm": "bass"}
+        role = role_map.get(voice, voice)
+        voice_orch = orch.get(role, {})
+        voice_info = (
+            f"  Instrument: {voice_orch.get('instrument', 'N/A')}, "
+            f"Range: {voice_orch.get('range', 'N/A')}, "
+            f"Register: {voice_orch.get('register', 'N/A')}"
+        )
+
+        message = (
+            f"Generate the full {voice} part as ABC notation.\n"
+            f"Use voice label {voice_label}.\n\n"
+            f"## Composition Structure\n"
+            f"- Key: {plan.get('key', 'C')}\n"
+            f"- Scale: {plan.get('scale', 'major')}\n"
+            f"- Time: {plan.get('time_signature', '4/4')}\n"
+            f"- BPM: {plan.get('bpm', 120)}\n"
+            f"- Form: {plan.get('form', 'ABA')}\n"
+            f"- Total bars: {total_bars}\n\n"
+            f"## Sections (must generate content for ALL sections)\n"
+            f"{sections_text}\n\n"
+            f"## Your Voice Configuration\n"
+            f"{voice_info}\n\n"
+            f"CRITICAL: You must generate content for ALL {total_bars} bars "
+            f"covering every section listed above. Do not leave any section incomplete.\n"
+            f"Output only ABC notation for voice {voice_label}."
+        )
+        return message
+
+    # ------------------------------------------------------------------
     # Reviewer helper
     # ------------------------------------------------------------------
 
@@ -454,6 +553,7 @@ class ComposeOrchestrator:
         self,
         plan: dict,
         melody_only: bool = False,
+        is_sample: bool = False,
         extra_context: str = "",
     ) -> dict:
         """Run the reviewer agent and return a review dict.
@@ -464,20 +564,85 @@ class ComposeOrchestrator:
         score_text = score_path.read_text(encoding="utf-8") if score_path.exists() else ""
 
         scope = "melody only" if melody_only else "full composition"
+        if is_sample:
+            scope = "direction sample (incomplete, for style/character evaluation only)"
+
         message = (
             f"Review the following ABC score ({scope}):\n\n"
             f"Score:\n```\n{score_text}\n```\n\n"
             f"Plan:\n```json\n{json.dumps(plan, indent=2)}\n```\n\n"
-            f"Respond with a JSON object containing at minimum:\n"
-            f'- "verdict": "pass" or "revise"\n'
-            f'- "issues": array of issue descriptions\n'
-            f'- "score": overall quality score 1-10\n'
         )
+
+        if is_sample:
+            message += (
+                "IMPORTANT: This is a DIRECTION SAMPLE, not a complete composition. "
+                "Evaluate based on:\n"
+                "- Melody quality and character (contour, phrasing, motif)\n"
+                "- Harmonic direction and chord progression logic\n"
+                "- Rhythmic character and groove\n"
+                "- Style consistency with the plan\n\n"
+                "DO NOT penalize for:\n"
+                "- Incomplete structure (only a few bars of each section)\n"
+                "- Missing section development or recapitulation\n"
+                "- Short overall length\n\n"
+            )
+
+        message += "Respond with your standard review JSON format (dimensions with scores, verdict, issues).\n"
         if extra_context:
             message += f"\nAdditional context: {extra_context}\n"
 
         response_text = await self._run_agent("clef-reviewer", message, plan=plan, score_abc=score_text)
-        return self._extract_json(response_text)
+        raw = self._extract_json(response_text)
+        return self._normalize_review(raw)
+
+    def _normalize_review(self, raw: dict) -> dict:
+        """Normalize reviewer output into a flat structure for the frontend.
+
+        The reviewer agent outputs nested "dimensions": {"melody": {"score": 7, ...}, ...}.
+        The frontend expects flat "scores": {"melody": 7, ...} + "verdict" + "summary".
+        """
+        result: dict = {"verdict": raw.get("verdict", "pass"), "scores": {}}
+
+        # Extract from nested "dimensions" format (reviewer's standard output)
+        dimensions = raw.get("dimensions", {})
+        if isinstance(dimensions, dict):
+            for key, val in dimensions.items():
+                if isinstance(val, dict):
+                    result["scores"][key] = val.get("score", 0)
+                elif isinstance(val, (int, float)):
+                    result["scores"][key] = val
+
+        # Fallback: if agent returned flat "scores" directly
+        if not result["scores"] and "scores" in raw:
+            result["scores"] = raw["scores"]
+
+        # Collect all issues into a flat list
+        all_issues: list[str] = []
+        if isinstance(dimensions, dict):
+            for val in dimensions.values():
+                if isinstance(val, dict) and "issues" in val:
+                    for issue in val["issues"]:
+                        if isinstance(issue, dict):
+                            all_issues.append(issue.get("description", str(issue)))
+                        else:
+                            all_issues.append(str(issue))
+        if not all_issues and "issues" in raw:
+            all_issues = raw["issues"]
+        result["issues"] = all_issues
+
+        # Summary: prefer explicit field, otherwise derive from overall_score
+        if "summary" in raw:
+            result["summary"] = raw["summary"]
+        elif "overall_score" in raw:
+            result["summary"] = f"Overall: {raw['overall_score']}/10"
+        else:
+            avg = sum(result["scores"].values()) / max(len(result["scores"]), 1)
+            result["summary"] = f"Overall: {avg:.1f}/10"
+
+        result["overall_score"] = raw.get("overall_score") or (
+            sum(result["scores"].values()) / max(len(result["scores"]), 1)
+        )
+        return result
 
     # ------------------------------------------------------------------
     # Leader helper
@@ -533,7 +698,7 @@ class ComposeOrchestrator:
             if not agent_name:
                 continue
             voice_label = self.VOICE_MAP.get(voice, f"V:{voice}")
-            demo_bars = plan.get("demo_length_bars", 4)
+            demo_bars = plan.get("demo_length_bars", 8)
 
             message = (
                 f"Generate a {demo_bars}-bar {voice} part as ABC notation. "
@@ -583,8 +748,9 @@ class ComposeOrchestrator:
                 raise RuntimeError(f"merge_abc (melody gate) failed: {merge_result['error']}")
             self._inject_midi_programs(score_path, plan)
 
-        # Step 3: Convert sample to MIDI
-        sample_mid = Path(self.workdir) / "sample.mid"
+        # Step 3: Convert sample to MIDI (versioned by round)
+        sample_round = self.session.sample_round
+        sample_mid = Path(self.workdir) / f"sample_r{sample_round}.mid"
         from clef_server.tools import abc_to_midi
         midi_result = abc_to_midi(str(score_path), str(sample_mid))
         if "error" in midi_result:
@@ -592,13 +758,16 @@ class ComposeOrchestrator:
             raise RuntimeError(f"abc_to_midi failed: {midi_result['error']}")
 
         # Step 4: Full review for confirmation data
-        full_review = await self._call_reviewer(plan, melody_only=False)
+        full_review = await self._call_reviewer(plan, melody_only=False, is_sample=True)
+        review_path = Path(self.workdir) / f"review_sample_r{sample_round}.json"
+        review_path.write_text(json.dumps(full_review, indent=2, ensure_ascii=False), encoding="utf-8")
 
         self.session.record_phase("sample", "done")
         self.session.set_awaiting_confirm(confirmation_data={
             "phase": "sample",
             "title": "试听方向小样",
             "sample_file": str(sample_mid.name),
+            "review_file": str(review_path.name),
             "review": full_review,
             "sample_round": self.session.sample_round,
         })
@@ -625,15 +794,7 @@ class ComposeOrchestrator:
                 continue
             voice_label = self.VOICE_MAP.get(voice, f"V:{voice}")
 
-            message = (
-                f"Generate the full {voice} part as ABC notation. "
-                f"Use voice label {voice_label}. Key: {plan.get('key', 'C')}, "
-                f"Scale: {plan.get('scale', 'major')}, "
-                f"Time: {plan.get('time_signature', '4/4')}, "
-                f"BPM: {plan.get('bpm', 120)}, "
-                f"Form: {plan.get('form', 'ABA')}. "
-                f"Output only ABC notation."
-            )
+            message = self._build_create_message(voice, plan)
 
             response = await self._run_agent(agent_name, message, plan=plan)
             abc_text = self._extract_abc(response)
@@ -655,8 +816,8 @@ class ComposeOrchestrator:
         if "error" in validate_result:
             logger.error("validate_abc failed: %s", validate_result["error"])
 
-        # Convert to MIDI
-        base_mid = Path(self.workdir) / "base.mid"
+        # Convert to MIDI (versioned)
+        base_mid = Path(self.workdir) / "base_r1.mid"
         from clef_server.tools import abc_to_midi
         midi_result = abc_to_midi(str(score_path), str(base_mid))
         if "error" in midi_result:
@@ -677,6 +838,8 @@ class ComposeOrchestrator:
         """Phase 3: Review-driven iteration (up to N rounds)."""
         self.session.record_phase("iterate", "running")
 
+        from clef_server.tools import merge_abc
+
         plan_path = Path(self.workdir) / "plan.json"
         plan = json.loads(plan_path.read_text(encoding="utf-8"))
         score_path = Path(self.workdir) / "score.abc"
@@ -686,6 +849,8 @@ class ComposeOrchestrator:
 
             # Full review
             review = await self._call_reviewer(plan, melody_only=False)
+            iter_review_path = Path(self.workdir) / f"review_iter_r{round_num}.json"
+            iter_review_path.write_text(json.dumps(review, indent=2, ensure_ascii=False), encoding="utf-8")
 
             # Leader decides tasks
             leader_decision = await self._call_leader(plan, review, extra_feedback=extra_feedback)
@@ -721,19 +886,37 @@ class ComposeOrchestrator:
                 voice = task.get("voice", "melody")
                 voice_label = self.VOICE_MAP.get(voice, f"V:{voice}")
 
-                # Agent writes directly to score.abc — H7: do NOT call merge_abc with empty fragments
-                # Update score by appending the revised part
-                score_path.write_text(
-                    current_score + f"\n% --- Iteration {round_num}: {agent_name} ({voice}) ---\n{voice_label}\n{abc_text}\n",
-                    encoding="utf-8",
-                )
+                # Replace voice content via merge_abc instead of appending
+                all_fragments = self._parse_voice_blocks(current_score)
+                if "+" in voice_label:
+                    # Handle rhythm multi-voice (V:3+V:4)
+                    sub_labels = [l.strip() for l in voice_label.split("+")]
+                    rhythm_blocks = self._parse_voice_blocks(f"RHYTHM_PLACEHOLDER\n{abc_text}\n")
+                    for sub_label in sub_labels:
+                        if sub_label in rhythm_blocks:
+                            all_fragments[sub_label] = rhythm_blocks[sub_label]
+                else:
+                    all_fragments[voice_label] = abc_text
+
+                merge_result = merge_abc(str(plan_path), all_fragments, str(score_path))
+                if "error" in merge_result:
+                    logger.error("merge_abc (iteration) failed: %s", merge_result["error"])
+                    raise RuntimeError(f"merge_abc (iteration) failed: {merge_result['error']}")
+
                 completed_agents.add(agent_name)
 
-            # Validate after each iteration round
+            # Validate + export versioned MIDI after each iteration round
             self._inject_midi_programs(score_path, plan)
             report_path = Path(self.workdir) / f"validation_report_iter{round_num}.json"
             from clef_server.tools import validate_abc
             validate_abc(str(score_path), str(plan_path), str(report_path))
+
+            # Export versioned MIDI for this iteration round
+            iter_mid = Path(self.workdir) / f"base_r{round_num + 1}.mid"
+            from clef_server.tools import abc_to_midi
+            midi_result = abc_to_midi(str(score_path), str(iter_mid))
+            if "error" in midi_result:
+                logger.warning("abc_to_midi failed for iteration round %d: %s", round_num, midi_result["error"])
 
         # C6: Set confirmation_data with review + iteration count before advancing
         self.session.record_phase("iterate", "done")
@@ -748,6 +931,8 @@ class ComposeOrchestrator:
             await self._phase_express()
         else:
             final_review = await self._call_reviewer(plan, melody_only=False)
+            final_review_path = Path(self.workdir) / f"review_final_r{self.session.iteration_count}.json"
+            final_review_path.write_text(json.dumps(final_review, indent=2, ensure_ascii=False), encoding="utf-8")
             confirmation_data = {
                 "phase": "review",
                 "title": "试听审核",
@@ -768,13 +953,15 @@ class ComposeOrchestrator:
 
         plan_path = Path(self.workdir) / "plan.json"
         plan = json.loads(plan_path.read_text(encoding="utf-8"))
-        base_mid = Path(self.workdir) / "base.mid"
 
-        # C4: Do NOT read binary MIDI as text — just check existence
-        if not base_mid.exists():
-            self.session.record_phase("express", "done", error="base.mid not found")
+        # Find latest versioned base MIDI (base_r1.mid, base_r2.mid, ...)
+        base_mids = sorted(Path(self.workdir).glob("base_r*.mid"))
+        base_mid = base_mids[-1] if base_mids else None
+
+        if not base_mid or not base_mid.exists():
+            self.session.record_phase("express", "done", error="base_r*.mid not found")
             self.session.set_done()
-            logger.warning("Session %s: base.mid missing, skipping expression injection", self.session_id)
+            logger.warning("Session %s: base_r*.mid missing, skipping expression injection", self.session_id)
             return
 
         # Generate expression plan via orchestrator agent
@@ -800,10 +987,11 @@ class ComposeOrchestrator:
             encoding="utf-8",
         )
 
-        # Inject expression into MIDI
+        # Inject expression into MIDI (versioned)
         output_dir = Path(self.workdir) / "output"
         output_dir.mkdir(parents=True, exist_ok=True)
-        output_path = output_dir / "final.mid"
+        iter_count = self.session.iteration_count or 1
+        output_path = output_dir / f"final_r{iter_count}.mid"
 
         from clef_server.tools import inject_expression
         inject_expression(str(base_mid), str(expr_plan_path), str(output_path))

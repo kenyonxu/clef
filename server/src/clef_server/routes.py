@@ -275,7 +275,7 @@ async def confirm_session(session_id: str, req: ConfirmRequest):
             settings = load_settings(server_root)
 
             orchestrator = ComposeOrchestrator(session_id=session_id, providers=providers, workdir=workdir, settings=settings)
-            await orchestrator.resume(feedback=feedback, action=action, saved_confirmation_data=saved_confirmation_data)
+            await orchestrator.resume(user_feedback=feedback, action=action, saved_confirmation_data=saved_confirmation_data)
         except Exception as e:
             logger.exception(f"Session {session_id}: resume failed")
             sess = _session_manager.get(session_id)

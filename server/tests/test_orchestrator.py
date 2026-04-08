@@ -332,11 +332,11 @@ class TestAdvancePhase:
         # Create output files so _collect_outputs returns something
         output_dir = tmp_path / "output"
         output_dir.mkdir()
-        (output_dir / "final.mid").write_text("fake")
+        (output_dir / "final_r1.mid").write_text("fake")
 
         await orch._advance_phase("express")
         assert session.status == "done"
-        assert "output/final.mid" in session.output_files
+        assert "output/final_r1.mid" in session.output_files
 
 
 # ---------------------------------------------------------------------------
@@ -356,12 +356,12 @@ class TestCollectOutputs:
     def test_collects_files(self, orch, tmp_path):
         output = tmp_path / "output"
         output.mkdir()
-        (output / "final.mid").write_text("data")
+        (output / "final_r1.mid").write_text("data")
         (output / "score.abc").write_text("notes")
 
         result = orch._collect_outputs()
         assert len(result) == 2
-        assert "output/final.mid" in result
+        assert "output/final_r1.mid" in result
         assert "output/score.abc" in result
 
 
@@ -463,7 +463,7 @@ class TestPhaseSample:
 
         # Patch tool functions that would fail without real scripts
         with patch("clef_server.tools.merge_abc", return_value={"output": "score.abc"}), \
-             patch("clef_server.tools.abc_to_midi", return_value={"output": "sample.mid"}):
+             patch("clef_server.tools.abc_to_midi", return_value={"output": "sample_r1.mid"}):
             await orch._phase_sample()
 
         assert session.status == "awaiting_confirm"
@@ -483,7 +483,7 @@ class TestPhaseSample:
         orch._run_agent = mock_run
 
         with patch("clef_server.tools.merge_abc", return_value={"output": "score.abc"}), \
-             patch("clef_server.tools.abc_to_midi", return_value={"output": "sample.mid"}):
+             patch("clef_server.tools.abc_to_midi", return_value={"output": "sample_r1.mid"}):
             await orch._phase_sample()
 
         phases = [e for e in session.phase_history if e["phase"] == "sample"]
@@ -503,7 +503,7 @@ class TestPhaseSample:
         orch._run_agent = mock_run
 
         with patch("clef_server.tools.merge_abc", return_value={"output": "score.abc"}), \
-             patch("clef_server.tools.abc_to_midi", return_value={"output": "sample.mid"}):
+             patch("clef_server.tools.abc_to_midi", return_value={"output": "sample_r1.mid"}):
             await orch._phase_sample()
 
         assert session.current_phase == "sample"
@@ -517,7 +517,7 @@ class TestPhaseCreate:
 
     @pytest.mark.asyncio
     async def test_phase_create_produces_files(self, session, providers, tmp_path):
-        """Phase create should produce score.abc and base.mid (via tool calls)."""
+        """Phase create should produce score.abc and base_r1.mid (via tool calls)."""
         orch = ComposeOrchestrator(session.session_id, providers, str(tmp_path))
         _setup_orchestrator(orch, session, tmp_path)
         session.current_phase = "create"
@@ -534,7 +534,7 @@ class TestPhaseCreate:
 
         with patch("clef_server.tools.merge_abc", side_effect=mock_merge), \
              patch("clef_server.tools.validate_abc", return_value={"report": {"is_valid": True}}), \
-             patch("clef_server.tools.abc_to_midi", return_value={"output": "base.mid"}) as mock_midi, \
+             patch("clef_server.tools.abc_to_midi", return_value={"output": "base_r1.mid"}) as mock_midi, \
              patch.object(orch, "_advance_phase", new_callable=AsyncMock):
             await orch._phase_create()
 
@@ -556,7 +556,7 @@ class TestPhaseCreate:
 
         with patch("clef_server.tools.merge_abc", return_value={"output": "score.abc"}), \
              patch("clef_server.tools.validate_abc", return_value={"report": {"is_valid": True}}), \
-             patch("clef_server.tools.abc_to_midi", return_value={"output": "base.mid"}), \
+             patch("clef_server.tools.abc_to_midi", return_value={"output": "base_r1.mid"}), \
              patch.object(orch, "_advance_phase", new_callable=AsyncMock) as mock_advance:
             await orch._phase_create()
             mock_advance.assert_called_once_with("create")
@@ -681,7 +681,7 @@ class TestPhaseExpress:
         """Phase express should set session to done status."""
         orch = ComposeOrchestrator(session.session_id, providers, str(tmp_path))
         _setup_orchestrator(orch, session, tmp_path)
-        (tmp_path / "base.mid").write_bytes(b"MThd\x00\x00\x00\x06")
+        (tmp_path / "base_r1.mid").write_bytes(b"MThd\x00\x00\x00\x06")
         session.current_phase = "express"
 
         async def mock_run(agent_name, message, **kw):
@@ -689,7 +689,7 @@ class TestPhaseExpress:
 
         orch._run_agent = mock_run
 
-        with patch("clef_server.tools.inject_expression", return_value={"output": "output/final.mid"}) as mock_inject:
+        with patch("clef_server.tools.inject_expression", return_value={"output": "output/final_r1.mid"}) as mock_inject:
             await orch._phase_express()
 
         assert session.status == "done"
@@ -700,7 +700,7 @@ class TestPhaseExpress:
         """Phase express should create output directory."""
         orch = ComposeOrchestrator(session.session_id, providers, str(tmp_path))
         _setup_orchestrator(orch, session, tmp_path)
-        (tmp_path / "base.mid").write_bytes(b"MThd\x00\x00\x00\x06")
+        (tmp_path / "base_r1.mid").write_bytes(b"MThd\x00\x00\x00\x06")
         session.current_phase = "express"
 
         async def mock_run(agent_name, message, **kw):
@@ -708,7 +708,7 @@ class TestPhaseExpress:
 
         orch._run_agent = mock_run
 
-        with patch("clef_server.tools.inject_expression", return_value={"output": "output/final.mid"}):
+        with patch("clef_server.tools.inject_expression", return_value={"output": "output/final_r1.mid"}):
             await orch._phase_express()
 
         assert (tmp_path / "output").exists()
@@ -718,7 +718,7 @@ class TestPhaseExpress:
         """C4: _phase_express should not read MIDI as text (only check exists)."""
         orch = ComposeOrchestrator(session.session_id, providers, str(tmp_path))
         _setup_orchestrator(orch, session, tmp_path)
-        (tmp_path / "base.mid").write_bytes(b"MThd\x00\x00\x00\x06")
+        (tmp_path / "base_r1.mid").write_bytes(b"MThd\x00\x00\x00\x06")
         session.current_phase = "express"
 
         # The MIDI file has 6 bytes. If read as text it would be very short.
@@ -728,17 +728,17 @@ class TestPhaseExpress:
 
         orch._run_agent = mock_run
 
-        with patch("clef_server.tools.inject_expression", return_value={"output": "output/final.mid"}):
+        with patch("clef_server.tools.inject_expression", return_value={"output": "output/final_r1.mid"}):
             await orch._phase_express()
 
         assert session.status == "done"
 
     @pytest.mark.asyncio
     async def test_phase_express_missing_base_mid(self, session, providers, tmp_path):
-        """C4: If base.mid missing, express should gracefully complete."""
+        """C4: If base_r*.mid missing, express should gracefully complete."""
         orch = ComposeOrchestrator(session.session_id, providers, str(tmp_path))
         _setup_orchestrator(orch, session, tmp_path)
-        # Do NOT create base.mid
+        # Do NOT create base_r*.mid
         session.current_phase = "express"
 
         with patch("clef_server.tools.inject_expression") as mock_inject:

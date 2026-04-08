@@ -9,6 +9,7 @@ export interface ConfirmationData {
   title: string
   plan?: Record<string, unknown>
   sample_file?: string
+  review_file?: string
   review?: ReviewData
   iterations?: number
   sample_round?: number
@@ -18,7 +19,9 @@ export interface ConfirmationData {
 export interface ReviewData {
   verdict?: 'pass' | 'revise'
   scores?: Record<string, number>
+  overall_score?: number
   summary?: string
+  issues?: string[]
 }
 
 export interface PhaseStep {
