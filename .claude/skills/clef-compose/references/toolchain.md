@@ -9,7 +9,7 @@
 | `abc_to_midi.py` | ABC → MIDI 转换 | `python scripts/abc_to_midi.py` (通过函数调用) |
 | `validate_abc.py` | music21 技术验证（6 项检查，见下） | `python scripts/validate_abc.py <abc> <plan>` |
 | `abc_lint.py` | 确定性 ABC 扫描（5 项：升降号/%%V:/||/时值/音域） | `python scripts/abc_lint.py <abc> [--fix] [--plan plan.json]` |
-| `merge_abc.py` | 合并多声部 ABC（自动 sanitize） | `python scripts/merge_abc.py` (通过函数调用) |
+| `merge_abc.py` | 合并多声部 ABC（自动 sanitize） | 通过 `clef_tools.py merge` 调用 |
 | `inject_expression.py` | 注入 CC/弯音到 MIDI | `python scripts/inject_expression.py <mid> <plan> <out>` |
 | `extract_solo.py` | 分轨 Solo 提取 | `python scripts/extract_solo.py <mid> <start> <end> <dir>` |
 | `analyze_midi.py` | MIDI piano roll 分析（密度/重叠/力度/间隙） | `python scripts/clef_tools.py analyze <mid>` |

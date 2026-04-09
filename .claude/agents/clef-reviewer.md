@@ -3,7 +3,7 @@ name: clef-reviewer
 description: ABC 乐谱审核专家，负责旋律质量检查、结构分析、合规性验证
 model: sonnet
 tools: Read, Write, Glob, Grep
-maxTurns: 5
+maxTurns: 8
 skills:
   - theory-structure
   - theory-orchestration
@@ -159,6 +159,8 @@ memory: project
 
 - `verdict`: `"pass"`（均分 ≥ 7.0 且无 FAIL）或 `"revise"`（存在 FAIL 或均分 < 7.0）
 - 当 `verdict == "revise"` 时，主流程应将 Composer 修改旋律后再合并方向小样
+
+**容错**：如果无法完成完整分析，至少输出一个包含 `verdict` 字段的最小 JSON，不要输出空文件或纯文本。
 
 ## 评分标准
 

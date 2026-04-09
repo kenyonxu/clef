@@ -3,6 +3,7 @@ import argparse
 import json
 import logging
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -59,31 +60,103 @@ def cmd_validate(args):
     return 1 if report.fails else 0
 
 
+# --- Merge helpers ---
+
+_EXCLUDE_NAMES = {"score", "score.abc", "validation_report", "history"}
+
+_FILENAME_VOICE_MAP = {
+    "melody": "V:1",
+    "harmony": "V:2",
+    "bass": "V:3",
+    "drums": "V:4",
+    "rhythm": "V:3",
+    "v1_melody": "V:1",
+    "v2_harmony": "V:2",
+    "v3_bass": "V:3",
+    "v4_drums": "V:4",
+    "v5_harp": "V:5",
+    "v1": "V:1",
+    "v2": "V:2",
+    "v3": "V:3",
+    "v4": "V:4",
+    "v5": "V:5",
+}
+
+
+def _is_fragment_file(fname: str) -> bool:
+    """判断文件是否为声部片段（非合并产物）。"""
+    stem = fname.removesuffix('.abc')
+    if stem in _EXCLUDE_NAMES:
+        return False
+    if stem.startswith('score_') or stem.startswith('_v') or stem.startswith('layer_'):
+        return False
+    return True
+
+
+def _extract_voice_id(fname: str, content: str) -> str | None:
+    """从文件名或内容中提取声部 ID (e.g. "V:1")。
+
+    三级回退策略：
+    1. 扫描内容中的 V:N 行
+    2. 匹配文件名约定（melody.abc -> V:1）
+    3. 匹配文件名中的 V:N 模式（V1_fragment.abc -> V:1）
+    """
+    for line in content.split('\n'):
+        stripped = line.strip()
+        if stripped.startswith('V:'):
+            parts = stripped[2:].split()
+            if parts and parts[0].isdigit():
+                return f"V:{parts[0]}"
+    stem = fname.removesuffix('.abc').lower().replace('-', '_')
+    if stem in _FILENAME_VOICE_MAP:
+        return _FILENAME_VOICE_MAP[stem]
+    m = re.search(r'V(\d+)', fname, re.IGNORECASE)
+    if m:
+        return f"V:{m.group(1)}"
+    return None
+
+
 def cmd_merge(args):
     if not os.path.isfile(args.plan):
         print(f"Error: file not found: {args.plan}")
         return 1
-    if not os.path.isdir(args.dir):
-        print(f"Error: directory not found: {args.dir}")
-        return 1
     from merge_abc import merge
     with open(args.plan, 'r', encoding='utf-8') as f:
         plan = json.load(f)
-    # Read fragments from directory
     fragments = {}
-    if os.path.isdir(args.dir):
+    # --files takes priority over --dir
+    if args.files:
+        for fpath in args.files:
+            if not os.path.isfile(fpath):
+                print(f"WARN: file not found: {fpath}, skipping", file=sys.stderr)
+                continue
+            fname = os.path.basename(fpath)
+            with open(fpath, 'r', encoding='utf-8') as f:
+                content = f.read()
+            voice_id = _extract_voice_id(fname, content)
+            if voice_id is None:
+                print(f"WARN: cannot identify voice in {fname}, skipping", file=sys.stderr)
+                continue
+            fragments[voice_id] = content
+    elif args.dir and os.path.isdir(args.dir):
         for fname in sorted(os.listdir(args.dir)):
             if not fname.endswith('.abc'):
                 continue
+            if not _is_fragment_file(fname):
+                continue
             with open(os.path.join(args.dir, fname), 'r', encoding='utf-8') as f:
                 content = f.read()
-            # Extract voice ID from content (V: header line)
-            voice_id = fname.replace('.abc', '')
-            for line in content.split('\n'):
-                if line.startswith('V:'):
-                    voice_id = line.split()[0]  # e.g. "V:1"
-                    break
+            voice_id = _extract_voice_id(fname, content)
+            if voice_id is None:
+                print(f"WARN: cannot identify voice in {fname}, skipping", file=sys.stderr)
+                continue
             fragments[voice_id] = content
+    else:
+        print("Error: provide --files or --dir", file=sys.stderr)
+        return 1
+    if not fragments:
+        print("Error: no fragment files found", file=sys.stderr)
+        return 1
     score = merge(plan, fragments, mode=args.mode)
     output_path = args.output
     if output_path:
@@ -379,7 +452,8 @@ def main():
     p.add_argument('_pos_plan', nargs='?', help='(deprecated) plan.json 路径')
     p.add_argument('_pos_dir', nargs='?', help='(deprecated) 片段目录路径')
     p.add_argument('--plan', help='plan.json 路径')
-    p.add_argument('--dir', help='片段目录路径')
+    p.add_argument('--dir', help='片段目录路径（扫描所有 .abc 文件）')
+    p.add_argument('--files', nargs='+', help='显式指定片段文件列表（优先于 --dir）')
     p.add_argument('--mode', choices=['full', 'solo'], default='full')
     p.add_argument('--output', '-o', default=None, help='输出 score.abc 路径')
 

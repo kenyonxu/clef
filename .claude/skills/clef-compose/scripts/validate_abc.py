@@ -513,6 +513,9 @@ def _calc_abc_duration(tokens: str, default_length: float) -> float:
     # summing individual note durations.
     tokens = re.sub(r"\[([^\]]*)\](\d*(?:/\d+)?)", r"z\2", tokens)
 
+    # Remove grace notes {...} — they have zero duration in ABC standard
+    tokens = re.sub(r"\{[^}]*\}", "", tokens)
+
     # Remove ABC decorations (!xxx!) to prevent letters inside (e.g. f in !mf!)
     # from being parsed as note names.
     tokens = re.sub(r"![^!]*!", "", tokens)
