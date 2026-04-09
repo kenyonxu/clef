@@ -52,7 +52,7 @@ class ComposeSession:
     sample_round: int = 0
     iteration_count: int = 0
     sub_steps: list[dict] = field(default_factory=list)
-    _event_queues: list = field(default_factory=list)
+    _event_queues: list[asyncio.Queue] = field(default_factory=list)
     step_status: dict[int, str] = field(default_factory=lambda: {0: "pending", 1: "pending", 2: "pending", 3: "pending"})
     current_step: int = 0
     created_at: float = field(default_factory=time.time)
