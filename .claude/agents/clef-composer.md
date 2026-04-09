@@ -67,6 +67,10 @@ memory: project
 - 音符密度：参考 plan.json 各段的 `energy_level` 和 `density_hint`。sparse 段可留白呼吸（2-4 notes/bar），normal 段保持流畅（6-10 notes/bar），high/dense 段用经过音、装饰音、分解和弦填充（12-16+ notes/bar）。避免全曲统一密度
 - channel 和 instrument 必须从 plan.json.orchestration.melody 读取
 - 乐器演奏约束参考 theory-orchestration「乐器演奏约束」章节（连音/颤音/换气等）
+- 连音标记（legato）：对于弦乐、管乐等延音类乐器（非打击乐），使用圆括号 `( )` 标记连奏。这确保 MIDI 转换时音符之间有适当重叠，避免断奏效果。
+  - 示例：`(d'2 e' f#' g'2)` — 括号内的音符平滑连接
+  - 整段 legato 时，用一对 `( )` 包裹整个乐句
+  - 仅在明确需要断奏效果时省略 `( )`，并加 staccato 标记 `. `
 
 ## SF2 音色库感知（当 plan.json 声部包含 sf2 字段时生效）
 

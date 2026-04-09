@@ -638,6 +638,44 @@ class ComposeOrchestrator:
 
         return blocks
 
+    @staticmethod
+    def _count_bars(abc_text: str) -> int:
+        """Count bar lines (|) in ABC text, excluding || or |: or :|."""
+        count = 0
+        for line in abc_text.strip().split("\n"):
+            stripped = line.strip()
+            if stripped.startswith("%"):
+                continue
+            count += len(re.findall(r'(?<!\|)\|(?!\|)', stripped))
+        return count
+
+    @staticmethod
+    def _truncate_to_bars(abc_text: str, target_bars: int) -> str:
+        """Truncate ABC voice content to exactly target_bars measures."""
+        bars_found = 0
+        result_parts: list[str] = []
+        for line in abc_text.strip().split("\n"):
+            stripped = line.strip()
+            if not stripped or stripped.startswith("%"):
+                result_parts.append(line)
+                continue
+            bar_positions = [m.start() for m in re.finditer(r'(?<!\|)\|(?!\|)', line)]
+            if not bar_positions:
+                result_parts.append(line)
+                continue
+            new_bars = bars_found + len(bar_positions)
+            if new_bars <= target_bars:
+                result_parts.append(line)
+                bars_found = new_bars
+            else:
+                remaining = target_bars - bars_found
+                if remaining > 0 and bar_positions:
+                    end_pos = bar_positions[remaining - 1] + 1
+                    result_parts.append(line[:end_pos])
+                    bars_found = target_bars
+                break
+        return "\n".join(result_parts)
+
     def _inject_sf2_data(self, plan: dict) -> dict:
         """Inject SF2 profile data into plan's orchestration voices.
 
@@ -792,7 +830,9 @@ class ComposeOrchestrator:
             f"{duration_ref}"
             f"{sf2_section}"
             f"\nOutput only ABC notation for voice {voice_label}. "
-            f"Total output must be exactly {total_bars} measures."
+            f"CRITICAL: Your output must contain EXACTLY {total_bars} bar lines (|). "
+            f"Count your bars before outputting. If you have more than {total_bars} bars, "
+            f"remove the excess. If fewer, add rest measures (z)."
         )
         return message
 
@@ -1009,8 +1049,18 @@ class ComposeOrchestrator:
 
             response = await self._run_agent(agent_name, message, plan=plan)
             abc_text = self._extract_abc(response)
-            fragments[voice_label] = abc_text
-            abc_parts.append(f"{voice_label}\n{abc_text}")
+            if "+" in voice_label:
+                rhythm_blocks = self._parse_voice_blocks(abc_text)
+                if rhythm_blocks:
+                    for sub_label in rhythm_blocks:
+                        fragments[sub_label] = rhythm_blocks[sub_label]
+                    abc_parts.extend(f"{label}\n{content}" for label, content in rhythm_blocks.items())
+                else:
+                    fragments[voice_label] = abc_text
+                    abc_parts.append(f"{voice_label}\n{abc_text}")
+            else:
+                fragments[voice_label] = abc_text
+                abc_parts.append(f"{voice_label}\n{abc_text}")
 
         # C1/C2: merge_abc takes positional (plan, fragments, output), returns dict (side-effect)
         from clef_server.tools import merge_abc
@@ -1061,9 +1111,13 @@ class ComposeOrchestrator:
 
             issues = review.get("issues", [])
             feedback_msg = "Issues found:\n" + "\n".join(f"- {i}" for i in issues)
+            demo_bars = plan.get("demo_length_bars", 8)
             response = await self._run_agent(
                 melody_agent,
-                f"Revise the melody based on feedback:\n{feedback_msg}\n\nOutput only the revised ABC.",
+                f"Revise the melody based on feedback:\n{feedback_msg}\n\n"
+                f"CRITICAL: Your revised melody must be EXACTLY {demo_bars} measures. "
+                f"Count your bar lines before outputting.\n"
+                f"Output only the revised ABC for {melody_label}.",
                 plan=plan,
                 score_abc=score_path.read_text(encoding="utf-8") if score_path.exists() else "",
             )
@@ -1074,6 +1128,14 @@ class ComposeOrchestrator:
                 logger.error("merge_abc (melody gate) failed: %s", merge_result["error"])
                 raise RuntimeError(f"merge_abc (melody gate) failed: {merge_result['error']}")
             self._inject_midi_programs(score_path, plan)
+
+        # Post melody gate: validate bar count consistency across all fragments
+        demo_bars = plan.get("demo_length_bars", 8)
+        for label in list(fragments):
+            actual = self._count_bars(fragments[label])
+            if actual > demo_bars * 1.1:
+                logger.warning("Sample fragment %s has %d bars (target %d), truncating", label, actual, demo_bars)
+                fragments[label] = self._truncate_to_bars(fragments[label], demo_bars)
 
         # Step 3: Convert sample to MIDI (versioned by round)
         sample_round = self.session.sample_round
@@ -1139,7 +1201,30 @@ class ComposeOrchestrator:
                     f"Agent {agent_name} failed to generate {voice} after 3 attempts"
                 )
 
-            fragments[voice_label] = abc_text
+            if "+" in voice_label:
+                # Rhythm agent outputs V:3 and V:4 together — split into separate fragments
+                rhythm_blocks = self._parse_voice_blocks(abc_text)
+                if rhythm_blocks:
+                    for sub_label in rhythm_blocks:
+                        fragments[sub_label] = rhythm_blocks[sub_label]
+                    logger.info("Session %s: Split rhythm into %s", self.session_id, list(rhythm_blocks.keys()))
+                else:
+                    logger.warning("Session %s: Rhythmist output had no V:3/V:4 labels", self.session_id)
+                    fragments[voice_label] = abc_text
+            else:
+                fragments[voice_label] = abc_text
+
+        # Validate per-voice bar counts — truncate if significantly over target
+        target_bars = plan.get("total_bars", 0)
+        if target_bars > 0:
+            for label in list(fragments):
+                actual = self._count_bars(fragments[label])
+                if actual > target_bars * 1.1:
+                    logger.warning(
+                        "Session %s: Voice %s has %d bars (target %d), truncating",
+                        self.session_id, label, actual, target_bars,
+                    )
+                    fragments[label] = self._truncate_to_bars(fragments[label], target_bars)
 
         # Merge all fragments
         from clef_server.tools import merge_abc
