@@ -447,7 +447,7 @@ V:N 的 voice_id 必须与 plan.json 中对应层的 voice_id 一致。
    ```
 3. 运行 `validate_abc.py` 技术验证（编曲层仅检查：音域越界 FAIL、小节不完整 FAIL、格式错误 FAIL。旋律性检查对 V:5+ 跳过）
 4. 如果 validate FAIL → 修正 layer 文件后重新 append（注意不要重复 append，先从 snapshot 回滚）
-5. 运行 `abc_to_midi.py` 转换，供用户试听
+5. 运行 `abc_to_midi.py` 转换，输出到 `addons/clef/output/<name>_with_layers.mid` 供用户试听
 
 **2.5.4 Reviewer 审核 + 自动修正循环** ⭐
 
