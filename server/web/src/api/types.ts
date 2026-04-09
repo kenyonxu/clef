@@ -4,10 +4,28 @@ export interface AgentProgress {
   model?: string
 }
 
+export interface SubStep {
+  label: string
+  status: 'pending' | 'running' | 'done' | 'failed'
+  agent?: string
+  phase?: string
+  timestamp?: number
+}
+
+export interface PlanSummary {
+  duration: string
+  section_structure: string
+  orchestration_desc: string
+  sf2_status: string
+  demo_length: string
+}
+
 export interface ConfirmationData {
   phase: 'parse' | 'sample' | 'review'
   title: string
   plan?: Record<string, unknown>
+  summary?: PlanSummary
+  user_prompt?: string
   sample_file?: string
   review_file?: string
   review?: ReviewData
@@ -30,6 +48,8 @@ export interface PhaseStep {
   label: string
   status: WorkflowStepStatus
   confirm: boolean
+  agents?: AgentProgress[]
+  sub_steps?: SubStep[]
 }
 
 export interface WorkflowStep {
@@ -38,6 +58,7 @@ export interface WorkflowStep {
   label: string
   status: WorkflowStepStatus
   agents?: AgentProgress[]
+  sub_steps?: SubStep[]
   error?: string
   confirm?: boolean
 }

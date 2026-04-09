@@ -3,6 +3,7 @@ import { apiClient } from '../api/client'
 import type {
   Session,
   WorkflowStep,
+  SubStep,
   ConfirmationData,
   ChatMessage,
   OutputFile,
@@ -27,6 +28,8 @@ interface SessionState {
   confirmSession: (sessionId: string, action: 'continue' | 'revise' | 'cancel', feedback?: string) => Promise<void>
   cancelSession: (sessionId: string) => Promise<void>
   loadSessions: () => Promise<void>
+  updateSubStep: (phase: string, label: string, status: string, agent?: string) => void
+  clearSubSteps: () => void
 }
 
 function createMessageId(): string {
@@ -188,5 +191,35 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     } catch {
       // Silent fail -- sessions page will show empty state
     }
+  },
+
+  updateSubStep: (phase: string, label: string, status: string, agent?: string) => {
+    set((s) => {
+      const steps = s.workflowSteps.map((step) => {
+        if (step.id !== phase) return step
+        const existing = step.sub_steps ?? []
+        const subStep: SubStep = {
+          label,
+          status: status as SubStep['status'],
+          agent,
+          timestamp: Date.now(),
+        }
+        const idx = existing.findIndex((ss) => ss.label === label)
+        const newSubSteps = [...existing]
+        if (idx >= 0) {
+          newSubSteps[idx] = subStep
+        } else {
+          newSubSteps.push(subStep)
+        }
+        return { ...step, sub_steps: newSubSteps }
+      })
+      return { workflowSteps: steps }
+    })
+  },
+
+  clearSubSteps: () => {
+    set((s) => ({
+      workflowSteps: s.workflowSteps.map((step) => ({ ...step, sub_steps: [] })),
+    }))
   },
 }))
