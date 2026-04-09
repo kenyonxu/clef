@@ -1,5 +1,6 @@
 {
   "output_dir": "E:\\GitHub\\clef-dev\\addons\\clef\\output",
+  "sf2_path": "E:\\GitHub\\clef-dev\\addons\\clef\\sound_front\\GeneralUser-GS\\GeneralUser-GS.sf2",
   "max_iterations": 3,
   "review_threshold": 7,
   "skip_review": false

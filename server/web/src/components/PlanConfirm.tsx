@@ -4,94 +4,102 @@ interface PlanConfirmProps {
   data: ConfirmationData
 }
 
-const PARAM_KEYS = ['title', 'key', 'scale', 'bpm', 'time_signature', 'form', 'demo_length_bars', 'generation_order'] as const
-
-const PARAM_LABELS: Record<string, string> = {
-  title: '标题',
-  key: '调性',
-  scale: '调式',
-  bpm: '速度',
-  time_signature: '拍号',
-  form: '曲式',
-  demo_length_bars: '小样长度',
-  generation_order: '生成顺序',
-}
-
-function formatValue(key: string, value: unknown): string {
-  if (key === 'generation_order' && Array.isArray(value)) {
-    return (value as string[]).join(' → ')
-  }
-  if (key === 'demo_length_bars' && typeof value === 'number') {
-    return `${value} bars`
-  }
-  if (key === 'scale') {
-    return value === 'major' ? '大调' : '小调'
-  }
-  return String(value)
-}
-
 const VOICE_LABELS: Record<string, string> = {
-  melody: 'V:1 旋律',
-  harmony: 'V:2 和声',
-  bass: 'V:3 低音',
-  drums: 'V:4 鼓',
+  melody: '旋律',
+  harmony: '和声',
+  bass: '低音',
+  drums: '鼓',
+}
+
+interface PlanData {
+  title?: string
+  key?: string
+  scale?: string
+  bpm?: number
+  time_signature?: string
+  form?: string
+  total_bars?: number
+  demo_length_bars?: number
+  generation_order?: string[]
+  sections?: Record<string, unknown>[]
 }
 
 export function PlanConfirm({ data }: PlanConfirmProps) {
-  const plan = data.plan ?? {}
-
-  const params = PARAM_KEYS.filter((k) => plan[k] != null && plan[k] !== '')
-  const orchestration = plan.orchestration as Record<string, Record<string, string>> | null
+  const plan = (data.plan ?? {}) as PlanData
+  const summary = data.summary
   const sections = Array.isArray(plan.sections) ? plan.sections : []
 
   return (
     <div className="space-y-3">
       <h3 className="text-sm font-bold text-white">{data.title}</h3>
 
-      {params.length > 0 && (
-        <div className="grid grid-cols-2 gap-2">
-          {params.map((key) => (
-            <div key={key} className="rounded-lg bg-surface-mid p-3">
-              <div className="text-[10px] font-semibold uppercase tracking-wider text-muted">
-                {PARAM_LABELS[key] ?? key}
-              </div>
-              <div className="mt-0.5 text-sm font-semibold text-white">
-                {formatValue(key, plan[key])}
-              </div>
-            </div>
-          ))}
+      {/* User prompt context */}
+      {data.user_prompt && (
+        <div className="rounded-lg bg-surface-mid p-3">
+          <div className="text-[10px] font-semibold uppercase tracking-wider text-muted mb-1">创作需求</div>
+          <p className="text-sm text-white/80">{data.user_prompt}</p>
         </div>
       )}
 
-      {orchestration && typeof orchestration === 'object' && (
-        <div>
-          <div className="text-[10px] font-semibold uppercase tracking-wider text-muted mb-1.5">
-            配器方案
-          </div>
-          <div className="space-y-0.5">
-            {Object.entries(orchestration).map(([voice, info]) => (
-              <div key={voice} className="flex items-center gap-2 text-xs py-1 border-b border-border-subtle last:border-0">
-                <span className="w-16 text-muted">{VOICE_LABELS[voice] ?? voice}</span>
-                <span className="flex-1 text-white">{info.name ?? info.instrument ?? voice}</span>
-                <span className="text-muted text-[11px]">{info.register ?? info.range ?? ''}</span>
-              </div>
-            ))}
-          </div>
+      {/* Key parameters grid */}
+      <div className="grid grid-cols-2 gap-2">
+        {plan.title && (
+          <ParamCard label="标题" value={String(plan.title)} />
+        )}
+        {plan.key && (
+          <ParamCard label="调性" value={`${plan.key} ${plan.scale === 'major' ? '大调' : '小调'}`} />
+        )}
+        {plan.bpm && (
+          <ParamCard label="速度" value={`${plan.bpm} BPM`} />
+        )}
+        {summary?.duration && (
+          <ParamCard label="时长" value={`${summary.duration}（${plan.total_bars} 小节）`} />
+        )}
+        {summary?.section_structure && (
+          <ParamCard label="曲式" value={summary.section_structure} />
+        )}
+        {plan.demo_length_bars && (
+          <ParamCard label="小样长度" value={summary?.demo_length ?? `${plan.demo_length_bars} bars`} />
+        )}
+        {plan.time_signature && (
+          <ParamCard label="拍号" value={String(plan.time_signature)} />
+        )}
+        {plan.generation_order && (
+          <ParamCard label="生成顺序" value={(plan.generation_order as string[]).map(o => VOICE_LABELS[o] ?? o).join(' → ')} />
+        )}
+      </div>
+
+      {/* Orchestration */}
+      {summary?.orchestration_desc && (
+        <div className="rounded-lg bg-surface-mid p-3">
+          <div className="text-[10px] font-semibold uppercase tracking-wider text-muted mb-1">配器方案</div>
+          <p className="text-sm text-white">{summary.orchestration_desc}</p>
         </div>
       )}
 
+      {/* SF2 Status */}
+      {summary?.sf2_status && (
+        <div className="flex items-center gap-2 text-xs text-muted">
+          <span>SF2 音色库：</span>
+          <span className={summary.sf2_status.includes('未配置') ? 'text-muted' : 'text-green-400'}>
+            {summary.sf2_status}
+          </span>
+        </div>
+      )}
+
+      {/* Section details */}
       {sections.length > 0 && (
         <div>
           <div className="text-[10px] font-semibold uppercase tracking-wider text-muted mb-1.5">
             段落结构
           </div>
           <div className="space-y-0.5">
-            {sections.map((section: { id?: string; name?: string; measures?: number | string; energy_level?: number }, i: number) => (
+            {sections.map((section: Record<string, unknown>, i: number) => (
               <div key={i} className="flex items-center gap-2 text-xs py-1 border-b border-border-subtle last:border-0">
-                <span className="font-bold text-brand w-6">{section.id ?? String.fromCharCode(65 + i)}</span>
-                <span className="flex-1 text-white">{section.name ?? `Section ${i + 1}`}</span>
+                <span className="font-bold text-brand w-6">{String(section.id ?? String.fromCharCode(65 + i))}</span>
+                <span className="flex-1 text-white">{String(section.name ?? `Section ${i + 1}`)}</span>
                 <span className="text-muted">
-                  {section.measures} bars
+                  {String(section.measures)} bars
                   {section.energy_level != null && ` · energy ${section.energy_level}`}
                 </span>
               </div>
@@ -99,6 +107,15 @@ export function PlanConfirm({ data }: PlanConfirmProps) {
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+function ParamCard({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg bg-surface-mid p-3">
+      <div className="text-[10px] font-semibold uppercase tracking-wider text-muted">{label}</div>
+      <div className="mt-0.5 text-sm font-semibold text-white">{value}</div>
     </div>
   )
 }

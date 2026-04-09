@@ -1,0 +1,16 @@
+%%abc-version 2.1
+X:1
+T:晨曦乡城
+M:4/4
+L:1/8
+Q:1/4=90
+K:D
+%%MIDI channel 1
+V:1
+%%MIDI program 40
+!mf! d'3/2 e'/2 f#' g' a'2 z2 | a'3/2 g'/2 f#' e' d'2 z2 | !p! a' g' f#' e' d'2 z2 | g' f#' e' d' c#'2 b2 |
+!mf! d'3/2 e'/2 f#' g' a'2 z2 | a'3/2 g'/2 f#' e' d'2 g' f#' | !f! e' d' c#' b a2 g2 | !p! f#'4 z4 |
+%%MIDI channel 2
+V:2
+%%MIDI program 48
+ | z8 | z8 | z8 | z8 | z8 | z8 | z8 | z8

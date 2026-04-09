@@ -222,6 +222,16 @@ func get_sample(preset_index: int, key: int, velocity: int, channel: int = 0) ->
 	var sample_modes: int = best_inst_zone.sample_modes
 	if inst_global_zone != null:
 		sample_modes |= inst_global_zone.sample_modes
+
+	# 调试: 打印循环原始值
+	print("[SF2] preset=%d key=%d sample_modes=%d header_loop=[%d,%d] actual_loop=[%d,%d] zone_offsets=[%d,%d]" % [
+		preset_index, key, sample_modes,
+		sample_header.loop_start, sample_header.loop_end,
+		actual_loop_start, actual_loop_end,
+		best_inst_zone.loop_start_offset, best_inst_zone.loop_end_offset])
+
+	# 循环判定: 仅依赖 sample_modes 标志位 (SF2 标准行为)
+	# sample_modes=0 的采样由播放器在播完后自动进入 release 衰减
 	info.has_loop = (sample_modes & 0x01) != 0 and actual_loop_end > actual_loop_start + 1
 	info.loop_during_release = (sample_modes & 0x02) != 0
 

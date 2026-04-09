@@ -1,0 +1,2755 @@
+{
+  "sf2_name": "GeneralUser GS 2.0.3 BETA",
+  "version": "2.01",
+  "sound_engine": "E-mu 10K2",
+  "preset_count": 287,
+  "presets": {
+    "0": {
+      "name": "Grand Piano",
+      "gm_name": "piano",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        51,
+        74
+      ],
+      "vel_layers": 1,
+      "avg_attack": 0.008,
+      "avg_release": 3.6609,
+      "quality": "high",
+      "characteristics": [
+        "percussive",
+        "long_release"
+      ]
+    },
+    "1": {
+      "name": "Bright Grand Piano",
+      "gm_name": "bright_piano",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        51,
+        74
+      ],
+      "vel_layers": 1,
+      "avg_attack": 0.008,
+      "avg_release": 4.544,
+      "quality": "high",
+      "characteristics": [
+        "percussive",
+        "long_release"
+      ]
+    },
+    "2": {
+      "name": "Electric Grand Piano",
+      "gm_name": "electric_grand",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        51,
+        74
+      ],
+      "vel_layers": 1,
+      "avg_attack": 0.008,
+      "avg_release": 4.544,
+      "quality": "high",
+      "characteristics": [
+        "percussive",
+        "long_release"
+      ]
+    },
+    "3": {
+      "name": "Honky-Tonk Piano",
+      "gm_name": "honkytonk_piano",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        51,
+        74
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": 3.8579,
+      "quality": "high",
+      "characteristics": [
+        "long_release"
+      ]
+    },
+    "4": {
+      "name": "Tine Electric Piano",
+      "gm_name": "electric_piano1",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        48,
+        71
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "5": {
+      "name": "FM Electric Piano",
+      "gm_name": "electric_piano2",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        51,
+        74
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "6": {
+      "name": "Harpsichord",
+      "gm_name": "harpsichord",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        46,
+        69
+      ],
+      "vel_layers": 1,
+      "avg_attack": 0.005,
+      "avg_release": 0.3234,
+      "quality": "high",
+      "characteristics": [
+        "percussive"
+      ]
+    },
+    "7": {
+      "name": "Clavinet",
+      "gm_name": "clavinet",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        45,
+        68
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": 0.0993,
+      "quality": "high",
+      "characteristics": [
+        "short_release"
+      ]
+    },
+    "8": {
+      "name": "Celeste",
+      "gm_name": "celesta",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        51,
+        74
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": 2.8803,
+      "quality": "high",
+      "characteristics": [
+        "long_release"
+      ]
+    },
+    "9": {
+      "name": "Glockenspiel",
+      "gm_name": "glockenspiel",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        51,
+        74
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": 3.8566,
+      "quality": "high",
+      "characteristics": [
+        "long_release"
+      ]
+    },
+    "10": {
+      "name": "Music Box",
+      "gm_name": "music_box",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        50,
+        73
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": 2.6769,
+      "quality": "high",
+      "characteristics": [
+        "long_release"
+      ]
+    },
+    "11": {
+      "name": "Vibraphone",
+      "gm_name": "vibraphone",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        45,
+        68
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "12": {
+      "name": "Marimba",
+      "gm_name": "marimba",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        51,
+        74
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": 3.7833,
+      "quality": "high",
+      "characteristics": [
+        "long_release"
+      ]
+    },
+    "13": {
+      "name": "Xylophone",
+      "gm_name": "xylophone",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        62,
+        85
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "14": {
+      "name": "Tubular Bells",
+      "gm_name": "tubular_bell",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        51,
+        74
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "15": {
+      "name": "Dulcimer",
+      "gm_name": "dulcimer",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        44,
+        67
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": 6.3203,
+      "quality": "high",
+      "characteristics": [
+        "long_release"
+      ]
+    },
+    "16": {
+      "name": "Tonewheel Organ",
+      "gm_name": "drawbar_organ",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        45,
+        68
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "17": {
+      "name": "Percussive Organ",
+      "gm_name": "percussive_organ",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        50,
+        73
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "18": {
+      "name": "Rock Organ",
+      "gm_name": "rock_organ",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        50,
+        73
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "19": {
+      "name": "Pipe Organ",
+      "gm_name": "church_organ",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        51,
+        74
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "20": {
+      "name": "Reed Organ",
+      "gm_name": "reed_organ",
+      "key_range": [
+        0,
+        115
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        48,
+        71
+      ],
+      "vel_layers": 1,
+      "avg_attack": 0.05,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "21": {
+      "name": "Accordion",
+      "gm_name": "accordion",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        46,
+        69
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "22": {
+      "name": "Harmonica",
+      "gm_name": "harmonica",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        46,
+        69
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "23": {
+      "name": "Bandoneon",
+      "gm_name": "tango_accordion",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        48,
+        71
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "24": {
+      "name": "Nylon Guitar",
+      "gm_name": "acoustic_guitar",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        42,
+        65
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "25": {
+      "name": "Steel Guitar",
+      "gm_name": "steel_guitar",
+      "key_range": [
+        0,
+        108
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        42,
+        65
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "26": {
+      "name": "Jazz Guitar",
+      "gm_name": "jazz_guitar",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        44,
+        67
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "27": {
+      "name": "Clean Guitar",
+      "gm_name": "clean_guitar",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        42,
+        65
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "28": {
+      "name": "Muted Guitar",
+      "gm_name": "muted_guitar",
+      "key_range": [
+        0,
+        118
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        51,
+        74
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "29": {
+      "name": "Overdrive Guitar",
+      "gm_name": "overdriven_guitar",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        49,
+        72
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "30": {
+      "name": "Distortion Guitar",
+      "gm_name": "distortion_guitar",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        44,
+        67
+      ],
+      "vel_layers": 1,
+      "avg_attack": 0.005,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": [
+        "percussive"
+      ]
+    },
+    "31": {
+      "name": "Guitar Harmonics",
+      "gm_name": "guitar_harmonics",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        51,
+        74
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "32": {
+      "name": "Acoustic Bass",
+      "gm_name": "acoustic_bass",
+      "key_range": [
+        0,
+        108
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        51,
+        74
+      ],
+      "vel_layers": 1,
+      "avg_attack": 0.002,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": [
+        "percussive"
+      ]
+    },
+    "33": {
+      "name": "Finger Bass",
+      "gm_name": "electric_bass_finger",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        51,
+        74
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "34": {
+      "name": "Pick Bass",
+      "gm_name": "electric_bass_pick",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        51,
+        74
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "35": {
+      "name": "Fretless Bass",
+      "gm_name": "fretless_bass",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        51,
+        74
+      ],
+      "vel_layers": 1,
+      "avg_attack": 0.002,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": [
+        "percussive"
+      ]
+    },
+    "36": {
+      "name": "Slap Bass 1",
+      "gm_name": "slap_bass1",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        51,
+        74
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "37": {
+      "name": "Slap Bass 2",
+      "gm_name": "slap_bass2",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        0,
+        23
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "38": {
+      "name": "Synth Bass 1",
+      "gm_name": "synth_bass1",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        51,
+        74
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "39": {
+      "name": "Synth Bass 2",
+      "gm_name": "synth_bass2",
+      "key_range": [
+        0,
+        108
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        51,
+        74
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "40": {
+      "name": "Violin",
+      "gm_name": "violin",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        44,
+        67
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "41": {
+      "name": "Viola",
+      "gm_name": "viola",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        51,
+        74
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "42": {
+      "name": "Cello",
+      "gm_name": "cello",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        42,
+        65
+      ],
+      "vel_layers": 1,
+      "avg_attack": 0.006,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": [
+        "percussive"
+      ]
+    },
+    "43": {
+      "name": "Double Bass",
+      "gm_name": "contrabass",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        42,
+        65
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "44": {
+      "name": "Tremolo Strings",
+      "gm_name": "tremolo_strings",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        43,
+        66
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "45": {
+      "name": "Pizzicato Strings",
+      "gm_name": "pizzicato_strings",
+      "key_range": [
+        0,
+        112
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        51,
+        74
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "46": {
+      "name": "Orchestral Harp",
+      "gm_name": "orchestral_harp",
+      "key_range": [
+        0,
+        116
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        51,
+        74
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "47": {
+      "name": "Timpani",
+      "gm_name": "timpani",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        42,
+        65
+      ],
+      "vel_layers": 20,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "48": {
+      "name": "Fast Strings",
+      "gm_name": "strings",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        43,
+        66
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "49": {
+      "name": "Slow Strings",
+      "gm_name": "slow_strings",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        43,
+        66
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "50": {
+      "name": "Synth Strings 1",
+      "gm_name": "synth_strings1",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        44,
+        67
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "51": {
+      "name": "Synth Strings 2",
+      "gm_name": "synth_strings2",
+      "key_range": [
+        0,
+        116
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        51,
+        74
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "52": {
+      "name": "Concert Choir",
+      "gm_name": "choir_aahs",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        45,
+        68
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "53": {
+      "name": "Voice Oohs",
+      "gm_name": "voice_oohs",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        51,
+        74
+      ],
+      "vel_layers": 1,
+      "avg_attack": 0.005,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": [
+        "percussive"
+      ]
+    },
+    "54": {
+      "name": "Synth Voice",
+      "gm_name": "synth_choir",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        45,
+        68
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "55": {
+      "name": "Orchestra Hit",
+      "gm_name": "orchestra_hit",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        42,
+        65
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "medium",
+      "characteristics": []
+    },
+    "56": {
+      "name": "Trumpet",
+      "gm_name": "trumpet",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        51,
+        74
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "57": {
+      "name": "Trombone",
+      "gm_name": "trombone",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        42,
+        65
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "58": {
+      "name": "Tuba",
+      "gm_name": "tuba",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        51,
+        74
+      ],
+      "vel_layers": 1,
+      "avg_attack": 0.1,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "59": {
+      "name": "Muted Trumpet",
+      "gm_name": "muted_trumpet",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        51,
+        74
+      ],
+      "vel_layers": 1,
+      "avg_attack": 0.1,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "60": {
+      "name": "French Horns",
+      "gm_name": "french_horn",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        42,
+        65
+      ],
+      "vel_layers": 1,
+      "avg_attack": 0.0203,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "61": {
+      "name": "Brass Section",
+      "gm_name": "brass_section",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        42,
+        65
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "62": {
+      "name": "Synth Brass 1",
+      "gm_name": "synth_brass1",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        51,
+        74
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "63": {
+      "name": "Synth Brass 2",
+      "gm_name": "synth_brass2",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        51,
+        74
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "64": {
+      "name": "Soprano Sax",
+      "gm_name": "soprano_sax",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        48,
+        71
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "65": {
+      "name": "Alto Sax",
+      "gm_name": "alto_sax",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        43,
+        66
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "66": {
+      "name": "Tenor Sax",
+      "gm_name": "tenor_sax",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        48,
+        71
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": 0.6799,
+      "quality": "high",
+      "characteristics": []
+    },
+    "67": {
+      "name": "Baritone Sax",
+      "gm_name": "baritone_sax",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        42,
+        65
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "68": {
+      "name": "Oboe",
+      "gm_name": "oboe",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        46,
+        69
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "69": {
+      "name": "English Horn",
+      "gm_name": "english_horn",
+      "key_range": [
+        0,
+        112
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        51,
+        74
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "70": {
+      "name": "Bassoon",
+      "gm_name": "bassoon",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        46,
+        69
+      ],
+      "vel_layers": 1,
+      "avg_attack": 0.006,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": [
+        "percussive"
+      ]
+    },
+    "71": {
+      "name": "Clarinet",
+      "gm_name": "clarinet",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        49,
+        72
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "72": {
+      "name": "Piccolo",
+      "gm_name": "piccolo",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        51,
+        74
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "73": {
+      "name": "Flute",
+      "gm_name": "flute",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        49,
+        72
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "74": {
+      "name": "Recorder",
+      "gm_name": "recorder",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        42,
+        65
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "75": {
+      "name": "Pan Flute",
+      "gm_name": "pan_flute",
+      "key_range": [
+        0,
+        111
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        51,
+        74
+      ],
+      "vel_layers": 1,
+      "avg_attack": 0.008,
+      "avg_release": -1.0,
+      "quality": "medium",
+      "characteristics": [
+        "percussive"
+      ]
+    },
+    "76": {
+      "name": "Bottle Blow",
+      "gm_name": "bottle_blow",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        51,
+        74
+      ],
+      "vel_layers": 5,
+      "avg_attack": 0.05,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "77": {
+      "name": "Shakuhachi",
+      "gm_name": "shakuhachi",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        51,
+        74
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "medium",
+      "characteristics": []
+    },
+    "78": {
+      "name": "Whistle",
+      "gm_name": "whistle",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        51,
+        74
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "79": {
+      "name": "Ocarina",
+      "gm_name": "ocarina",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        51,
+        74
+      ],
+      "vel_layers": 1,
+      "avg_attack": 0.01,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": [
+        "percussive"
+      ]
+    },
+    "80": {
+      "name": "Square Lead",
+      "gm_name": "synth_lead_square",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        51,
+        74
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "81": {
+      "name": "Saw Lead",
+      "gm_name": "synth_lead_saw",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        51,
+        74
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "82": {
+      "name": "Synth Calliope",
+      "gm_name": "synth_lead_calliope",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        51,
+        74
+      ],
+      "vel_layers": 5,
+      "avg_attack": 0.05,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "83": {
+      "name": "Chiffer Lead",
+      "gm_name": "synth_lead_chiff",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        51,
+        74
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "84": {
+      "name": "Charang",
+      "gm_name": "synth_lead_charang",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        45,
+        68
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "85": {
+      "name": "Solo Vox",
+      "gm_name": "synth_lead_voice",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        51,
+        74
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "86": {
+      "name": "5th Saw Wave",
+      "gm_name": "synth_lead_fifths",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        51,
+        74
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "medium",
+      "characteristics": []
+    },
+    "87": {
+      "name": "Bass & Lead",
+      "gm_name": "synth_lead_bass_lead",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        51,
+        74
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "88": {
+      "name": "Fantasia",
+      "gm_name": "synth_pad_new_age",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        44,
+        67
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "89": {
+      "name": "Warm Pad",
+      "gm_name": "synth_pad_warm",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        43,
+        66
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "90": {
+      "name": "Polysynth",
+      "gm_name": "synth_pad_polysynth",
+      "key_range": [
+        0,
+        108
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        44,
+        67
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "91": {
+      "name": "Space Voice",
+      "gm_name": "synth_pad_choir",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        51,
+        74
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "92": {
+      "name": "Bowed Glass",
+      "gm_name": "synth_pad_bowed",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        44,
+        67
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "93": {
+      "name": "Metal Pad",
+      "gm_name": "synth_pad_metallic",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        51,
+        74
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "94": {
+      "name": "Halo Pad",
+      "gm_name": "synth_pad_halo",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        45,
+        68
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "95": {
+      "name": "Sweep Pad",
+      "gm_name": "synth_pad_sweep",
+      "key_range": [
+        0,
+        108
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        44,
+        67
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "96": {
+      "name": "Ice Rain",
+      "gm_name": "gm_96",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        51,
+        74
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "97": {
+      "name": "Soundtrack",
+      "gm_name": "gm_97",
+      "key_range": [
+        0,
+        108
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        51,
+        74
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "98": {
+      "name": "Crystal",
+      "gm_name": "gm_98",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        51,
+        74
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "99": {
+      "name": "Atmosphere",
+      "gm_name": "gm_99",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        51,
+        74
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "100": {
+      "name": "Brightness",
+      "gm_name": "gm_100",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        51,
+        74
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "101": {
+      "name": "Goblin",
+      "gm_name": "gm_101",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        42,
+        65
+      ],
+      "vel_layers": 1,
+      "avg_attack": 2.8592,
+      "avg_release": 4.1411,
+      "quality": "high",
+      "characteristics": [
+        "slow_attack",
+        "long_release"
+      ]
+    },
+    "102": {
+      "name": "Echo Drops",
+      "gm_name": "gm_102",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        51,
+        74
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "103": {
+      "name": "Star Theme",
+      "gm_name": "gm_103",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        51,
+        74
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "104": {
+      "name": "Sitar",
+      "gm_name": "gm_104",
+      "key_range": [
+        0,
+        108
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        51,
+        74
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": 4.2499,
+      "quality": "high",
+      "characteristics": [
+        "long_release"
+      ]
+    },
+    "105": {
+      "name": "Banjo",
+      "gm_name": "gm_105",
+      "key_range": [
+        0,
+        108
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        51,
+        74
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "106": {
+      "name": "Shamisen",
+      "gm_name": "gm_106",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        51,
+        74
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": 1.4067,
+      "quality": "high",
+      "characteristics": []
+    },
+    "107": {
+      "name": "Koto",
+      "gm_name": "gm_107",
+      "key_range": [
+        0,
+        108
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        51,
+        74
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "108": {
+      "name": "Kalimba",
+      "gm_name": "gm_108",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        51,
+        74
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": 1.2,
+      "quality": "high",
+      "characteristics": []
+    },
+    "109": {
+      "name": "Bagpipes",
+      "gm_name": "gm_109",
+      "key_range": [
+        0,
+        108
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        51,
+        74
+      ],
+      "vel_layers": 1,
+      "avg_attack": 0.0925,
+      "avg_release": 0.605,
+      "quality": "high",
+      "characteristics": []
+    },
+    "110": {
+      "name": "Fiddle",
+      "gm_name": "gm_110",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        44,
+        67
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "111": {
+      "name": "Shenai",
+      "gm_name": "gm_111",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        51,
+        74
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "112": {
+      "name": "Tinker Bell",
+      "gm_name": "gm_112",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        51,
+        74
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": 2.8727,
+      "quality": "high",
+      "characteristics": [
+        "long_release"
+      ]
+    },
+    "113": {
+      "name": "Agogo",
+      "gm_name": "gm_113",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        51,
+        74
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": 0.8333,
+      "quality": "high",
+      "characteristics": []
+    },
+    "114": {
+      "name": "Steel Drums",
+      "gm_name": "gm_114",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        48,
+        71
+      ],
+      "vel_layers": 1,
+      "avg_attack": 0.002,
+      "avg_release": 2.3749,
+      "quality": "medium",
+      "characteristics": [
+        "percussive",
+        "long_release"
+      ]
+    },
+    "115": {
+      "name": "Wood Block",
+      "gm_name": "gm_115",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        51,
+        74
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "high",
+      "characteristics": []
+    },
+    "116": {
+      "name": "Taiko Drum",
+      "gm_name": "gm_116",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        42,
+        65
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": 3.6513,
+      "quality": "high",
+      "characteristics": [
+        "long_release"
+      ]
+    },
+    "117": {
+      "name": "Melodic Tom",
+      "gm_name": "gm_117",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        51,
+        74
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": 24.9984,
+      "quality": "high",
+      "characteristics": [
+        "long_release"
+      ]
+    },
+    "118": {
+      "name": "Synth Drum",
+      "gm_name": "gm_118",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        51,
+        74
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "low",
+      "characteristics": []
+    },
+    "119": {
+      "name": "Reverse Cymbal",
+      "gm_name": "gm_119",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        51,
+        74
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "low",
+      "characteristics": []
+    },
+    "120": {
+      "name": "Fret Noise",
+      "gm_name": "gm_120",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        42,
+        65
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "low",
+      "characteristics": []
+    },
+    "121": {
+      "name": "Breath Noise",
+      "gm_name": "gm_121",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        42,
+        65
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": 0.75,
+      "quality": "medium",
+      "characteristics": []
+    },
+    "122": {
+      "name": "Seashore",
+      "gm_name": "gm_122",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        42,
+        65
+      ],
+      "vel_layers": 1,
+      "avg_attack": 1.775,
+      "avg_release": -1.0,
+      "quality": "medium",
+      "characteristics": [
+        "slow_attack"
+      ]
+    },
+    "123": {
+      "name": "Birds",
+      "gm_name": "gm_123",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        51,
+        74
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "medium",
+      "characteristics": []
+    },
+    "124": {
+      "name": "Telephone 1",
+      "gm_name": "gm_124",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        51,
+        74
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": 6.8655,
+      "quality": "medium",
+      "characteristics": [
+        "long_release"
+      ]
+    },
+    "125": {
+      "name": "Helicopter",
+      "gm_name": "gm_125",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        42,
+        65
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "low",
+      "characteristics": []
+    },
+    "126": {
+      "name": "Applause",
+      "gm_name": "gm_126",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        42,
+        65
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "medium",
+      "characteristics": []
+    },
+    "127": {
+      "name": "Gun Shot",
+      "gm_name": "gm_127",
+      "key_range": [
+        0,
+        127
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        51,
+        74
+      ],
+      "vel_layers": 1,
+      "avg_attack": -1.0,
+      "avg_release": -1.0,
+      "quality": "low",
+      "characteristics": []
+    }
+  }
+}

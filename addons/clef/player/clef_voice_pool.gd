@@ -22,6 +22,16 @@ func start_note(p_channel: int, p_key: int, velocity: int,
 		if voice.channel == p_channel and voice.key == p_key and not voice.is_idle():
 			voice.stop_note()
 
+	# Legato: 同通道不同音高的活跃音符快速释放
+	# 跳过 ATTACK 状态，防止同时起始的和弦音符互相触发 legato
+	for voice in _voices:
+		if voice.channel == p_channel and not voice.is_idle() and voice.key != p_key:
+			print("[LEGATO] ch=%d new_key=%d -> old_key=%d state=%s" % [p_channel, p_key, voice.key, ClefVoice.State.keys()[voice.state]])
+			if voice.state != ClefVoice.State.ATTACK:
+				voice.stop_note_legato()
+			else:
+				print("[LEGATO]   SKIP (ATTACK)")
+
 	# 统计该通道活跃语音数
 	var channel_active: int = 0
 	for voice in _voices:

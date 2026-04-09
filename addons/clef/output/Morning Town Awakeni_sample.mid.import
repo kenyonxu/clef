@@ -1,0 +1,14 @@
+[remap]
+
+importer="clef"
+type="MidiResource"
+uid="uid://diwowy285xkd7"
+path="res://.godot/imported/Morning Town Awakeni_sample.mid-46377f26404ffded3d275ab3a2ab2fb2.tres"
+
+[deps]
+
+source_file="res://addons/clef/output/Morning Town Awakeni_sample.mid"
+dest_files=["res://.godot/imported/Morning Town Awakeni_sample.mid-46377f26404ffded3d275ab3a2ab2fb2.tres"]
+
+[params]
+

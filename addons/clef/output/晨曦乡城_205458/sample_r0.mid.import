@@ -1,0 +1,14 @@
+[remap]
+
+importer="clef"
+type="MidiResource"
+uid="uid://or0iymduknna"
+path="res://.godot/imported/sample_r0.mid-296c20ab08b5420ae5b39e4e160ada53.tres"
+
+[deps]
+
+source_file="res://addons/clef/output/晨曦乡城_205458/sample_r0.mid"
+dest_files=["res://.godot/imported/sample_r0.mid-296c20ab08b5420ae5b39e4e160ada53.tres"]
+
+[params]
+

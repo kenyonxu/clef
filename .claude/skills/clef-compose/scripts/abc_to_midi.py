@@ -767,7 +767,9 @@ class _VoiceTrackBuilder:
     """
 
     def __init__(self, voice: dict, header: dict, unit_ticks: int,
-                 key_accidentals: Optional[dict[str, int]] = None) -> None:
+                 key_accidentals: Optional[dict[str, int]] = None,
+                 auto_legato: bool = False,
+                 legato_overlap_ratio: float = 0.85) -> None:
         self.voice = voice
         self.header = header
         self.unit_ticks = unit_ticks
@@ -775,6 +777,12 @@ class _VoiceTrackBuilder:
         self.channel = voice['channel']
         self.is_perc = voice['clef'] == 'perc'
         self.transpose = voice.get('transpose', 0)
+
+        # Auto-legato: extend note-off for sustained instruments to create
+        # smooth overlap. Only applies within bars (not across bar lines),
+        # not before rests, not on staccato notes.
+        self.auto_legato = auto_legato and not self.is_perc
+        self.legato_overlap_ratio = legato_overlap_ratio
 
         # Timing state
         self.abs_time = 0
@@ -789,6 +797,7 @@ class _VoiceTrackBuilder:
         self.pending_start = 0
         self.pending_duration = 0
         self.pending_velocity = 0
+        self.pending_was_staccato = False
 
         # Broken rhythm: multiplier (num, den) to apply to the next note
         self.next_broken_mult: Optional[tuple[int, int]] = None
@@ -817,14 +826,37 @@ class _VoiceTrackBuilder:
         # Bar-local accidentals
         self.bar_accidentals: dict[str, int] = {}
 
+        # Track whether next note starts in the same bar as the pending note
+        # (auto-legato must NOT extend across bar lines)
+        self._pending_bar_end = 0
+
     # ── Helpers ──────────────────────────────────────────────────────────
 
-    def _close_pending(self) -> None:
+    def _close_pending(self, followed_by_rest: bool = False) -> None:
         if self.pending_pitch is None:
             return
         off_time = self.pending_start + self.pending_duration
         if self.slur_active:
             off_time = max(off_time, self.abs_time)
+        # Auto-legato: extend note-off to overlap with the next note,
+        # but NOT across bar lines, NOT before rests, NOT on staccato.
+        if (self.auto_legato and not self.pending_was_staccato
+                and not followed_by_rest
+                and not self.slur_active):
+            # Only extend if the next note is in the same bar
+            if self.abs_time < self._pending_bar_end:
+                gap = self.abs_time - off_time
+                if gap > 0:
+                    # Fill most of the gap between notes
+                    extend = int(gap * self.legato_overlap_ratio)
+                    off_time = off_time + extend
+                else:
+                    # Back-to-back notes: extend past next note-on for overlap
+                    # Use ~10% of note duration as overlap
+                    overlap = max(int(self.pending_duration * 0.10), 10)
+                    off_time = off_time + overlap
+                # Never extend past the bar line
+                off_time = min(off_time, self._pending_bar_end)
         self.events.append((self.pending_start, mido.Message(
             'note_on', note=self.pending_pitch, velocity=self.pending_velocity,
             time=0, channel=self.channel)))
@@ -957,7 +989,8 @@ class _VoiceTrackBuilder:
         if token not in ('|', '|:', ':|', '||', '|]', '::'):
             return False
         if not self.tie_active:
-            self._close_pending()
+            # Bar line = phrase boundary, no legato extension
+            self._close_pending(followed_by_rest=True)
         bar_end = self.bar_start_tick + self.bar_ticks
         self.abs_time = max(self.abs_time, bar_end)
         self.bar_start_tick = self.abs_time
@@ -983,7 +1016,7 @@ class _VoiceTrackBuilder:
     def _handle_rest(self, token: str) -> bool:
         if token[0] not in ('z', 'x'):
             return False
-        self._close_pending()
+        self._close_pending(followed_by_rest=True)
         self.abs_time += self._calc_note_duration(token)
         return True
 
@@ -1048,7 +1081,8 @@ class _VoiceTrackBuilder:
         decor = self.pending_decor
         self.pending_decor = None
 
-        if decor == 'STACCATO':
+        is_staccato = decor == 'STACCATO'
+        if is_staccato:
             duration = duration // 2
         elif decor == 'TENUTO':
             duration = int(duration * 1.1)
@@ -1083,6 +1117,9 @@ class _VoiceTrackBuilder:
         self.pending_start = self.abs_time
         self.pending_duration = duration
         self.pending_velocity = vel
+        self.pending_was_staccato = is_staccato
+        # Record bar boundary for auto-legato — don't extend past this
+        self._pending_bar_end = self.bar_start_tick + self.bar_ticks
 
     # ── Main Build ───────────────────────────────────────────────────────
 
@@ -1160,18 +1197,26 @@ def _build_voice_track(
     header: dict,
     unit_ticks: int,
     key_accidentals: Optional[dict[str, int]] = None,
+    auto_legato: bool = False,
+    legato_overlap_ratio: float = 0.85,
 ) -> mido.MidiTrack:
     """Build a MIDI track from a parsed voice section."""
-    return _VoiceTrackBuilder(voice, header, unit_ticks, key_accidentals).build()
+    return _VoiceTrackBuilder(
+        voice, header, unit_ticks, key_accidentals,
+        auto_legato=auto_legato, legato_overlap_ratio=legato_overlap_ratio,
+    ).build()
 
 
 # ── Main Converter ──────────────────────────────────────────────────────
 
-def abc_to_midi(abc_text: str) -> mido.MidiFile:
+def abc_to_midi(abc_text: str, auto_legato: bool = False) -> mido.MidiFile:
     """Convert ABC notation text to a MIDI file.
 
     Args:
         abc_text: Full ABC notation string including headers and voice sections.
+        auto_legato: If True, extend note-off times for sustained instruments
+            to create smooth overlap (85% ratio). Respects bar lines, rests,
+            and staccato markers.
 
     Returns:
         A mido.MidiFile object with one tempo track plus one track per voice.
@@ -1219,7 +1264,10 @@ def abc_to_midi(abc_text: str) -> mido.MidiFile:
 
     # Voice tracks
     for voice in voices:
-        track = _build_voice_track(voice, header, unit_ticks, key_accidentals=key_accidentals)
+        track = _build_voice_track(
+            voice, header, unit_ticks, key_accidentals=key_accidentals,
+            auto_legato=auto_legato,
+        )
         track.name = voice.get('name', f'Voice {voice["channel"]}')
         mid.tracks.append(track)
 
@@ -1244,6 +1292,8 @@ if __name__ == "__main__":
                         help='Input ABC file (alias for positional)')
     parser.add_argument('--output', '-o', dest='output_named',
                         help='Output MIDI file (alias for positional)')
+    parser.add_argument('--auto-legato', action='store_true',
+                        help='Enable auto-legato for sustained instruments')
 
     args = parser.parse_args()
 
@@ -1257,6 +1307,6 @@ if __name__ == "__main__":
         out_path = str(Path(abc_path).with_suffix('.mid'))
 
     abc_text = Path(abc_path).read_text(encoding='utf-8')
-    mid = abc_to_midi(abc_text)
+    mid = abc_to_midi(abc_text, auto_legato=args.auto_legato)
     mid.save(out_path)
     print(f"MIDI saved to {out_path}")

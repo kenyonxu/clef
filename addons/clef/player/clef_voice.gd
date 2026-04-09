@@ -42,6 +42,11 @@ const _HEAD_SILENT_SECOND: float = 1.0 / 8.0
 # Release 延迟 (防止 pop/click)
 var _request_release: bool = false
 var _request_release_second: float = 0.0
+# 非循环采样的预期播放时长 (秒), 用于提前触发 release
+# AudioStreamPlayer 在非循环流播完后直接静音，volume_db 渐变无效
+# 因此必须在采样结束前 ~50ms 主动触发 release，让最后几帧音频平滑淡出
+var _stream_play_duration: float = 0.0
+const _PRE_RELEASE_MARGIN: float = 0.05
 
 
 func _ready() -> void:
@@ -70,6 +75,12 @@ func _process(delta: float) -> void:
 	# 自动释放模式：播放结束后进入 release
 	if _auto_release and state == State.SUSTAIN:
 		_request_release = true
+
+	# 非循环采样：提前触发 release (匹配 SF2 标准行为)
+	# 必须在采样实际结束前开始淡出，否则 AudioStreamPlayer 已静音，volume_db 无效
+	if not _auto_release and state not in [State.RELEASE, State.FINISHED]:
+		if _stream_play_duration > 0.0 and _using_timer >= _stream_play_duration - _PRE_RELEASE_MARGIN:
+			_trigger_release()
 
 	# Release 延迟处理 (补偿 mix latency, 防止 pop/click)
 	if _request_release and state != State.RELEASE:
@@ -115,6 +126,7 @@ func start_note(inst_info: ClefInstrumentInfo, p_channel: int, p_key: int,
 	_paused = false
 	_request_release = false
 	_request_release_second = 0.0
+	_stream_play_duration = 0.0
 	state = State.ATTACK
 
 	# 从静音开始，ADSR 会渐入
@@ -123,6 +135,10 @@ func start_note(inst_info: ClefInstrumentInfo, p_channel: int, p_key: int,
 	# Mix latency 补偿 (与 MidiPlayer 一致)
 	var mix_delay: float = clampf(_GAP_SECOND - AudioServer.get_time_to_next_mix(), 0.0, _GAP_SECOND)
 	var from_position: float = _HEAD_SILENT_SECOND - mix_delay * pow(2.0, _base_pitch + _key_offset)
+
+	# 计算非循环采样的预期播放时长
+	_calculate_stream_duration(from_position)
+
 	play(maxf(0.0, from_position))
 
 
@@ -132,6 +148,18 @@ func stop_note() -> void:
 		return
 	if _sustained:
 		return
+	_request_release_second = _GAP_SECOND - maxf(AudioServer.get_time_to_next_mix(), 0.0)
+	_request_release = true
+
+
+## Legato 快速释放 — 同通道新音进入时，旧音用极短 release 快速淡出
+## 与 stop_note() 的区别：release 时间强制缩短到 30ms，避免长尾音污染新音
+func stop_note_legato() -> void:
+	if state == State.IDLE or state == State.FINISHED or state == State.RELEASE:
+		return
+	if _sustained:
+		return
+	_release = 0.03  # 30ms 快速淡出
 	_request_release_second = _GAP_SECOND - maxf(AudioServer.get_time_to_next_mix(), 0.0)
 	_request_release = true
 
@@ -199,6 +227,28 @@ func _trigger_release() -> void:
 	_release_start_db = current_adsr_db
 	state = State.RELEASE
 	_adsr_timer = 0.0
+
+
+## 计算非循环采样的预期播放时长
+## 从 from_position 到采样末尾的总时长，考虑 pitch_scale 的影响
+func _calculate_stream_duration(from_position: float) -> void:
+	var wav: AudioStreamWAV = stream as AudioStreamWAV
+	if wav == null:
+		return
+	if wav.loop_mode != AudioStreamWAV.LOOP_DISABLED:
+		return  # 循环采样不需要预释放
+
+	# 采样总时长 (秒) = 数据字节数 / (采样率 * 每帧字节数)
+	var bytes_per_frame: int = 4  # 16-bit mono = 2 bytes, stereo = 4 bytes
+	if wav.stereo:
+		bytes_per_frame = 4
+	else:
+		bytes_per_frame = 2
+	var total_duration: float = float(wav.data.size()) / (float(wav.mix_rate) * float(bytes_per_frame))
+
+	# 播放起始位置由 pitch_scale 影响: 实际播放时长 = (total - from) / pitch_scale
+	var pitch_factor: float = pow(2.0, _base_pitch + _key_offset)
+	_stream_play_duration = (total_duration - from_position) / pitch_factor
 
 
 ## ADSR 状态机

@@ -1,0 +1,89 @@
+<h2>当前 Workflow 面板的问题</h2>
+<p class="subtitle">基于代码分析，以下是两个核心可用性问题</p>
+
+<div class="split">
+  <div class="mockup">
+    <div class="mockup-header">问题 1：Reviewer 参与不可见</div>
+    <div class="mockup-body" style="padding: 12px;">
+      <p style="font-size: 11px; color: #aaa; margin-bottom: 8px;">当前 StepCard 显示的 agents 列表是静态定义的：</p>
+      <div style="background: #1a1a2e; border-radius: 6px; padding: 10px; font-family: monospace; font-size: 11px; color: #ccc; line-height: 1.6;">
+        <div style="border-bottom: 1px solid #333; padding-bottom: 6px; margin-bottom: 6px;">
+          <span style="color: #888;">sample</span> <span style="color: #4ade80;">● running</span><br/>
+          <span style="color: #666; padding-left: 12px;">├ clef-composer (sonnet)</span><br/>
+          <span style="color: #666; padding-left: 12px;">├ clef-harmonist (sonnet)</span><br/>
+          <span style="color: #666; padding-left: 12px;">└ clef-rhythmist (sonnet)</span>
+        </div>
+        <div style="background: #2a1a1a; border-radius: 4px; padding: 8px; border-left: 3px solid #f87171;">
+          <span style="color: #f87171; font-size: 10px;">缺失：</span><br/>
+          <span style="color: #fbbf24;">+ clef-reviewer</span> <span style="color: #666;">← melody gate 审查</span><br/>
+          <span style="color: #fbbf24;">+ clef-reviewer</span> <span style="color: #666;">← full review</span>
+        </div>
+        <div style="margin-top: 8px; border-bottom: 1px solid #333; padding-bottom: 6px; margin-bottom: 6px;">
+          <span style="color: #888;">iterate</span> <span style="color: #4ade80;">● running</span><br/>
+          <span style="color: #666; padding-left: 12px;">├ clef-reviewer (sonnet)</span><br/>
+          <span style="color: #666; padding-left: 12px;">└ clef-revision (sonnet)</span>
+        </div>
+        <div style="background: #2a1a1a; border-radius: 4px; padding: 8px; border-left: 3px solid #f87171;">
+          <span style="color: #f87171; font-size: 10px;">缺失：</span><br/>
+          <span style="color: #fbbf24;">+ clef-leader</span> <span style="color: #666;">← 任务调度决策</span>
+        </div>
+      </div>
+      <p style="font-size: 11px; color: #888; margin-top: 8px;">PHASES 中的 agents 是静态列表，不反映运行时实际参与的 agent</p>
+    </div>
+  </div>
+
+  <div class="mockup">
+    <div class="mockup-header">问题 2：长时间运行无进度信息</div>
+    <div class="mockup-body" style="padding: 12px;">
+      <p style="font-size: 11px; color: #aaa; margin-bottom: 8px;">create phase 内部有 5+ 个子步骤，但用户只看到：</p>
+      <div style="background: #1a1a2e; border-radius: 6px; padding: 10px; font-family: monospace; font-size: 11px; color: #ccc; line-height: 1.6;">
+        <div style="border-bottom: 1px solid #333; padding-bottom: 6px; margin-bottom: 6px;">
+          <span style="color: #888;">create</span> <span style="color: #4ade80;">● running</span>
+        </div>
+        <div style="text-align: center; padding: 16px 0;">
+          <span style="color: #555;">已运行 2 分 30 秒...</span><br/>
+          <span style="color: #444; font-size: 10px;">没有其他信息</span>
+        </div>
+      </div>
+      <p style="font-size: 11px; color: #888; margin-top: 8px;">实际 orchestrator 内部流程：</p>
+      <div style="background: #1a1a2e; border-radius: 6px; padding: 10px; font-family: monospace; font-size: 10px; color: #666; line-height: 1.8; margin-top: 6px;">
+        1. 生成和声 (clef-harmonist) ← 可能 30-60s<br/>
+        2. 生成旋律 (clef-composer) ← 可能 30-60s<br/>
+        3. 生成节奏 (clef-rhythmist) ← 可能 30-60s<br/>
+        4. 合并声部 (merge_abc)<br/>
+        5. 技术验证 (validate_abc)<br/>
+        6. 修正失败声部 (可能重试)<br/>
+        7. 转换 MIDI (abc_to_midi)<br/>
+        <span style="color: #444;">→ 总计可能 3-5 分钟，全程黑盒</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top: 20px;">
+  <h3>改进方向选择</h3>
+  <p class="subtitle">你希望优先解决哪个层面的问题？</p>
+  <div class="options">
+    <div class="option" data-choice="both" onclick="toggleSelect(this)">
+      <div class="letter">A</div>
+      <div class="content">
+        <h3>两者都要</h3>
+        <p>修复 agents 显示 + 添加子步骤进度（推荐，完整解决可用性问题）</p>
+      </div>
+    </div>
+    <div class="option" data-choice="agents-only" onclick="toggleSelect(this)">
+      <div class="letter">B</div>
+      <div class="content">
+        <h3>只修 agents 显示</h3>
+        <p>在 PHASES 静态列表中补全 reviewer/leader，不改后端进度机制</p>
+      </div>
+    </div>
+    <div class="option" data-choice="progress-only" onclick="toggleSelect(this)">
+      <div class="letter">C</div>
+      <div class="content">
+        <h3>只做子步骤进度</h3>
+        <p>实现后端 sub-step 事件 + 前端进度条，agents 显示保持现状</p>
+      </div>
+    </div>
+  </div>
+</div>

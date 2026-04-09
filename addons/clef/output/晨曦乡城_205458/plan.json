@@ -1,0 +1,122 @@
+{
+  "title": "晨曦乡城",
+  "key": "D",
+  "scale": "major",
+  "bpm": 90,
+  "time_signature": "4/4",
+  "form": "ABA",
+  "total_bars": 17,
+  "sections": [
+    {
+      "id": "intro",
+      "name": "黎明苏醒",
+      "measures": 6
+    },
+    {
+      "id": "main",
+      "name": "活力渐起",
+      "measures": 8
+    },
+    {
+      "id": "outro",
+      "name": "回归宁静",
+      "measures": 3
+    }
+  ],
+  "orchestration": {
+    "melody": {
+      "name": "主小提琴",
+      "channel": 1,
+      "instrument": "小提琴",
+      "range": "C-1-G9",
+      "register": "G#2-G4",
+      "midi_program": 40,
+      "sf2": {
+        "name": "Violin",
+        "gm_name": "violin",
+        "key_range": [
+          0,
+          127
+        ],
+        "vel_range": [
+          0,
+          127
+        ],
+        "sweet_spot": [
+          44,
+          67
+        ],
+        "vel_layers": 1,
+        "avg_attack": -1.0,
+        "avg_release": -1.0,
+        "quality": "high",
+        "characteristics": []
+      }
+    },
+    "harmony": {
+      "name": "背景和声",
+      "channel": 2,
+      "instrument": "弦乐合奏",
+      "range": "C-1-G9",
+      "register": "G2-F#4",
+      "midi_program": 48,
+      "sf2": {
+        "name": "Fast Strings",
+        "gm_name": "strings",
+        "key_range": [
+          0,
+          127
+        ],
+        "vel_range": [
+          0,
+          127
+        ],
+        "sweet_spot": [
+          43,
+          66
+        ],
+        "vel_layers": 1,
+        "avg_attack": -1.0,
+        "avg_release": -1.0,
+        "quality": "high",
+        "characteristics": []
+      }
+    },
+    "bass": {
+      "name": "低音铺垫",
+      "channel": 3,
+      "instrument": "原声贝斯",
+      "range": "C-1-C8",
+      "register": "D#3-D5",
+      "midi_program": 32,
+      "sf2": {
+        "name": "Acoustic Bass",
+        "gm_name": "acoustic_bass",
+        "key_range": [
+          0,
+          108
+        ],
+        "vel_range": [
+          0,
+          127
+        ],
+        "sweet_spot": [
+          51,
+          74
+        ],
+        "vel_layers": 1,
+        "avg_attack": 0.002,
+        "avg_release": -1.0,
+        "quality": "high",
+        "characteristics": [
+          "percussive"
+        ]
+      }
+    }
+  },
+  "generation_order": [
+    "harmony",
+    "melody"
+  ],
+  "demo_length_bars": 8
+}

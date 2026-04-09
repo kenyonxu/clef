@@ -1,0 +1,14 @@
+[remap]
+
+importer="clef"
+type="MidiResource"
+uid="uid://djrcwx6hkxd4c"
+path="res://.godot/imported/Morning Town Awakening_final.mid-952a0d33c024d559731ef76213373a61.tres"
+
+[deps]
+
+source_file="res://addons/clef/output/Morning Town Awakening_final.mid"
+dest_files=["res://.godot/imported/Morning Town Awakening_final.mid-952a0d33c024d559731ef76213373a61.tres"]
+
+[params]
+

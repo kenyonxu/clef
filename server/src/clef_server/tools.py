@@ -79,7 +79,7 @@ def abc_to_midi(
     try:
         from abc_to_midi import abc_to_midi as _abc_to_midi
         abc_text = Path(input_abc).read_text(encoding="utf-8")
-        midi = _abc_to_midi(abc_text)
+        midi = _abc_to_midi(abc_text, auto_legato=True)
         midi.save(output_mid)
         return {"output": output_mid}
     except ImportError as e:
