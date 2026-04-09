@@ -222,11 +222,35 @@ async def status_stream(session_id: str):
         raise HTTPException(status_code=404, detail="Session not found")
     try:
         from sse_starlette.sse import EventSourceResponse
-        async def event_generator():
-            yield {"event": "connected", "data": json.dumps({"session_id": session_id})}
-        return EventSourceResponse(event_generator())
     except ImportError:
         raise HTTPException(status_code=503, detail="SSE not available (sse-starlette not installed)")
+
+    async def event_generator():
+        queue: asyncio.Queue = asyncio.Queue(maxsize=100)
+        session.add_event_listener(queue)
+        try:
+            # Send initial state dump so client can catch up
+            initial = {
+                "type": "state",
+                "session_id": session_id,
+                "current_phase": session.current_phase,
+                "sub_steps": session.sub_steps,
+                "workflow_steps": session.get_workflow_steps(),
+            }
+            yield {"event": "state", "data": json.dumps(initial, ensure_ascii=False)}
+
+            # Stream events until session reaches terminal state
+            terminal = {"done", "failed", "cancelled"}
+            while session.status not in terminal:
+                try:
+                    event = await asyncio.wait_for(queue.get(), timeout=30)
+                    yield {"event": event["event"], "data": event["data"]}
+                except asyncio.TimeoutError:
+                    yield {"event": "ping", "data": json.dumps({"t": time.time()})}
+        finally:
+            session.remove_event_listener(queue)
+
+    return EventSourceResponse(event_generator())
 
 
 @router.get("/result/{session_id}")
@@ -419,7 +443,7 @@ async def update_providers(req: ProviderUpdateRequest):
         if "openai_compat" not in raw:
             raw["openai_compat"] = {}
         for alias, cfg in req.openai_compat.items():
-            raw["openai_compat"][alias] = cfg
+            raw["openai_compat"][alias] = cfg.model_dump() if hasattr(cfg, "model_dump") else cfg
 
     save_provider_config(path, raw)
     return await get_providers()
