@@ -90,6 +90,13 @@ class ComposeOrchestrator:
     # Agent config key -> agent factory name in agents.yaml
     VOICE_AGENT_MAP = {"melody": "clef-composer", "harmony": "clef-harmonist", "rhythm": "clef-rhythmist"}
 
+    # Display names for sub-step progress (Chinese)
+    _VOICE_DISPLAY_NAMES = {
+        "melody": "生成旋律",
+        "harmony": "生成和声",
+        "rhythm": "生成节奏",
+    }
+
     def __init__(
         self,
         session_id: str,
@@ -109,6 +116,9 @@ class ComposeOrchestrator:
         self.review_threshold = self._settings.get("review_threshold", 7)
         self.skip_review = self._settings.get("skip_review", False)
         self._validation_failures: list[dict] = []
+
+        # Load agent configs from agents.yaml (falls back to hardcoded defaults)
+        self._agent_defs = self._load_agent_defs()
 
     # ------------------------------------------------------------------
     # Session access (always fresh from the manager)
@@ -299,6 +309,61 @@ class ComposeOrchestrator:
         ]
 
     # ------------------------------------------------------------------
+    # Plan summary builder
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _build_plan_summary(plan: dict) -> dict:
+        """Build a rich parameter summary from plan.json for the confirmation UI."""
+        total_bars = plan.get("total_bars", 0)
+        bpm = plan.get("bpm", 0)
+        ts = plan.get("time_signature", "4/4")
+        beats_per_bar = int(ts.split("/")[0]) if "/" in ts else 4
+
+        # Duration
+        duration_sec = (total_bars * beats_per_bar / bpm * 60) if bpm > 0 else 0
+        if duration_sec >= 60:
+            duration_str = f"~{int(duration_sec // 60)}分{int(duration_sec % 60)}秒"
+        else:
+            duration_str = f"~{duration_sec:.0f}秒"
+
+        # Section structure compact form: "ABA（4+7+4 小节）"
+        sections = plan.get("sections", [])
+        bar_counts = [str(s.get("measures", "?")) for s in sections]
+        section_structure = f"{plan.get('form', '')}（{'+'.join(bar_counts)} 小节）"
+
+        # Orchestration description
+        orch = plan.get("orchestration", {})
+        voice_cn = {"melody": "旋律", "harmony": "和声", "bass": "低音", "drums": "鼓"}
+        inst_parts = []
+        for role in ["melody", "harmony", "bass", "drums"]:
+            part = orch.get(role, {})
+            if part:
+                name = part.get("name", part.get("instrument", ""))
+                inst_parts.append(f"{name}{voice_cn.get(role, role)}")
+
+        # SF2 status
+        sf2_count = sum(
+            1
+            for role in ["melody", "harmony", "bass"]
+            if isinstance(orch.get(role), dict) and "sf2" in orch[role]
+        )
+        sf2_status = f"已加载 {sf2_count} 个声部音色" if sf2_count > 0 else "未配置"
+
+        # Demo length with duration
+        demo_bars = plan.get("demo_length_bars", 0)
+        demo_sec = (demo_bars * beats_per_bar / bpm * 60) if bpm > 0 and demo_bars > 0 else 0
+        demo_str = f"{demo_bars} 小节（~{demo_sec:.0f}秒）" if demo_sec > 0 else f"{demo_bars} 小节"
+
+        return {
+            "duration": duration_str,
+            "section_structure": section_structure,
+            "orchestration_desc": " + ".join(inst_parts),
+            "sf2_status": sf2_status,
+            "demo_length": demo_str,
+        }
+
+    # ------------------------------------------------------------------
     # Phase 0: Parse + Plan
     # ------------------------------------------------------------------
 
@@ -309,6 +374,7 @@ class ComposeOrchestrator:
             raise RuntimeError("No LLM provider available")
 
         self.session.record_phase("parse", "running")
+        self.session.record_sub_step("解析用户需求", "running")
 
         system_prompt = (
             "You are a music composition planner. Given a user's music description, "
@@ -335,6 +401,8 @@ class ComposeOrchestrator:
         ]
 
         response = await client.get_response(messages)
+        self.session.record_sub_step("解析用户需求", "done")
+        self.session.record_sub_step("生成 plan.json", "running")
         content = str(response.messages[0].contents[0]) if response.messages else ""
         content = content.strip()
         if content.startswith("```"):
@@ -356,6 +424,7 @@ class ComposeOrchestrator:
         try:
             validated = _PlanSchema.model_validate(plan)
             plan = validated.model_dump()
+            self.session.record_sub_step("验证规划参数", "done")
         except Exception as e:
             raise RuntimeError(f"LLM plan failed schema validation: {e}") from e
 
@@ -375,6 +444,9 @@ class ComposeOrchestrator:
             encoding="utf-8",
         )
 
+        self.session.record_sub_step("生成 plan.json", "done")
+        self.session.record_sub_step("验证规划参数", "running")
+
         # Rename workdir to use title instead of prompt snippet
         title = plan.get("title", "")
         if title:
@@ -384,10 +456,13 @@ class ComposeOrchestrator:
             self.session.workdir = new_workdir
 
         self.session.record_phase("parse", "done")
+        summary = self._build_plan_summary(plan)
         self.session.set_awaiting_confirm(confirmation_data={
             "phase": "parse",
             "title": "确认音乐规划",
             "plan": plan,
+            "summary": summary,
+            "user_prompt": self.session.user_prompt,
         })
         logger.info("Session %s: Phase 0 done, plan saved", self.session_id)
 
@@ -396,6 +471,7 @@ class ComposeOrchestrator:
     # ------------------------------------------------------------------
 
     # Agent definitions: prompt file, model alias, skills
+    # (fallback defaults — overridden by config/agents.yaml when available)
     _AGENT_DEFS: dict[str, dict[str, Any]] = {
         "clef-composer": {
             "prompt_md": "clef-composer.md",
@@ -424,6 +500,26 @@ class ComposeOrchestrator:
         },
     }
 
+    def _load_agent_defs(self) -> dict[str, dict[str, Any]]:
+        """Load agent configs from config/agents.yaml, falling back to hardcoded defaults."""
+        try:
+            from clef_server.config import load_agent_configs
+            config_path = self.project_root / "server" / "config" / "agents.yaml"
+            configs = load_agent_configs(config_path, base_dir=self.project_root)
+            defs: dict[str, dict[str, Any]] = {}
+            for name, cfg in configs.items():
+                defs[name] = {
+                    "prompt_md": str(cfg.prompt_md),  # full resolved path from agents.yaml
+                    "model_alias": cfg.model_alias,
+                    "skills": cfg.skills,
+                    "temperature": cfg.temperature,
+                }
+            logger.info("Loaded agent configs from agents.yaml: %s", list(defs.keys()))
+            return defs
+        except Exception as exc:
+            logger.warning("Failed to load agents.yaml, using defaults: %s", exc)
+            return dict(self._AGENT_DEFS)
+
     async def _run_agent(
         self,
         agent_name: str,
@@ -436,7 +532,7 @@ class ComposeOrchestrator:
         Bypasses AF AgentExecutor (which requires WorkflowContext) and
         uses ChatCompletionsClient with the agent's instructions + skills.
         """
-        agent_def = self._AGENT_DEFS.get(agent_name)
+        agent_def = self._agent_defs.get(agent_name)
         if not agent_def:
             logger.warning("Unknown agent %s, returning placeholder", agent_name)
             return f"[placeholder ABC for {agent_name}]"
@@ -446,7 +542,10 @@ class ComposeOrchestrator:
             from clef_server.middleware import ClefContextMiddleware
 
             # Build system prompt from agent markdown + skills + context
-            prompt_path = self.project_root / ".claude" / "agents" / agent_def["prompt_md"]
+            prompt_md = agent_def["prompt_md"]
+            prompt_path = Path(prompt_md)
+            if not prompt_path.is_absolute():
+                prompt_path = self.project_root / ".claude" / "agents" / prompt_md
             if not prompt_path.exists():
                 logger.warning("Agent prompt not found: %s", prompt_path)
                 return f"[placeholder ABC for {agent_name}]"
@@ -475,7 +574,8 @@ class ComposeOrchestrator:
                 Message(role="system", contents=[instructions]),
                 Message(role="user", contents=[message]),
             ]
-            response = await client.get_response(messages)
+            temperature = agent_def.get("temperature", 0.7)
+            response = await client.get_response(messages, temperature=temperature)
 
             # Extract text from response
             content = ""
@@ -695,7 +795,8 @@ class ComposeOrchestrator:
                 return
             logger.warning("Rhythmist output had no V:3/V:4 labels, storing as %s", voice_label)
         fragments[voice_label] = abc_text
-        abc_parts.append(f"{voice_label}\n{abc_text}")
+        if abc_parts is not None:
+            abc_parts.append(f"{voice_label}\n{abc_text}")
 
     def _inject_sf2_data(self, plan: dict) -> dict:
         """Inject SF2 profile data into plan's orchestration voices.
@@ -899,7 +1000,26 @@ class ComposeOrchestrator:
                 "- Short overall length\n\n"
             )
 
-        message += "Respond with your standard review JSON format (dimensions with scores, verdict, issues).\n"
+        message += (
+            "You MUST respond with a JSON object in this exact format (no markdown, no extra text):\n"
+            "```json\n"
+            "{\n"
+            '  "dimensions": {\n'
+            '    "melody": {"score": 7, "issues": [{"bar": "1-4", "severity": "WARN", "description": "...", "suggestion": "..."}]},\n'
+            '    "harmony": {"score": 8, "issues": []},\n'
+            '    "rhythm": {"score": 7, "issues": []},\n'
+            '    "structure": {"score": 8, "issues": []},\n'
+            '    "style": {"score": 7, "issues": []},\n'
+            '    "orchestration": {"score": 8, "issues": []}\n'
+            "  },\n"
+            '  "overall_score": 7.5,\n'
+            '  "verdict": "pass",\n'
+            '  "summary": "Brief overall assessment."\n'
+            "}\n"
+            "```\n"
+            "IMPORTANT: Every dimension MUST have a score (0-10). If you find issues, include them "
+            "in the issues array with bar, severity (WARN/FAIL), description, and suggestion.\n"
+        )
         if extra_context:
             message += f"\nAdditional context: {extra_context}\n"
 
@@ -977,10 +1097,13 @@ class ComposeOrchestrator:
         score_path = Path(self.workdir) / "score.abc"
         score_text = score_path.read_text(encoding="utf-8") if score_path.exists() else ""
 
+        total_bars = plan.get("total_bars", 0)
         message = (
             f"Based on this review, decide what needs to be revised:\n\n"
             f"Review:\n```json\n{json.dumps(review, indent=2)}\n```\n\n"
             f"Score:\n```\n{score_text}\n```\n\n"
+            f"IMPORTANT: The target length is {total_bars} bars. "
+            f"Do NOT add or extend bars beyond {total_bars}.\n\n"
             f"Respond with a JSON object:\n"
             f'- "iteration_complete": true if no more work needed\n'
             f'- "tasks": array of {{agent, voice, depends_on, instruction}}\n'
@@ -1058,6 +1181,9 @@ class ComposeOrchestrator:
             voice_label = self.VOICE_MAP.get(voice, f"V:{voice}")
             demo_bars = plan.get("demo_length_bars", 8)
 
+            voice_display = self._VOICE_DISPLAY_NAMES.get(voice, f"生成 {voice}")
+            self.session.record_sub_step(voice_display, "running", agent=agent_name)
+
             message = (
                 f"Generate a {demo_bars}-bar {voice} part as ABC notation. "
                 f"Use voice label {voice_label}. Key: {plan.get('key', 'C')}, "
@@ -1072,14 +1198,19 @@ class ComposeOrchestrator:
             abc_text = self._extract_abc(response)
             self._store_fragment(fragments, abc_parts, voice_label, abc_text)
 
+            self.session.record_sub_step(voice_display, "done", agent=agent_name)
+
         # C1/C2: merge_abc takes positional (plan, fragments, output), returns dict (side-effect)
         from clef_server.tools import merge_abc
+        self.session.record_sub_step("合并声部", "running")
         merge_result = merge_abc(str(plan_path), fragments, str(score_path))
         if "error" in merge_result:
             logger.error("merge_abc failed: %s", merge_result["error"])
             raise RuntimeError(f"merge_abc failed: {merge_result['error']}")
 
         self._inject_midi_programs(score_path, plan)
+        self.session.record_sub_step("合并声部", "done")
+        self.session.record_sub_step("技术验证", "running")
 
         # Step 1.5: Validate and fix technical issues before melody gate
         validation_report = Path(self.workdir) / "validation_report_sample.json"
@@ -1111,7 +1242,10 @@ class ComposeOrchestrator:
                 # Re-validate to confirm fixes
                 failures = self._run_validation(score_path, plan_path, validation_report)
 
+        self.session.record_sub_step("技术验证", "done")
+
         # Step 2: Melody gate — review melody only up to 3 times
+        self.session.record_sub_step("旋律审查", "running", agent="clef-reviewer")
         melody_agent = self.VOICE_AGENT_MAP.get("melody", "clef-composer")
         melody_label = self.VOICE_MAP.get("melody", "V:1")
         for _ in range(self.max_melody_gate_retries):
@@ -1139,6 +1273,8 @@ class ComposeOrchestrator:
                 raise RuntimeError(f"merge_abc (melody gate) failed: {merge_result['error']}")
             self._inject_midi_programs(score_path, plan)
 
+        self.session.record_sub_step("旋律审查", "done", agent="clef-reviewer")
+
         # Post melody gate: validate bar count consistency across all fragments
         demo_bars = plan.get("demo_length_bars", 8)
         for label in list(fragments):
@@ -1151,15 +1287,20 @@ class ComposeOrchestrator:
         sample_round = self.session.sample_round
         sample_mid = Path(self.workdir) / f"sample_r{sample_round}.mid"
         from clef_server.tools import abc_to_midi
+        self.session.record_sub_step("转换 MIDI", "running")
         midi_result = abc_to_midi(str(score_path), str(sample_mid))
         if "error" in midi_result:
             logger.error("abc_to_midi failed: %s", midi_result["error"])
             raise RuntimeError(f"abc_to_midi failed: {midi_result['error']}")
+        self.session.record_sub_step("转换 MIDI", "done")
 
         # Step 4: Full review for confirmation data
+        self.session.record_sub_step("完整审查", "running", agent="clef-reviewer")
         full_review = await self._call_reviewer(plan, melody_only=False, is_sample=True)
         review_path = Path(self.workdir) / f"review_sample_r{sample_round}.json"
         review_path.write_text(json.dumps(full_review, indent=2, ensure_ascii=False), encoding="utf-8")
+
+        self.session.record_sub_step("完整审查", "done", agent="clef-reviewer")
 
         self.session.record_phase("sample", "done")
         self.session.set_awaiting_confirm(confirmation_data={
@@ -1194,6 +1335,9 @@ class ComposeOrchestrator:
                 continue
             voice_label = self.VOICE_MAP.get(voice, f"V:{voice}")
 
+            voice_display = self._VOICE_DISPLAY_NAMES.get(voice, f"生成 {voice}")
+            self.session.record_sub_step(voice_display, "running", agent=agent_name)
+
             message = self._build_create_message(voice, plan)
 
             # Retry up to 2 times if agent returns placeholder
@@ -1213,6 +1357,8 @@ class ComposeOrchestrator:
 
             self._store_fragment(fragments, None, voice_label, abc_text)
 
+            self.session.record_sub_step(voice_display, "done", agent=agent_name)
+
         # Validate per-voice bar counts — truncate if significantly over target
         target_bars = plan.get("total_bars", 0)
         if target_bars > 0:
@@ -1227,12 +1373,15 @@ class ComposeOrchestrator:
 
         # Merge all fragments
         from clef_server.tools import merge_abc
+        self.session.record_sub_step("合并声部", "running")
         merge_result = merge_abc(str(plan_path), fragments, str(score_path))
         if "error" in merge_result:
             logger.error("merge_abc failed: %s", merge_result["error"])
             raise RuntimeError(f"merge_abc failed: {merge_result['error']}")
 
         self._inject_midi_programs(score_path, plan)
+        self.session.record_sub_step("合并声部", "done")
+        self.session.record_sub_step("技术验证", "running")
 
         # Validate and store failures for iteration phase
         report_path = Path(self.workdir) / "validation_report.json"
@@ -1279,13 +1428,17 @@ class ComposeOrchestrator:
                             if "error" not in merge_result:
                                 self._inject_midi_programs(score_path, plan)
 
+        self.session.record_sub_step("技术验证", "done")
+
         # Convert to MIDI (versioned)
         base_mid = Path(self.workdir) / "base_r1.mid"
         from clef_server.tools import abc_to_midi
+        self.session.record_sub_step("转换 MIDI", "running")
         midi_result = abc_to_midi(str(score_path), str(base_mid))
         if "error" in midi_result:
             logger.error("abc_to_midi failed: %s", midi_result["error"])
             raise RuntimeError(f"abc_to_midi failed: {midi_result['error']}")
+        self.session.record_sub_step("转换 MIDI", "done")
 
         self.session.record_phase("create", "done")
         logger.info("Session %s: Phase 2 (create) done", self.session_id)
@@ -1309,14 +1462,21 @@ class ComposeOrchestrator:
 
         for round_num in range(1, self.max_iteration_rounds + 1):
             self.session.iteration_count = round_num
+            self.session.record_sub_step(
+                f"迭代轮次 {round_num}/{self.max_iteration_rounds}", "running"
+            )
 
             # Full review
+            self.session.record_sub_step("完整审查", "running", agent="clef-reviewer")
             review = await self._call_reviewer(plan, melody_only=False)
             iter_review_path = Path(self.workdir) / f"review_iter_r{round_num}.json"
             iter_review_path.write_text(json.dumps(review, indent=2, ensure_ascii=False), encoding="utf-8")
+            self.session.record_sub_step("完整审查", "done", agent="clef-reviewer")
 
             # Leader decides tasks
+            self.session.record_sub_step("任务调度", "running", agent="clef-leader")
             leader_decision = await self._call_leader(plan, review, extra_feedback=extra_feedback)
+            self.session.record_sub_step("任务调度", "done", agent="clef-leader")
             tasks = leader_decision.get("tasks", [])
 
             if leader_decision.get("iteration_complete", False) or not tasks:
@@ -1345,7 +1505,7 @@ class ComposeOrchestrator:
                 # Normalize: LLM may return "composer" instead of "clef-composer"
                 if not agent_name.startswith("clef-"):
                     agent_name = f"clef-{agent_name}"
-                if agent_name not in self._AGENT_DEFS:
+                if agent_name not in self._agent_defs:
                     logger.warning("Unknown agent %r from leader, skipping task", agent_name)
                     continue
                 instruction = task.get("instruction", "Revise based on review feedback.")
@@ -1361,6 +1521,8 @@ class ComposeOrchestrator:
                     instruction += "\n\n" + self._format_validation_feedback(self._validation_failures)
 
                 current_score = score_path.read_text(encoding="utf-8") if score_path.exists() else ""
+                task_label = f"执行任务 ({agent_name})"
+                self.session.record_sub_step(task_label, "running", agent=agent_name)
                 response = await self._run_agent(
                     agent_name,
                     instruction,
@@ -1389,7 +1551,21 @@ class ComposeOrchestrator:
                     logger.error("merge_abc (iteration) failed: %s", merge_result["error"])
                     raise RuntimeError(f"merge_abc (iteration) failed: {merge_result['error']}")
 
+                # Enforce bar count — truncate if agent added extra bars
+                target_bars = plan.get("total_bars", 0)
+                if target_bars > 0:
+                    current_score = score_path.read_text(encoding="utf-8")
+                    actual = self._count_bars(current_score)
+                    if actual > target_bars + 1:
+                        logger.warning(
+                            "Session %s: After %s revision, score has %d bars (target %d), truncating",
+                            self.session_id, agent_name, actual, target_bars,
+                        )
+                        truncated = self._truncate_to_bars(current_score, target_bars)
+                        score_path.write_text(truncated, encoding="utf-8")
+
                 completed_agents.add(agent_name)
+                self.session.record_sub_step(task_label, "done", agent=agent_name)
 
                 # Refresh score for next task in this round
                 current_score = score_path.read_text(encoding="utf-8") if score_path.exists() else ""
@@ -1406,6 +1582,10 @@ class ComposeOrchestrator:
             midi_result = abc_to_midi(str(score_path), str(iter_mid))
             if "error" in midi_result:
                 logger.warning("abc_to_midi failed for iteration round %d: %s", round_num, midi_result["error"])
+
+            self.session.record_sub_step(
+                f"迭代轮次 {round_num}/{self.max_iteration_rounds}", "done"
+            )
 
         # C6: Set confirmation_data with review + iteration count before advancing
         self.session.record_phase("iterate", "done")
@@ -1466,8 +1646,11 @@ class ComposeOrchestrator:
             f'- "vibrato": array of {{start_beat, end_beat, channel, rate, depth}}\n'
         )
 
+        self.session.record_sub_step("生成表现力方案", "running", agent="clef-orchestrator")
         response = await self._run_agent("clef-orchestrator", message, plan=plan)
         expression_plan = self._extract_json(response)
+
+        self.session.record_sub_step("生成表现力方案", "done", agent="clef-orchestrator")
 
         # Save expression plan
         expr_plan_path = Path(self.workdir) / "expression_plan.json"
@@ -1481,12 +1664,15 @@ class ComposeOrchestrator:
         output_path = Path(self.workdir) / f"final_r{iter_count}.mid"
 
         from clef_server.tools import inject_expression
+        self.session.record_sub_step("注入表现力数据", "running")
         inject_result = inject_expression(str(base_mid), str(expr_plan_path), str(output_path))
         if isinstance(inject_result, dict) and "error" in inject_result:
             logger.error("inject_expression failed: %s", inject_result["error"])
             self.session.record_phase("express", "done", error=inject_result["error"])
             self.session.set_done()
             return
+
+        self.session.record_sub_step("注入表现力数据", "done")
 
         self.session.record_phase("express", "done")
         self.session.set_done(output_files=[str(output_path.relative_to(Path(self.workdir)))])
