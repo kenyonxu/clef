@@ -164,7 +164,6 @@ async def create_compose(req: ComposeRequest):
     settings = load_settings(_get_server_root())
     workdir = generate_workdir(settings, session_id, req.prompt)
     Path(workdir).mkdir(parents=True, exist_ok=True)
-    (Path(workdir) / "output").mkdir(exist_ok=True)
     session = _session_manager.create(
         user_prompt=req.prompt,
         workdir=workdir,

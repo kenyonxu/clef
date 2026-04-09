@@ -290,14 +290,12 @@ class ComposeOrchestrator:
     # ------------------------------------------------------------------
 
     def _collect_outputs(self) -> list[str]:
-        """Collect output file paths from ``workdir/output/``."""
-        output_dir = Path(self.workdir) / "output"
-        if not output_dir.exists():
-            return []
+        """Collect output file paths from workdir root (.mid, .abc, .json)."""
+        workdir = Path(self.workdir)
         return [
-            p.relative_to(Path(self.workdir)).as_posix()
-            for p in sorted(output_dir.rglob("*"))
-            if p.is_file()
+            p.relative_to(workdir).as_posix()
+            for p in sorted(workdir.glob("*"))
+            if p.is_file() and p.suffix in (".mid", ".abc", ".json")
         ]
 
     # ------------------------------------------------------------------
@@ -1100,7 +1098,8 @@ class ComposeOrchestrator:
             "review": full_review,
             "sample_round": self.session.sample_round,
         })
-        logger.info("Session %s: Phase 1 (sample) done", self.session_id)
+        self.session.sample_round += 1
+        logger.info("Session %s: Phase 1 (sample) done, round %d", self.session_id, self.session.sample_round)
 
     # ------------------------------------------------------------------
     # Phase 2: Create (完整创作)
