@@ -126,6 +126,7 @@ def load_agent_configs(path: Path, base_dir: Path | None = None) -> dict[str, Ag
 
 SETTINGS_DEFAULTS: dict[str, Any] = {
     "output_dir": "",
+    "sf2_path": "",
     "max_iterations": 3,
     "review_threshold": 7,
     "skip_review": False,

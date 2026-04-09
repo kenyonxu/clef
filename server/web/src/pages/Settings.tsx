@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useSettingsStore } from '../stores/settingsStore'
 import { useUIStore } from '../stores/uiStore'
 import { OutputDirSetting } from '../components/settings/OutputDirSetting'
+import { Sf2Setting } from '../components/settings/Sf2Setting'
 import { WorkflowParams } from '../components/settings/WorkflowParams'
 import { ProviderList } from '../components/settings/ProviderList'
 import { AgentTable } from '../components/settings/AgentTable'
@@ -21,6 +22,7 @@ export function Settings() {
 
   // General tab form state — lifted from child components
   const [outputDir, setOutputDir] = useState('')
+  const [sf2Path, setSf2Path] = useState('')
   const [maxIterations, setMaxIterations] = useState(3)
   const [reviewThreshold, setReviewThreshold] = useState(7)
   const [skipReview, setSkipReview] = useState(false)
@@ -38,6 +40,7 @@ export function Settings() {
   useEffect(() => {
     if (settings) {
       setOutputDir(settings.output_dir)
+      setSf2Path(settings.sf2_path)
       setMaxIterations(settings.max_iterations)
       setReviewThreshold(settings.review_threshold)
       setSkipReview(settings.skip_review)
@@ -61,6 +64,7 @@ export function Settings() {
     try {
       await saveSettings({
         output_dir: outputDir,
+        sf2_path: sf2Path,
         max_iterations: maxIterations,
         review_threshold: reviewThreshold,
         skip_review: skipReview,
@@ -99,6 +103,12 @@ export function Settings() {
           <>
             <div className="rounded-xl border border-border-subtle bg-surface p-5 space-y-6">
               <OutputDirSetting value={outputDir} onChange={setOutputDir} />
+              <Sf2Setting
+                value={sf2Path}
+                sf2Name={settings?.sf2_name ?? ''}
+                presetCount={settings?.sf2_preset_count ?? 0}
+                onChange={setSf2Path}
+              />
               <WorkflowParams
                 maxIterations={maxIterations}
                 onMaxIterationsChange={setMaxIterations}

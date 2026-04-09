@@ -102,11 +102,11 @@ class ComposeOrchestrator:
         # Resolve project root (where .claude/agents/ lives)
         self.project_root = Path(__file__).resolve().parent.parent.parent.parent
         # Settings-driven workflow params (shadow class constants)
-        _s = settings or {}
-        self.max_iteration_rounds = _s.get("max_iterations", self.MAX_ITERATION_ROUNDS)
+        self._settings = settings or {}
+        self.max_iteration_rounds = self._settings.get("max_iterations", self.MAX_ITERATION_ROUNDS)
         self.max_melody_gate_retries = self.MAX_MELODY_GATE_RETRIES  # not configurable via settings
-        self.review_threshold = _s.get("review_threshold", 7)
-        self.skip_review = _s.get("skip_review", False)
+        self.review_threshold = self._settings.get("review_threshold", 7)
+        self.skip_review = self._settings.get("skip_review", False)
 
     # ------------------------------------------------------------------
     # Session access (always fresh from the manager)
@@ -357,6 +357,9 @@ class ComposeOrchestrator:
 
         # Calculate demo_length_bars proportionally (not LLM-generated)
         plan["demo_length_bars"] = self._calculate_demo_bars(plan["total_bars"])
+
+        # Inject SF2 profile data into orchestration if SF2 is configured
+        plan = self._inject_sf2_data(plan)
 
         # Persist plan.json to workdir
         plan_path = Path(self.workdir) / "plan.json"
@@ -628,8 +631,53 @@ class ComposeOrchestrator:
 
         return blocks
 
+    def _inject_sf2_data(self, plan: dict) -> dict:
+        """Inject SF2 profile data into plan's orchestration voices.
+
+        Loads the SF2 profile, matches each voice's midi_program to the profile,
+        and overrides range/register with real SF2 data.
+
+        Returns a new plan dict with SF2 data injected (does not mutate input).
+        """
+        sf2_path = self._settings.get("sf2_path", "")
+        if not sf2_path:
+            return plan
+
+        from clef_server.sf2_profile import load_sf2_profile, midi_to_note
+
+        profile = load_sf2_profile(sf2_path)
+        if not profile:
+            return plan
+
+        presets = profile.get("presets", {})
+        orch = plan.get("orchestration", {})
+        new_orch = {}
+        for role in ["melody", "harmony", "bass"]:
+            part = dict(orch.get(role, {}))
+            gm_program = part.get("midi_program")
+            if isinstance(gm_program, int) and str(gm_program) in presets:
+                preset_data = presets[str(gm_program)]
+                part["sf2"] = preset_data
+                # Override range/register with real SF2 data
+                kr = preset_data.get("key_range", [0, 127])
+                part["range"] = f"{midi_to_note(kr[0])}-{midi_to_note(kr[1])}"
+                ss = preset_data.get("sweet_spot", [kr[0], kr[1]])
+                part["register"] = f"{midi_to_note(ss[0])}-{midi_to_note(ss[1])}"
+            new_orch[role] = part
+
+        new_plan = {**plan, "orchestration": new_orch}
+
+        logger.info(
+            "Session %s: SF2 profile injected (%s, %d presets)",
+            self.session_id, profile.get("sf2_name", "?"),
+            profile.get("preset_count", 0),
+        )
+        return new_plan
+
     def _build_create_message(self, voice: str, plan: dict) -> str:
         """Build a detailed prompt for the create phase, including section structure."""
+        from clef_server.sf2_profile import midi_to_note
+
         voice_label = self.VOICE_MAP.get(voice, f"V:{voice}")
         total_bars = plan.get("total_bars", 0)
         sections = plan.get("sections", [])
@@ -656,6 +704,23 @@ class ComposeOrchestrator:
             f"Register: {voice_orch.get('register', 'N/A')}"
         )
 
+        # SF2 constraints if available
+        sf2_section = ""
+        sf2 = voice_orch.get("sf2")
+        if sf2:
+            kr = sf2.get("key_range", [])
+            ss = sf2.get("sweet_spot", [])
+            chars = sf2.get("characteristics", [])
+            char_text = ", ".join(chars) if chars else "N/A"
+            sf2_section = (
+                f"\n\n## SF2 Instrument Constraints\n"
+                f"- Key range: [{kr[0]}, {kr[1]}] ({midi_to_note(kr[0])}-{midi_to_note(kr[1])})\n"
+                f"- Sweet spot (recommended register): [{ss[0]}, {ss[1]}] ({midi_to_note(ss[0])}-{midi_to_note(ss[1])})\n"
+                f"- Velocity layers: {sf2.get('vel_layers', 'N/A')}\n"
+                f"- Characteristics: {char_text}\n"
+                f"CRITICAL: Do NOT write notes outside the key range [{kr[0]}, {kr[1]}]!\n"
+            )
+
         message = (
             f"Generate the full {voice} part as ABC notation.\n"
             f"Use voice label {voice_label}.\n\n"
@@ -672,6 +737,7 @@ class ComposeOrchestrator:
             f"{voice_info}\n\n"
             f"CRITICAL: You must generate content for ALL {total_bars} bars "
             f"covering every section listed above. Do not leave any section incomplete.\n"
+            f"{sf2_section}"
             f"Output only ABC notation for voice {voice_label}."
         )
         return message
@@ -1108,7 +1174,7 @@ class ComposeOrchestrator:
                 "title": "试听审核",
                 "review": final_review,
                 "iteration_count": self.session.iteration_count,
-                "output_file": "output/final.mid",
+                "output_file": "final.mid",
             }
             # Advance to review (confirm phase)
             await self._advance_phase("iterate", confirmation_data=confirmation_data)
@@ -1158,10 +1224,8 @@ class ComposeOrchestrator:
         )
 
         # Inject expression into MIDI (versioned)
-        output_dir = Path(self.workdir) / "output"
-        output_dir.mkdir(parents=True, exist_ok=True)
         iter_count = self.session.iteration_count or 1
-        output_path = output_dir / f"final_r{iter_count}.mid"
+        output_path = Path(self.workdir) / f"final_r{iter_count}.mid"
 
         from clef_server.tools import inject_expression
         inject_result = inject_expression(str(base_mid), str(expr_plan_path), str(output_path))

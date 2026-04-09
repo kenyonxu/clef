@@ -70,6 +70,9 @@ class ConfirmRequest(BaseModel):
 
 class SettingsResponse(BaseModel):
     output_dir: str = ""
+    sf2_path: str = ""
+    sf2_name: str = ""
+    sf2_preset_count: int = 0
     max_iterations: int = 3
     review_threshold: int = 7
     skip_review: bool = False
@@ -77,6 +80,7 @@ class SettingsResponse(BaseModel):
 
 class SettingsUpdateRequest(BaseModel):
     output_dir: str | None = Field(None, max_length=260)
+    sf2_path: str | None = Field(None, max_length=260)
     max_iterations: int | None = Field(None, ge=1, le=20)
     review_threshold: int | None = Field(None, ge=1, le=10)
     skip_review: bool | None = None
@@ -315,6 +319,20 @@ def _get_server_root() -> Path:
     return Path(__file__).resolve().parent.parent.parent
 
 
+def _get_sf2_meta(sf2_path: str) -> dict:
+    """Read SF2 profile metadata (name, preset_count) for settings response."""
+    if not sf2_path:
+        return {"sf2_name": "", "sf2_preset_count": 0}
+    from clef_server.sf2_profile import load_sf2_profile
+    profile = load_sf2_profile(sf2_path)
+    if not profile:
+        return {"sf2_name": "", "sf2_preset_count": 0}
+    return {
+        "sf2_name": profile.get("sf2_name", ""),
+        "sf2_preset_count": profile.get("preset_count", 0),
+    }
+
+
 def _mask_api_key(key: str) -> str:
     if not key or len(key) < 8:
         return "***" if key else ""
@@ -325,6 +343,9 @@ def _mask_api_key(key: str) -> str:
 async def get_settings():
     from clef_server.config import load_settings
     settings = load_settings(_get_server_root())
+    # Enrich with SF2 profile metadata (blocking I/O → thread)
+    sf2_meta = await asyncio.to_thread(_get_sf2_meta, settings.get("sf2_path", ""))
+    settings.update(sf2_meta)
     return SettingsResponse(**settings)
 
 
@@ -333,8 +354,18 @@ async def update_settings(req: SettingsUpdateRequest):
     from clef_server.config import load_settings, save_settings
     settings = load_settings(_get_server_root())
     update_data = req.model_dump(exclude_none=True)
+    # Validate sf2_path: must exist, be a file, and have .sf2 extension
+    if "sf2_path" in update_data and update_data["sf2_path"]:
+        sf2 = Path(update_data["sf2_path"])
+        if not sf2.exists() or not sf2.is_file():
+            raise HTTPException(status_code=400, detail=f"SF2 file not found: {update_data['sf2_path']}")
+        if sf2.suffix.lower() != ".sf2":
+            raise HTTPException(status_code=400, detail="SF2 path must have .sf2 extension")
     settings.update(update_data)
     save_settings(_get_server_root(), settings)
+    # Enrich with SF2 profile metadata (blocking I/O → thread)
+    sf2_meta = await asyncio.to_thread(_get_sf2_meta, settings.get("sf2_path", ""))
+    settings.update(sf2_meta)
     return SettingsResponse(**settings)
 
 

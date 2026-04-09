@@ -115,6 +115,9 @@ export interface OutputFile {
 
 export interface Settings {
   output_dir: string
+  sf2_path: string
+  sf2_name: string
+  sf2_preset_count: number
   max_iterations: number
   review_threshold: number
   skip_review: boolean
@@ -122,6 +125,7 @@ export interface Settings {
 
 export interface SettingsUpdate {
   output_dir?: string
+  sf2_path?: string
   max_iterations?: number
   review_threshold?: number
   skip_review?: boolean
