@@ -85,6 +85,7 @@ class ComposeOrchestrator:
 
     # Voice label mapping: role -> ABC voice number
     VOICE_MAP = {"melody": "V:1", "harmony": "V:2", "rhythm": "V:3+V:4"}
+    _VOICE_TO_AGENT = {"V:1": "clef-composer", "V:2": "clef-harmonist", "V:3": "clef-rhythmist", "V:4": "clef-rhythmist"}
 
     # Agent config key -> agent factory name in agents.yaml
     VOICE_AGENT_MAP = {"melody": "clef-composer", "harmony": "clef-harmonist", "rhythm": "clef-rhythmist"}
@@ -107,6 +108,7 @@ class ComposeOrchestrator:
         self.max_melody_gate_retries = self.MAX_MELODY_GATE_RETRIES  # not configurable via settings
         self.review_threshold = self._settings.get("review_threshold", 7)
         self.skip_review = self._settings.get("skip_review", False)
+        self._validation_failures: list[dict] = []
 
     # ------------------------------------------------------------------
     # Session access (always fresh from the manager)
@@ -344,6 +346,13 @@ class ComposeOrchestrator:
             plan = json.loads(content)
         except json.JSONDecodeError as e:
             raise RuntimeError(f"LLM returned invalid plan JSON: {e}") from e
+
+        # Normalize LLM output: coerce types that models often get wrong
+        for section in plan.get("sections", []):
+            if "id" in section:
+                section["id"] = str(section["id"])
+            if "name" in section:
+                section["name"] = str(section["name"])
 
         # Validate plan against schema
         try:
@@ -682,6 +691,7 @@ class ComposeOrchestrator:
         total_bars = plan.get("total_bars", 0)
         sections = plan.get("sections", [])
         orch = plan.get("orchestration", {})
+        ts = plan.get("time_signature", "4/4")
 
         # Build section summary
         section_lines = []
@@ -721,24 +731,70 @@ class ComposeOrchestrator:
                 f"CRITICAL: Do NOT write notes outside the key range [{kr[0]}, {kr[1]}]!\n"
             )
 
+        # Duration reference (shared by all voices)
+        beats_per_measure = int(ts.split("/")[0])
+        duration_ref = (
+            f"\n\n## Duration Self-Check (MANDATORY)\n"
+            f"Time signature: {ts} → {beats_per_measure} beats per measure.\n"
+            f"With L:1/8, each measure = {beats_per_measure * 2} eighth-note units.\n"
+            f"Duration reference (L:1/8):\n"
+            f"  f = 1 unit (eighth note)\n"
+            f"  f2 = 2 units (quarter note)\n"
+            f"  f4 = 4 units (half note)\n"
+            f"  f/2 = 0.5 units (sixteenth note)  ⚠ NOT 1 unit!\n"
+            f"  [Ace]2 = 2 units,  z = 1 unit,  z2 = 2 units\n"
+            f"VERIFY: sum of durations in EACH measure must = {beats_per_measure * 2}.\n"
+            f"Before output, re-check every measure. Do NOT output if any measure is incomplete.\n"
+        )
+
+        # Voice-specific rhythm guidance
+        voice_rules = ""
+        if role == "melody":
+            voice_rules = (
+                "\n\n## Melody Rules\n"
+                "- Follow plan.json melody_strategy per section (new/variation/sequence/development/recap/climax)\n"
+                "- Rhythm variety: sections must have contrasting density (sparse vs dense)\n"
+                "- Dynamics: at least 2 dynamic levels per section (!mf! base + !ff! climax)\n"
+                "- Large intervals (>5 semitones): insert passing notes immediately\n"
+            )
+        elif role == "harmony":
+            voice_rules = (
+                "\n\n## Harmony Rules\n"
+                "- EVERY measure must be COMPLETELY filled — sum of durations = "
+                f"{beats_per_measure * 2} eighth-note units\n"
+                "- Chord marks (\"D\") and chord notes ([FAc]) must appear in the SAME measure\n"
+                "- Voice leading: common tones keep, non-common tones move by step (≤2 semitones)\n"
+                "- Do NOT use the same rhythm pattern in every measure — vary rhythm between sections\n"
+                "- Harmony notes must align with melody's strong beats\n"
+            )
+        elif role == "bass":
+            voice_rules = (
+                "\n\n## Bass & Drum Rules\n"
+                "- Bass: prefer chord root or fifth, reference V:2 chord marks\n"
+                "- Drums: adjust density by section energy (sparse in A, fills in B/C transitions)\n"
+                "- Drum fills only at section transitions (last 1-2 bars), NOT at piece endings\n"
+                "- Bass notes stay within register range from plan.json\n"
+            )
+
         message = (
             f"Generate the full {voice} part as ABC notation.\n"
             f"Use voice label {voice_label}.\n\n"
             f"## Composition Structure\n"
             f"- Key: {plan.get('key', 'C')}\n"
             f"- Scale: {plan.get('scale', 'major')}\n"
-            f"- Time: {plan.get('time_signature', '4/4')}\n"
+            f"- Time: {ts}\n"
             f"- BPM: {plan.get('bpm', 120)}\n"
             f"- Form: {plan.get('form', 'ABA')}\n"
             f"- Total bars: {total_bars}\n\n"
             f"## Sections (must generate content for ALL sections)\n"
             f"{sections_text}\n\n"
             f"## Your Voice Configuration\n"
-            f"{voice_info}\n\n"
-            f"CRITICAL: You must generate content for ALL {total_bars} bars "
-            f"covering every section listed above. Do not leave any section incomplete.\n"
+            f"{voice_info}"
+            f"{voice_rules}"
+            f"{duration_ref}"
             f"{sf2_section}"
-            f"Output only ABC notation for voice {voice_label}."
+            f"\nOutput only ABC notation for voice {voice_label}. "
+            f"Total output must be exactly {total_bars} measures."
         )
         return message
 
@@ -877,6 +933,48 @@ class ComposeOrchestrator:
         return self._extract_json(response_text)
 
     # ------------------------------------------------------------------
+    # Validation helpers
+    # ------------------------------------------------------------------
+
+    def _run_validation(self, score_path: Path, plan_path: Path, report_path: Path) -> list[dict]:
+        """Run validate_abc and return list of FAIL issues (empty if all pass).
+
+        Returns list of {"category": ..., "voice": ..., "message": ...}.
+        """
+        from clef_server.tools import validate_abc
+
+        result = validate_abc(str(score_path), str(plan_path), str(report_path))
+        if "error" in result:
+            logger.error("validate_abc error: %s", result["error"])
+            return []
+
+        if not report_path.exists():
+            return []
+
+        report = json.loads(report_path.read_text(encoding="utf-8"))
+        fails = report.get("fails", [])
+        # Filter out known artifacts
+        real_fails = [f for f in fails if not f.get("known_artifact", False)]
+        if real_fails:
+            logger.warning(
+                "Session %s: %d validation FAIL(s): %s",
+                self.session_id,
+                len(real_fails),
+                "; ".join(f"{f['voice']}:{f['category']}" for f in real_fails),
+            )
+        return real_fails
+
+    def _format_validation_feedback(self, failures: list[dict]) -> str:
+        """Format validation FAIL items into a feedback string for agents."""
+        if not failures:
+            return ""
+        lines = ["VALIDATION FAILURES (must fix before proceeding):"]
+        for f in failures:
+            lines.append(f"- [{f['category']}] {f['voice']}: {f['message']}")
+        lines.append("You MUST fix these issues in your output. Re-check every measure's duration.")
+        return "\n".join(lines)
+
+    # ------------------------------------------------------------------
     # Phase 1: Sample (方向小样)
     # ------------------------------------------------------------------
 
@@ -924,6 +1022,36 @@ class ComposeOrchestrator:
             raise RuntimeError(f"merge_abc failed: {merge_result['error']}")
 
         self._inject_midi_programs(score_path, plan)
+
+        # Step 1.5: Validate and fix technical issues before melody gate
+        validation_report = Path(self.workdir) / "validation_report_sample.json"
+        failures = self._run_validation(score_path, plan_path, validation_report)
+        if failures:
+            # Re-generate failed voices with validation feedback
+            val_feedback = self._format_validation_feedback(failures)
+            for f in failures:
+                voice = f.get("voice", "")
+                agent_name = self._VOICE_TO_AGENT.get(voice)
+                if not agent_name:
+                    continue
+                response = await self._run_agent(
+                    agent_name,
+                    f"Fix validation errors in your {voice} part:\n{val_feedback}\n\n"
+                    f"Output only the corrected ABC for {voice}.",
+                    plan=plan,
+                    score_abc=score_path.read_text(encoding="utf-8") if score_path.exists() else "",
+                )
+                abc_text = self._extract_abc(response)
+                fragments[voice] = abc_text
+
+            # Re-merge with fixed fragments
+            merge_result = merge_abc(str(plan_path), fragments, str(score_path))
+            if "error" in merge_result:
+                logger.error("merge_abc (validation fix) failed: %s", merge_result["error"])
+            else:
+                self._inject_midi_programs(score_path, plan)
+                # Re-validate to confirm fixes
+                failures = self._run_validation(score_path, plan_path, validation_report)
 
         # Step 2: Melody gate — review melody only up to 3 times
         melody_agent = self.VOICE_AGENT_MAP.get("melody", "clef-composer")
@@ -1023,12 +1151,41 @@ class ComposeOrchestrator:
 
         self._inject_midi_programs(score_path, plan)
 
-        # Validate
+        # Validate and store failures for iteration phase
         report_path = Path(self.workdir) / "validation_report.json"
-        from clef_server.tools import validate_abc
-        validate_result = validate_abc(str(score_path), str(plan_path), str(report_path))
-        if "error" in validate_result:
-            logger.error("validate_abc failed: %s", validate_result["error"])
+        failures = self._run_validation(score_path, plan_path, report_path)
+        self._validation_failures = failures  # Persist for iterate phase
+
+        if failures:
+            # Re-generate failed voices with validation feedback (one retry pass)
+            val_feedback = self._format_validation_feedback(failures)
+            failed_voices = {f.get("voice", "") for f in failures}
+            for voice_str in failed_voices:
+                agent_name = self._VOICE_TO_AGENT.get(voice_str)
+                if not agent_name:
+                    continue
+                voice_key = {v: k for k, v in self.VOICE_MAP.items()}.get(voice_str)
+                if not voice_key:
+                    continue
+                voice_label = self.VOICE_MAP.get(voice_key, voice_str)
+                response = await self._run_agent(
+                    agent_name,
+                    f"Fix validation errors in your {voice_str} part:\n{val_feedback}\n\n"
+                    f"Output only the corrected ABC for {voice_label}.",
+                    plan=plan,
+                    score_abc=score_path.read_text(encoding="utf-8") if score_path.exists() else "",
+                )
+                abc_text = self._extract_abc(response)
+                if self._is_placeholder(abc_text):
+                    continue
+                fragments[voice_label] = abc_text
+
+            # Re-merge
+            merge_result = merge_abc(str(plan_path), fragments, str(score_path))
+            if "error" not in merge_result:
+                self._inject_midi_programs(score_path, plan)
+                failures = self._run_validation(score_path, plan_path, report_path)
+                self._validation_failures = failures
 
         # Convert to MIDI (versioned)
         base_mid = Path(self.workdir) / "base_r1.mid"
@@ -1107,6 +1264,10 @@ class ComposeOrchestrator:
                     issues_text = "\n".join(f"- {i}" for i in review_issues)
                     instruction += f"\n\nReview issues to address:\n{issues_text}"
 
+                # Append validation failures if any
+                if self._validation_failures:
+                    instruction += "\n\n" + self._format_validation_feedback(self._validation_failures)
+
                 current_score = score_path.read_text(encoding="utf-8") if score_path.exists() else ""
                 response = await self._run_agent(
                     agent_name,
@@ -1144,8 +1305,8 @@ class ComposeOrchestrator:
             # Validate + export versioned MIDI after each iteration round
             self._inject_midi_programs(score_path, plan)
             report_path = Path(self.workdir) / f"validation_report_iter{round_num}.json"
-            from clef_server.tools import validate_abc
-            validate_abc(str(score_path), str(plan_path), str(report_path))
+            failures = self._run_validation(score_path, plan_path, report_path)
+            self._validation_failures = failures
 
             # Export versioned MIDI for this iteration round
             iter_mid = Path(self.workdir) / f"base_r{round_num + 1}.mid"
