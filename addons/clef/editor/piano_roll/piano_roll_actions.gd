@@ -22,7 +22,7 @@ func _rebuild_context_menu() -> void:
 		_roll._context_menu.queue_free()
 		_roll._context_menu = null
 	match _roll._mode:
-		PianoRoll.Mode.EDITING:
+		PianoRoll.Mode.EDIT:
 			_build_edit_menu()
 		PianoRoll.Mode.FEEDBACK:
 			_build_feedback_menu()

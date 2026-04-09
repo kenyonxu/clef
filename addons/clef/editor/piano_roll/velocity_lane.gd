@@ -51,6 +51,15 @@ func _draw() -> void:
 
 func set_notes(notes: Array[PianoRoll.RollNote]) -> void:
 	_notes = notes
+	# 自动检测 active_channel：当前 channel 无音符时切换到第一个有音符的 channel
+	if not _notes.is_empty():
+		var has_active := false
+		for note in _notes:
+			if note.channel == active_channel:
+				has_active = true
+				break
+		if not has_active:
+			active_channel = _notes[0].channel
 	_rebuild_sliders()
 
 
@@ -68,7 +77,7 @@ func set_active_channel(channel: int) -> void:
 
 func set_edit_mode(mode: int) -> void:
 	_mode = mode
-	var editable := (mode == PianoRoll.Mode.EDITING)
+	var editable := (mode == PianoRoll.Mode.EDIT)
 	for slider in _sliders:
 		if is_instance_valid(slider):
 			slider.mouse_filter = Control.MOUSE_FILTER_STOP if editable else Control.MOUSE_FILTER_IGNORE
@@ -103,7 +112,7 @@ func _rebuild_sliders() -> void:
 	clear_sliders()
 	if _notes.is_empty():
 		return
-	var editable := (_mode == PianoRoll.Mode.EDITING)
+	var editable := (_mode == PianoRoll.Mode.EDIT)
 	for i in range(_notes.size()):
 		var note: PianoRoll.RollNote = _notes[i]
 		if note.channel != active_channel:
@@ -209,7 +218,7 @@ func _update_selection_highlight() -> void:
 
 
 func _on_slider_input(event: InputEvent, note_index: int, slider: VSlider) -> void:
-	if _mode != PianoRoll.Mode.EDITING:
+	if _mode != PianoRoll.Mode.EDIT:
 		return
 	if event is InputEventMouseButton:
 		var mb := event as InputEventMouseButton
