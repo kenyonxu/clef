@@ -1,5 +1,7 @@
 """Session management — lifecycle tracking for compose jobs."""
 
+import asyncio
+import json
 import time
 import uuid
 from dataclasses import dataclass, field
@@ -25,9 +27,9 @@ WORKFLOW_STEPS = [
 
 PHASES = [
     {"id": "parse",   "label": "需求解析 + 规划",  "confirm": True,  "agents": []},
-    {"id": "sample",  "label": "方向小样",         "confirm": True,  "agents": ["clef-composer", "clef-harmonist", "clef-rhythmist"]},
+    {"id": "sample",  "label": "方向小样",         "confirm": True,  "agents": ["clef-composer", "clef-harmonist", "clef-rhythmist", "clef-reviewer"]},
     {"id": "create",  "label": "完整创作",         "confirm": False, "agents": ["clef-composer", "clef-harmonist", "clef-rhythmist"]},
-    {"id": "iterate", "label": "质量迭代",         "confirm": False, "agents": ["clef-reviewer", "clef-revision"]},
+    {"id": "iterate", "label": "质量迭代",         "confirm": False, "agents": ["clef-reviewer", "clef-leader", "clef-revision"]},
     {"id": "review",  "label": "试听审核",         "confirm": True,  "agents": ["clef-reviewer"]},
     {"id": "express", "label": "表现力注入",       "confirm": False, "agents": ["clef-orchestrator"]},
 ]
@@ -49,6 +51,8 @@ class ComposeSession:
     phase_history: list[dict] = field(default_factory=list)
     sample_round: int = 0
     iteration_count: int = 0
+    sub_steps: list[dict] = field(default_factory=list)
+    _event_queues: list = field(default_factory=list)
     step_status: dict[int, str] = field(default_factory=lambda: {0: "pending", 1: "pending", 2: "pending", 3: "pending"})
     current_step: int = 0
     created_at: float = field(default_factory=time.time)
@@ -87,6 +91,47 @@ class ComposeSession:
         entry = {"phase": phase_id, "status": status, "error": error, "timestamp": time.time()}
         self.phase_history.append(entry)
         self.updated_at = time.time()
+        # Clear sub-steps when a phase starts running
+        if status == "running":
+            self.current_phase = phase_id
+            self.sub_steps = []
+
+    def record_sub_step(self, label: str, status: str, *, agent: str | None = None) -> None:
+        """Record a sub-step within the current phase and emit SSE event."""
+        entry = {
+            "label": label,
+            "status": status,
+            "agent": agent,
+            "phase": self.current_phase,
+            "timestamp": time.time(),
+        }
+        # Update or append in sub_steps list
+        for i, existing in enumerate(self.sub_steps):
+            if existing["label"] == label and existing["phase"] == self.current_phase:
+                self.sub_steps[i] = entry
+                break
+        else:
+            self.sub_steps.append(entry)
+        self.updated_at = time.time()
+
+        # Emit to all SSE listeners
+        event_data = json.dumps(entry, ensure_ascii=False)
+        for q in self._event_queues:
+            try:
+                q.put_nowait({"event": f"sub_step_{status}", "data": event_data})
+            except asyncio.QueueFull:
+                pass  # Drop event if queue is full
+
+    def add_event_listener(self, queue) -> None:
+        """Register an asyncio.Queue for SSE event delivery."""
+        self._event_queues.append(queue)
+
+    def remove_event_listener(self, queue) -> None:
+        """Unregister an SSE event listener."""
+        try:
+            self._event_queues.remove(queue)
+        except ValueError:
+            pass
 
     def update_step(self, step_id: int, status: str, *, error: str | None = None) -> None:
         """Update a workflow step's status."""
@@ -118,6 +163,9 @@ class ComposeSession:
             step = {**p, "status": status}
             if error is not None:
                 step["error"] = error
+            # Include sub-steps for the current phase
+            if p["id"] == self.current_phase and self.sub_steps:
+                step["sub_steps"] = list(self.sub_steps)
             phases.append(step)
         return phases
 
