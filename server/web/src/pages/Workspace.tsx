@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import { useSessionStore } from '../stores/sessionStore'
 import { useUIStore } from '../stores/uiStore'
 import { usePolling } from '../hooks/usePolling'
+import { useSSE } from '../hooks/useSSE'
 import { StepCard } from '../components/StepCard'
 import { ChatMessage } from '../components/ChatMessage'
 import { FileList } from '../components/FileList'
@@ -50,6 +51,8 @@ export function Workspace() {
   }, [currentSession?.session_id, pollOnce])
 
   usePolling(stablePollOnce, 3000, () => isTerminal)
+
+  useSSE(currentSession?.session_id ?? null, !isTerminal)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
