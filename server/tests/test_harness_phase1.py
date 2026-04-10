@@ -55,13 +55,13 @@ class TestPathTraversalGuard:
         assert result["path"] == str(target)
         assert target.read_text(encoding="utf-8") == "X:1\nK:C\nC |"
 
-    def test_write_file_backward_compat_no_workdir(self, tmp_path: Path) -> None:
-        """write_file without workdir param still works (backward compat)."""
+    def test_write_file_requires_workdir(self, tmp_path: Path) -> None:
+        """write_file without workdir raises TypeError (security: always validate)."""
         from clef_server.tools import write_file
 
         target = tmp_path / "score.abc"
-        result = write_file(str(target), "X:1\nK:C\nC |")
-        assert result["path"] == str(target)
+        with pytest.raises(TypeError):
+            write_file(str(target), "X:1\nK:C\nC |")
 
     def test_read_file_rejects_path_traversal(self, tmp_path: Path) -> None:
         """read_file with ../../etc/passwd must be rejected."""

@@ -59,15 +59,12 @@ _TOOL_META: dict[str, ToolMeta] = {
 }
 
 
-def _validate_path(path: str, workdir: str | None = None) -> Path:
+def _validate_path(path: str, workdir: str) -> Path:
     """Resolve path and validate it stays within workdir boundary.
 
     Raises ValueError if path escapes workdir (path traversal).
-    If workdir is None, skips validation (backward compat).
     """
     resolved = Path(path).resolve()
-    if workdir is None:
-        return resolved
     workdir_resolved = Path(workdir).resolve()
     try:
         resolved.relative_to(workdir_resolved)
@@ -81,7 +78,7 @@ def _validate_path(path: str, workdir: str | None = None) -> Path:
 @tool
 def read_file(
     path: Annotated[str, "Absolute or relative file path to read"],
-    workdir: Annotated[str | None, "Working directory for path validation"] = None,
+    workdir: Annotated[str, "Working directory for path validation"],
 ) -> str:
     """Read file contents as UTF-8 text."""
     p = _validate_path(path, workdir)
@@ -94,7 +91,7 @@ def read_file(
 def write_file(
     path: Annotated[str, "Absolute or relative file path to write"],
     content: Annotated[str, "File content to write (UTF-8 text)"],
-    workdir: Annotated[str | None, "Working directory for path validation"] = None,
+    workdir: Annotated[str, "Working directory for path validation"],
 ) -> dict:
     """Write content to file, creating parent directories as needed."""
     p = _validate_path(path, workdir)

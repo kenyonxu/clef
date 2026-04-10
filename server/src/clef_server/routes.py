@@ -68,7 +68,7 @@ class ConfirmRequest(BaseModel):
 
 class PermissionUpdateRequest(BaseModel):
     denied_tools: list[str] = Field(default_factory=list, description="Tools to deny")
-    allowed_overrides: list[str] = Field(default_factory=list, description="Tools to re-enable (intersected with base map)")
+    allowed_overrides: list[str] = Field(default_factory=list, description="Tools to explicitly allow (grants access even if not in base map)")
 
     model_config = {"extra": "forbid"}
 

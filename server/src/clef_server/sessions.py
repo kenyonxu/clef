@@ -30,7 +30,7 @@ class ToolPermissions:
         if tool in self.denied_tools:
             return False
         if tool in self.allowed_overrides:
-            return tool in base_map.get(agent, [])
+            return True
         return tool in base_map.get(agent, [])
 
 # Legacy 4-step numeric workflow — kept for backward compatibility (routes.py)

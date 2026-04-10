@@ -26,15 +26,15 @@ class TestToolPermissions:
 
         assert perms.is_tool_allowed("write_file", "clef-composer", base_map) is False
 
-    def test_override_not_in_base_still_blocked(self) -> None:
-        """Override cannot expand beyond base map (least privilege)."""
+    def test_override_grants_beyond_base_map(self) -> None:
+        """Override grants tool access even if not in base map."""
         from clef_server.sessions import ToolPermissions
 
         perms = ToolPermissions(allowed_overrides=frozenset({"inject_expression"}))
         base_map = {"clef-composer": ["read_file", "write_file"]}
 
-        # inject_expression not in composer's base map → still blocked
-        assert perms.is_tool_allowed("inject_expression", "clef-composer", base_map) is False
+        # inject_expression not in composer's base map, but override grants it
+        assert perms.is_tool_allowed("inject_expression", "clef-composer", base_map) is True
 
     def test_override_in_base_allowed(self) -> None:
         """Override re-enables a tool that would otherwise be available."""
