@@ -7,6 +7,7 @@
     "0": {
       "name": "Grand Piano",
       "gm_name": "piano",
+      "is_drum": false,
       "key_range": [
         0,
         127
@@ -31,6 +32,7 @@
     "1": {
       "name": "Bright Grand Piano",
       "gm_name": "bright_piano",
+      "is_drum": false,
       "key_range": [
         0,
         127
@@ -55,6 +57,7 @@
     "2": {
       "name": "Electric Grand Piano",
       "gm_name": "electric_grand",
+      "is_drum": false,
       "key_range": [
         0,
         127
@@ -79,6 +82,7 @@
     "3": {
       "name": "Honky-Tonk Piano",
       "gm_name": "honkytonk_piano",
+      "is_drum": false,
       "key_range": [
         0,
         127
@@ -102,9 +106,10 @@
     "4": {
       "name": "Tine Electric Piano",
       "gm_name": "electric_piano1",
+      "is_drum": false,
       "key_range": [
         0,
-        127
+        120
       ],
       "vel_range": [
         0,
@@ -123,6 +128,7 @@
     "5": {
       "name": "FM Electric Piano",
       "gm_name": "electric_piano2",
+      "is_drum": false,
       "key_range": [
         0,
         127
@@ -144,9 +150,10 @@
     "6": {
       "name": "Harpsichord",
       "gm_name": "harpsichord",
+      "is_drum": false,
       "key_range": [
         0,
-        127
+        117
       ],
       "vel_range": [
         0,
@@ -167,9 +174,10 @@
     "7": {
       "name": "Clavinet",
       "gm_name": "clavinet",
+      "is_drum": false,
       "key_range": [
         0,
-        127
+        115
       ],
       "vel_range": [
         0,
@@ -190,6 +198,7 @@
     "8": {
       "name": "Celeste",
       "gm_name": "celesta",
+      "is_drum": false,
       "key_range": [
         0,
         127
@@ -213,6 +222,7 @@
     "9": {
       "name": "Glockenspiel",
       "gm_name": "glockenspiel",
+      "is_drum": false,
       "key_range": [
         0,
         127
@@ -236,9 +246,10 @@
     "10": {
       "name": "Music Box",
       "gm_name": "music_box",
+      "is_drum": false,
       "key_range": [
         0,
-        127
+        125
       ],
       "vel_range": [
         0,
@@ -259,9 +270,10 @@
     "11": {
       "name": "Vibraphone",
       "gm_name": "vibraphone",
+      "is_drum": false,
       "key_range": [
         0,
-        127
+        114
       ],
       "vel_range": [
         0,
@@ -280,6 +292,7 @@
     "12": {
       "name": "Marimba",
       "gm_name": "marimba",
+      "is_drum": false,
       "key_range": [
         0,
         127
@@ -303,8 +316,9 @@
     "13": {
       "name": "Xylophone",
       "gm_name": "xylophone",
+      "is_drum": false,
       "key_range": [
-        0,
+        21,
         127
       ],
       "vel_range": [
@@ -324,6 +338,7 @@
     "14": {
       "name": "Tubular Bells",
       "gm_name": "tubular_bell",
+      "is_drum": false,
       "key_range": [
         0,
         127
@@ -345,9 +360,10 @@
     "15": {
       "name": "Dulcimer",
       "gm_name": "dulcimer",
+      "is_drum": false,
       "key_range": [
         0,
-        127
+        112
       ],
       "vel_range": [
         0,
@@ -368,9 +384,10 @@
     "16": {
       "name": "Tonewheel Organ",
       "gm_name": "drawbar_organ",
+      "is_drum": false,
       "key_range": [
         0,
-        127
+        115
       ],
       "vel_range": [
         0,
@@ -389,9 +406,10 @@
     "17": {
       "name": "Percussive Organ",
       "gm_name": "percussive_organ",
+      "is_drum": false,
       "key_range": [
         0,
-        127
+        124
       ],
       "vel_range": [
         0,
@@ -410,9 +428,10 @@
     "18": {
       "name": "Rock Organ",
       "gm_name": "rock_organ",
+      "is_drum": false,
       "key_range": [
         0,
-        127
+        124
       ],
       "vel_range": [
         0,
@@ -431,6 +450,7 @@
     "19": {
       "name": "Pipe Organ",
       "gm_name": "church_organ",
+      "is_drum": false,
       "key_range": [
         0,
         127
@@ -452,6 +472,7 @@
     "20": {
       "name": "Reed Organ",
       "gm_name": "reed_organ",
+      "is_drum": false,
       "key_range": [
         0,
         115
@@ -473,9 +494,10 @@
     "21": {
       "name": "Accordion",
       "gm_name": "accordion",
+      "is_drum": false,
       "key_range": [
         0,
-        127
+        117
       ],
       "vel_range": [
         0,
@@ -494,9 +516,10 @@
     "22": {
       "name": "Harmonica",
       "gm_name": "harmonica",
+      "is_drum": false,
       "key_range": [
         0,
-        127
+        117
       ],
       "vel_range": [
         0,
@@ -515,9 +538,10 @@
     "23": {
       "name": "Bandoneon",
       "gm_name": "tango_accordion",
+      "is_drum": false,
       "key_range": [
         0,
-        127
+        120
       ],
       "vel_range": [
         0,
@@ -536,9 +560,10 @@
     "24": {
       "name": "Nylon Guitar",
       "gm_name": "acoustic_guitar",
+      "is_drum": false,
       "key_range": [
         0,
-        127
+        108
       ],
       "vel_range": [
         0,
@@ -557,6 +582,7 @@
     "25": {
       "name": "Steel Guitar",
       "gm_name": "steel_guitar",
+      "is_drum": false,
       "key_range": [
         0,
         108
@@ -578,9 +604,10 @@
     "26": {
       "name": "Jazz Guitar",
       "gm_name": "jazz_guitar",
+      "is_drum": false,
       "key_range": [
         0,
-        127
+        113
       ],
       "vel_range": [
         0,
@@ -599,9 +626,10 @@
     "27": {
       "name": "Clean Guitar",
       "gm_name": "clean_guitar",
+      "is_drum": false,
       "key_range": [
         0,
-        127
+        109
       ],
       "vel_range": [
         0,
@@ -620,6 +648,7 @@
     "28": {
       "name": "Muted Guitar",
       "gm_name": "muted_guitar",
+      "is_drum": false,
       "key_range": [
         0,
         118
@@ -641,9 +670,10 @@
     "29": {
       "name": "Overdrive Guitar",
       "gm_name": "overdriven_guitar",
+      "is_drum": false,
       "key_range": [
         0,
-        127
+        122
       ],
       "vel_range": [
         0,
@@ -662,9 +692,10 @@
     "30": {
       "name": "Distortion Guitar",
       "gm_name": "distortion_guitar",
+      "is_drum": false,
       "key_range": [
         0,
-        127
+        112
       ],
       "vel_range": [
         0,
@@ -685,6 +716,7 @@
     "31": {
       "name": "Guitar Harmonics",
       "gm_name": "guitar_harmonics",
+      "is_drum": false,
       "key_range": [
         0,
         127
@@ -706,6 +738,7 @@
     "32": {
       "name": "Acoustic Bass",
       "gm_name": "acoustic_bass",
+      "is_drum": false,
       "key_range": [
         0,
         108
@@ -729,6 +762,7 @@
     "33": {
       "name": "Finger Bass",
       "gm_name": "electric_bass_finger",
+      "is_drum": false,
       "key_range": [
         0,
         127
@@ -750,6 +784,7 @@
     "34": {
       "name": "Pick Bass",
       "gm_name": "electric_bass_pick",
+      "is_drum": false,
       "key_range": [
         0,
         127
@@ -771,6 +806,7 @@
     "35": {
       "name": "Fretless Bass",
       "gm_name": "fretless_bass",
+      "is_drum": false,
       "key_range": [
         0,
         127
@@ -794,6 +830,7 @@
     "36": {
       "name": "Slap Bass 1",
       "gm_name": "slap_bass1",
+      "is_drum": false,
       "key_range": [
         0,
         127
@@ -815,6 +852,7 @@
     "37": {
       "name": "Slap Bass 2",
       "gm_name": "slap_bass2",
+      "is_drum": false,
       "key_range": [
         0,
         127
@@ -836,6 +874,7 @@
     "38": {
       "name": "Synth Bass 1",
       "gm_name": "synth_bass1",
+      "is_drum": false,
       "key_range": [
         0,
         127
@@ -857,6 +896,7 @@
     "39": {
       "name": "Synth Bass 2",
       "gm_name": "synth_bass2",
+      "is_drum": false,
       "key_range": [
         0,
         108
@@ -878,6 +918,7 @@
     "40": {
       "name": "Violin",
       "gm_name": "violin",
+      "is_drum": false,
       "key_range": [
         0,
         127
@@ -899,6 +940,7 @@
     "41": {
       "name": "Viola",
       "gm_name": "viola",
+      "is_drum": false,
       "key_range": [
         0,
         127
@@ -920,9 +962,10 @@
     "42": {
       "name": "Cello",
       "gm_name": "cello",
+      "is_drum": false,
       "key_range": [
         0,
-        127
+        108
       ],
       "vel_range": [
         0,
@@ -943,9 +986,10 @@
     "43": {
       "name": "Double Bass",
       "gm_name": "contrabass",
+      "is_drum": false,
       "key_range": [
         0,
-        127
+        108
       ],
       "vel_range": [
         0,
@@ -964,9 +1008,10 @@
     "44": {
       "name": "Tremolo Strings",
       "gm_name": "tremolo_strings",
+      "is_drum": false,
       "key_range": [
         0,
-        127
+        110
       ],
       "vel_range": [
         0,
@@ -985,6 +1030,7 @@
     "45": {
       "name": "Pizzicato Strings",
       "gm_name": "pizzicato_strings",
+      "is_drum": false,
       "key_range": [
         0,
         112
@@ -1006,6 +1052,7 @@
     "46": {
       "name": "Orchestral Harp",
       "gm_name": "orchestral_harp",
+      "is_drum": false,
       "key_range": [
         0,
         116
@@ -1027,9 +1074,10 @@
     "47": {
       "name": "Timpani",
       "gm_name": "timpani",
+      "is_drum": false,
       "key_range": [
         0,
-        127
+        108
       ],
       "vel_range": [
         0,
@@ -1048,9 +1096,10 @@
     "48": {
       "name": "Fast Strings",
       "gm_name": "strings",
+      "is_drum": false,
       "key_range": [
         0,
-        127
+        110
       ],
       "vel_range": [
         0,
@@ -1069,9 +1118,10 @@
     "49": {
       "name": "Slow Strings",
       "gm_name": "slow_strings",
+      "is_drum": false,
       "key_range": [
         0,
-        127
+        110
       ],
       "vel_range": [
         0,
@@ -1090,9 +1140,10 @@
     "50": {
       "name": "Synth Strings 1",
       "gm_name": "synth_strings1",
+      "is_drum": false,
       "key_range": [
         0,
-        127
+        113
       ],
       "vel_range": [
         0,
@@ -1111,6 +1162,7 @@
     "51": {
       "name": "Synth Strings 2",
       "gm_name": "synth_strings2",
+      "is_drum": false,
       "key_range": [
         0,
         116
@@ -1132,9 +1184,10 @@
     "52": {
       "name": "Concert Choir",
       "gm_name": "choir_aahs",
+      "is_drum": false,
       "key_range": [
         0,
-        127
+        115
       ],
       "vel_range": [
         0,
@@ -1153,6 +1206,7 @@
     "53": {
       "name": "Voice Oohs",
       "gm_name": "voice_oohs",
+      "is_drum": false,
       "key_range": [
         0,
         127
@@ -1176,9 +1230,10 @@
     "54": {
       "name": "Synth Voice",
       "gm_name": "synth_choir",
+      "is_drum": false,
       "key_range": [
         0,
-        127
+        115
       ],
       "vel_range": [
         0,
@@ -1197,9 +1252,10 @@
     "55": {
       "name": "Orchestra Hit",
       "gm_name": "orchestra_hit",
+      "is_drum": false,
       "key_range": [
         0,
-        127
+        108
       ],
       "vel_range": [
         0,
@@ -1218,6 +1274,7 @@
     "56": {
       "name": "Trumpet",
       "gm_name": "trumpet",
+      "is_drum": false,
       "key_range": [
         0,
         127
@@ -1239,9 +1296,10 @@
     "57": {
       "name": "Trombone",
       "gm_name": "trombone",
+      "is_drum": false,
       "key_range": [
         0,
-        127
+        108
       ],
       "vel_range": [
         0,
@@ -1260,6 +1318,7 @@
     "58": {
       "name": "Tuba",
       "gm_name": "tuba",
+      "is_drum": false,
       "key_range": [
         0,
         127
@@ -1281,6 +1340,7 @@
     "59": {
       "name": "Muted Trumpet",
       "gm_name": "muted_trumpet",
+      "is_drum": false,
       "key_range": [
         0,
         127
@@ -1302,6 +1362,7 @@
     "60": {
       "name": "French Horns",
       "gm_name": "french_horn",
+      "is_drum": false,
       "key_range": [
         0,
         127
@@ -1323,9 +1384,10 @@
     "61": {
       "name": "Brass Section",
       "gm_name": "brass_section",
+      "is_drum": false,
       "key_range": [
         0,
-        127
+        108
       ],
       "vel_range": [
         0,
@@ -1344,6 +1406,7 @@
     "62": {
       "name": "Synth Brass 1",
       "gm_name": "synth_brass1",
+      "is_drum": false,
       "key_range": [
         0,
         127
@@ -1365,6 +1428,7 @@
     "63": {
       "name": "Synth Brass 2",
       "gm_name": "synth_brass2",
+      "is_drum": false,
       "key_range": [
         0,
         127
@@ -1386,9 +1450,10 @@
     "64": {
       "name": "Soprano Sax",
       "gm_name": "soprano_sax",
+      "is_drum": false,
       "key_range": [
         0,
-        127
+        120
       ],
       "vel_range": [
         0,
@@ -1407,9 +1472,10 @@
     "65": {
       "name": "Alto Sax",
       "gm_name": "alto_sax",
+      "is_drum": false,
       "key_range": [
         0,
-        127
+        110
       ],
       "vel_range": [
         0,
@@ -1428,6 +1494,7 @@
     "66": {
       "name": "Tenor Sax",
       "gm_name": "tenor_sax",
+      "is_drum": false,
       "key_range": [
         0,
         127
@@ -1449,9 +1516,10 @@
     "67": {
       "name": "Baritone Sax",
       "gm_name": "baritone_sax",
+      "is_drum": false,
       "key_range": [
         0,
-        127
+        108
       ],
       "vel_range": [
         0,
@@ -1470,9 +1538,10 @@
     "68": {
       "name": "Oboe",
       "gm_name": "oboe",
+      "is_drum": false,
       "key_range": [
         0,
-        127
+        117
       ],
       "vel_range": [
         0,
@@ -1491,6 +1560,7 @@
     "69": {
       "name": "English Horn",
       "gm_name": "english_horn",
+      "is_drum": false,
       "key_range": [
         0,
         112
@@ -1512,6 +1582,7 @@
     "70": {
       "name": "Bassoon",
       "gm_name": "bassoon",
+      "is_drum": false,
       "key_range": [
         0,
         127
@@ -1535,9 +1606,10 @@
     "71": {
       "name": "Clarinet",
       "gm_name": "clarinet",
+      "is_drum": false,
       "key_range": [
         0,
-        127
+        123
       ],
       "vel_range": [
         0,
@@ -1556,6 +1628,7 @@
     "72": {
       "name": "Piccolo",
       "gm_name": "piccolo",
+      "is_drum": false,
       "key_range": [
         0,
         127
@@ -1577,9 +1650,10 @@
     "73": {
       "name": "Flute",
       "gm_name": "flute",
+      "is_drum": false,
       "key_range": [
         0,
-        127
+        123
       ],
       "vel_range": [
         0,
@@ -1598,9 +1672,10 @@
     "74": {
       "name": "Recorder",
       "gm_name": "recorder",
+      "is_drum": false,
       "key_range": [
         0,
-        127
+        108
       ],
       "vel_range": [
         0,
@@ -1619,6 +1694,7 @@
     "75": {
       "name": "Pan Flute",
       "gm_name": "pan_flute",
+      "is_drum": false,
       "key_range": [
         0,
         111
@@ -1642,6 +1718,7 @@
     "76": {
       "name": "Bottle Blow",
       "gm_name": "bottle_blow",
+      "is_drum": false,
       "key_range": [
         0,
         127
@@ -1663,6 +1740,7 @@
     "77": {
       "name": "Shakuhachi",
       "gm_name": "shakuhachi",
+      "is_drum": false,
       "key_range": [
         0,
         127
@@ -1684,6 +1762,7 @@
     "78": {
       "name": "Whistle",
       "gm_name": "whistle",
+      "is_drum": false,
       "key_range": [
         0,
         127
@@ -1705,6 +1784,7 @@
     "79": {
       "name": "Ocarina",
       "gm_name": "ocarina",
+      "is_drum": false,
       "key_range": [
         0,
         127
@@ -1728,6 +1808,7 @@
     "80": {
       "name": "Square Lead",
       "gm_name": "synth_lead_square",
+      "is_drum": false,
       "key_range": [
         0,
         127
@@ -1749,6 +1830,7 @@
     "81": {
       "name": "Saw Lead",
       "gm_name": "synth_lead_saw",
+      "is_drum": false,
       "key_range": [
         0,
         127
@@ -1770,6 +1852,7 @@
     "82": {
       "name": "Synth Calliope",
       "gm_name": "synth_lead_calliope",
+      "is_drum": false,
       "key_range": [
         0,
         127
@@ -1791,9 +1874,10 @@
     "83": {
       "name": "Chiffer Lead",
       "gm_name": "synth_lead_chiff",
+      "is_drum": false,
       "key_range": [
         0,
-        127
+        113
       ],
       "vel_range": [
         0,
@@ -1812,9 +1896,10 @@
     "84": {
       "name": "Charang",
       "gm_name": "synth_lead_charang",
+      "is_drum": false,
       "key_range": [
         0,
-        127
+        115
       ],
       "vel_range": [
         0,
@@ -1833,6 +1918,7 @@
     "85": {
       "name": "Solo Vox",
       "gm_name": "synth_lead_voice",
+      "is_drum": false,
       "key_range": [
         0,
         127
@@ -1854,6 +1940,7 @@
     "86": {
       "name": "5th Saw Wave",
       "gm_name": "synth_lead_fifths",
+      "is_drum": false,
       "key_range": [
         0,
         127
@@ -1875,6 +1962,7 @@
     "87": {
       "name": "Bass & Lead",
       "gm_name": "synth_lead_bass_lead",
+      "is_drum": false,
       "key_range": [
         0,
         127
@@ -1896,6 +1984,7 @@
     "88": {
       "name": "Fantasia",
       "gm_name": "synth_pad_new_age",
+      "is_drum": false,
       "key_range": [
         0,
         127
@@ -1917,6 +2006,7 @@
     "89": {
       "name": "Warm Pad",
       "gm_name": "synth_pad_warm",
+      "is_drum": false,
       "key_range": [
         0,
         127
@@ -1938,6 +2028,7 @@
     "90": {
       "name": "Polysynth",
       "gm_name": "synth_pad_polysynth",
+      "is_drum": false,
       "key_range": [
         0,
         108
@@ -1959,6 +2050,7 @@
     "91": {
       "name": "Space Voice",
       "gm_name": "synth_pad_choir",
+      "is_drum": false,
       "key_range": [
         0,
         127
@@ -1980,9 +2072,10 @@
     "92": {
       "name": "Bowed Glass",
       "gm_name": "synth_pad_bowed",
+      "is_drum": false,
       "key_range": [
         0,
-        127
+        111
       ],
       "vel_range": [
         0,
@@ -2001,6 +2094,7 @@
     "93": {
       "name": "Metal Pad",
       "gm_name": "synth_pad_metallic",
+      "is_drum": false,
       "key_range": [
         0,
         127
@@ -2022,9 +2116,10 @@
     "94": {
       "name": "Halo Pad",
       "gm_name": "synth_pad_halo",
+      "is_drum": false,
       "key_range": [
         0,
-        127
+        115
       ],
       "vel_range": [
         0,
@@ -2043,6 +2138,7 @@
     "95": {
       "name": "Sweep Pad",
       "gm_name": "synth_pad_sweep",
+      "is_drum": false,
       "key_range": [
         0,
         108
@@ -2064,6 +2160,7 @@
     "96": {
       "name": "Ice Rain",
       "gm_name": "gm_96",
+      "is_drum": false,
       "key_range": [
         0,
         127
@@ -2085,6 +2182,7 @@
     "97": {
       "name": "Soundtrack",
       "gm_name": "gm_97",
+      "is_drum": false,
       "key_range": [
         0,
         108
@@ -2106,6 +2204,7 @@
     "98": {
       "name": "Crystal",
       "gm_name": "gm_98",
+      "is_drum": false,
       "key_range": [
         0,
         127
@@ -2127,6 +2226,7 @@
     "99": {
       "name": "Atmosphere",
       "gm_name": "gm_99",
+      "is_drum": false,
       "key_range": [
         0,
         127
@@ -2148,6 +2248,7 @@
     "100": {
       "name": "Brightness",
       "gm_name": "gm_100",
+      "is_drum": false,
       "key_range": [
         0,
         127
@@ -2169,9 +2270,10 @@
     "101": {
       "name": "Goblin",
       "gm_name": "gm_101",
+      "is_drum": false,
       "key_range": [
         0,
-        127
+        108
       ],
       "vel_range": [
         0,
@@ -2193,6 +2295,7 @@
     "102": {
       "name": "Echo Drops",
       "gm_name": "gm_102",
+      "is_drum": false,
       "key_range": [
         0,
         127
@@ -2214,6 +2317,7 @@
     "103": {
       "name": "Star Theme",
       "gm_name": "gm_103",
+      "is_drum": false,
       "key_range": [
         0,
         127
@@ -2235,6 +2339,7 @@
     "104": {
       "name": "Sitar",
       "gm_name": "gm_104",
+      "is_drum": false,
       "key_range": [
         0,
         108
@@ -2258,6 +2363,7 @@
     "105": {
       "name": "Banjo",
       "gm_name": "gm_105",
+      "is_drum": false,
       "key_range": [
         0,
         108
@@ -2279,6 +2385,7 @@
     "106": {
       "name": "Shamisen",
       "gm_name": "gm_106",
+      "is_drum": false,
       "key_range": [
         0,
         127
@@ -2300,6 +2407,7 @@
     "107": {
       "name": "Koto",
       "gm_name": "gm_107",
+      "is_drum": false,
       "key_range": [
         0,
         108
@@ -2321,6 +2429,7 @@
     "108": {
       "name": "Kalimba",
       "gm_name": "gm_108",
+      "is_drum": false,
       "key_range": [
         0,
         127
@@ -2342,6 +2451,7 @@
     "109": {
       "name": "Bagpipes",
       "gm_name": "gm_109",
+      "is_drum": false,
       "key_range": [
         0,
         108
@@ -2363,6 +2473,7 @@
     "110": {
       "name": "Fiddle",
       "gm_name": "gm_110",
+      "is_drum": false,
       "key_range": [
         0,
         127
@@ -2384,6 +2495,7 @@
     "111": {
       "name": "Shenai",
       "gm_name": "gm_111",
+      "is_drum": false,
       "key_range": [
         0,
         127
@@ -2405,6 +2517,7 @@
     "112": {
       "name": "Tinker Bell",
       "gm_name": "gm_112",
+      "is_drum": false,
       "key_range": [
         0,
         127
@@ -2428,6 +2541,7 @@
     "113": {
       "name": "Agogo",
       "gm_name": "gm_113",
+      "is_drum": false,
       "key_range": [
         0,
         127
@@ -2449,9 +2563,10 @@
     "114": {
       "name": "Steel Drums",
       "gm_name": "gm_114",
+      "is_drum": false,
       "key_range": [
         0,
-        127
+        120
       ],
       "vel_range": [
         0,
@@ -2473,6 +2588,7 @@
     "115": {
       "name": "Wood Block",
       "gm_name": "gm_115",
+      "is_drum": false,
       "key_range": [
         0,
         127
@@ -2494,9 +2610,10 @@
     "116": {
       "name": "Taiko Drum",
       "gm_name": "gm_116",
+      "is_drum": false,
       "key_range": [
         0,
-        127
+        108
       ],
       "vel_range": [
         0,
@@ -2517,6 +2634,7 @@
     "117": {
       "name": "Melodic Tom",
       "gm_name": "gm_117",
+      "is_drum": false,
       "key_range": [
         0,
         127
@@ -2540,6 +2658,7 @@
     "118": {
       "name": "Synth Drum",
       "gm_name": "gm_118",
+      "is_drum": false,
       "key_range": [
         0,
         127
@@ -2561,6 +2680,7 @@
     "119": {
       "name": "Reverse Cymbal",
       "gm_name": "gm_119",
+      "is_drum": false,
       "key_range": [
         0,
         127
@@ -2582,9 +2702,10 @@
     "120": {
       "name": "Fret Noise",
       "gm_name": "gm_120",
+      "is_drum": false,
       "key_range": [
         0,
-        127
+        108
       ],
       "vel_range": [
         0,
@@ -2603,9 +2724,10 @@
     "121": {
       "name": "Breath Noise",
       "gm_name": "gm_121",
+      "is_drum": false,
       "key_range": [
         0,
-        127
+        108
       ],
       "vel_range": [
         0,
@@ -2624,9 +2746,10 @@
     "122": {
       "name": "Seashore",
       "gm_name": "gm_122",
+      "is_drum": false,
       "key_range": [
         0,
-        127
+        108
       ],
       "vel_range": [
         0,
@@ -2647,6 +2770,7 @@
     "123": {
       "name": "Birds",
       "gm_name": "gm_123",
+      "is_drum": false,
       "key_range": [
         0,
         127
@@ -2668,6 +2792,7 @@
     "124": {
       "name": "Telephone 1",
       "gm_name": "gm_124",
+      "is_drum": false,
       "key_range": [
         0,
         127
@@ -2691,9 +2816,10 @@
     "125": {
       "name": "Helicopter",
       "gm_name": "gm_125",
+      "is_drum": false,
       "key_range": [
         0,
-        127
+        108
       ],
       "vel_range": [
         0,
@@ -2712,9 +2838,10 @@
     "126": {
       "name": "Applause",
       "gm_name": "gm_126",
+      "is_drum": false,
       "key_range": [
         0,
-        127
+        108
       ],
       "vel_range": [
         0,
@@ -2733,6 +2860,7 @@
     "127": {
       "name": "Gun Shot",
       "gm_name": "gm_127",
+      "is_drum": false,
       "key_range": [
         0,
         127
@@ -2750,6 +2878,31 @@
       "avg_release": -1.0,
       "quality": "low",
       "characteristics": []
+    },
+    "drum": {
+      "name": "Standard 1",
+      "gm_name": "drum_kit",
+      "is_drum": true,
+      "key_range": [
+        27,
+        87
+      ],
+      "vel_range": [
+        0,
+        127
+      ],
+      "sweet_spot": [
+        51,
+        74
+      ],
+      "vel_layers": 26,
+      "avg_attack": 2.4245,
+      "avg_release": 15.2205,
+      "quality": "high",
+      "characteristics": [
+        "slow_attack",
+        "long_release"
+      ]
     }
   }
 }

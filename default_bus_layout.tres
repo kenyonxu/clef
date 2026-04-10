@@ -18,45 +18,205 @@ threshold = -24.0
 [sub_resource type="AudioEffectPanner" id="AudioEffectPanner_j3pel"]
 pan = 1.0
 
+[sub_resource type="AudioEffectReverb" id="AudioEffectReverb_g28q7"]
+predelay_msec = 15.0
+room_size = 0.29
+damping = 0.3
+hipass = 0.05
+wet = 0.0
+
+[sub_resource type="AudioEffectChorus" id="AudioEffectChorus_n8wo2"]
+wet = 0.0
+
 [sub_resource type="AudioEffectPanner" id="AudioEffectPanner_g28q7"]
 pan = 0.007874016
+
+[sub_resource type="AudioEffectReverb" id="AudioEffectReverb_5t1r3"]
+predelay_msec = 15.0
+room_size = 0.29
+damping = 0.3
+hipass = 0.05
+wet = 0.0
+
+[sub_resource type="AudioEffectChorus" id="AudioEffectChorus_cenje"]
+wet = 0.0
 
 [sub_resource type="AudioEffectPanner" id="AudioEffectPanner_n8wo2"]
 pan = 1.0
 
+[sub_resource type="AudioEffectReverb" id="AudioEffectReverb_dqt2m"]
+predelay_msec = 15.0
+room_size = 0.29
+damping = 0.3
+hipass = 0.05
+wet = 0.0
+
+[sub_resource type="AudioEffectChorus" id="AudioEffectChorus_7kkex"]
+wet = 0.0
+
 [sub_resource type="AudioEffectPanner" id="AudioEffectPanner_5t1r3"]
+
+[sub_resource type="AudioEffectReverb" id="AudioEffectReverb_k2ilm"]
+predelay_msec = 15.0
+room_size = 0.29
+damping = 0.3
+hipass = 0.05
+wet = 0.0
+
+[sub_resource type="AudioEffectChorus" id="AudioEffectChorus_2g6t7"]
+wet = 0.0
 
 [sub_resource type="AudioEffectPanner" id="AudioEffectPanner_cenje"]
 
+[sub_resource type="AudioEffectReverb" id="AudioEffectReverb_y2dp7"]
+predelay_msec = 15.0
+room_size = 0.29
+damping = 0.3
+hipass = 0.05
+wet = 0.0
+
+[sub_resource type="AudioEffectChorus" id="AudioEffectChorus_dapn3"]
+wet = 0.0
+
 [sub_resource type="AudioEffectPanner" id="AudioEffectPanner_dqt2m"]
+
+[sub_resource type="AudioEffectReverb" id="AudioEffectReverb_e2wrs"]
+predelay_msec = 15.0
+room_size = 0.29
+damping = 0.3
+hipass = 0.05
+wet = 0.0
+
+[sub_resource type="AudioEffectChorus" id="AudioEffectChorus_ro4dx"]
+wet = 0.0
 
 [sub_resource type="AudioEffectPanner" id="AudioEffectPanner_7kkex"]
 
+[sub_resource type="AudioEffectReverb" id="AudioEffectReverb_51bpa"]
+predelay_msec = 15.0
+room_size = 0.29
+damping = 0.3
+hipass = 0.05
+wet = 0.0
+
+[sub_resource type="AudioEffectChorus" id="AudioEffectChorus_2mq3o"]
+wet = 0.0
+
 [sub_resource type="AudioEffectPanner" id="AudioEffectPanner_k2ilm"]
+
+[sub_resource type="AudioEffectReverb" id="AudioEffectReverb_5tfch"]
+predelay_msec = 15.0
+room_size = 0.29
+damping = 0.3
+hipass = 0.05
+wet = 0.0
+
+[sub_resource type="AudioEffectChorus" id="AudioEffectChorus_sjxdv"]
+wet = 0.0
 
 [sub_resource type="AudioEffectPanner" id="AudioEffectPanner_2g6t7"]
 pan = 0.007874016
 
+[sub_resource type="AudioEffectReverb" id="AudioEffectReverb_hnxjo"]
+predelay_msec = 15.0
+room_size = 0.29
+damping = 0.3
+hipass = 0.05
+wet = 0.0
+
+[sub_resource type="AudioEffectChorus" id="AudioEffectChorus_3r1kf"]
+wet = 0.0
+
 [sub_resource type="AudioEffectPanner" id="AudioEffectPanner_y2dp7"]
 pan = -0.27559054
+
+[sub_resource type="AudioEffectReverb" id="AudioEffectReverb_nf0co"]
+predelay_msec = 15.0
+room_size = 0.29
+damping = 0.3
+hipass = 0.05
+wet = 0.0
+
+[sub_resource type="AudioEffectChorus" id="AudioEffectChorus_w8t7n"]
+wet = 0.0
 
 [sub_resource type="AudioEffectPanner" id="AudioEffectPanner_dapn3"]
 pan = 0.007874016
 
+[sub_resource type="AudioEffectReverb" id="AudioEffectReverb_7h8fu"]
+predelay_msec = 15.0
+room_size = 0.29
+damping = 0.3
+hipass = 0.05
+wet = 0.0
+
+[sub_resource type="AudioEffectChorus" id="AudioEffectChorus_2lqp5"]
+wet = 0.0
+
 [sub_resource type="AudioEffectPanner" id="AudioEffectPanner_e2wrs"]
 pan = 0.32283464
+
+[sub_resource type="AudioEffectReverb" id="AudioEffectReverb_pu3yg"]
+predelay_msec = 15.0
+room_size = 0.29
+damping = 0.3
+hipass = 0.05
+wet = 0.0
+
+[sub_resource type="AudioEffectChorus" id="AudioEffectChorus_sk1wo"]
+wet = 0.0
 
 [sub_resource type="AudioEffectPanner" id="AudioEffectPanner_ro4dx"]
 pan = -1.0
 
+[sub_resource type="AudioEffectReverb" id="AudioEffectReverb_shvw8"]
+predelay_msec = 15.0
+room_size = 0.29
+damping = 0.3
+hipass = 0.05
+wet = 0.0
+
+[sub_resource type="AudioEffectChorus" id="AudioEffectChorus_hupnq"]
+wet = 0.0
+
 [sub_resource type="AudioEffectPanner" id="AudioEffectPanner_51bpa"]
 pan = -1.0
+
+[sub_resource type="AudioEffectReverb" id="AudioEffectReverb_5iqlm"]
+predelay_msec = 15.0
+room_size = 0.29
+damping = 0.3
+hipass = 0.05
+wet = 0.0
+
+[sub_resource type="AudioEffectChorus" id="AudioEffectChorus_qi87n"]
+wet = 0.0
 
 [sub_resource type="AudioEffectPanner" id="AudioEffectPanner_2mq3o"]
 pan = -1.0
 
+[sub_resource type="AudioEffectReverb" id="AudioEffectReverb_g8vdu"]
+predelay_msec = 15.0
+room_size = 0.29
+damping = 0.3
+hipass = 0.05
+wet = 0.0
+
+[sub_resource type="AudioEffectChorus" id="AudioEffectChorus_82uw8"]
+wet = 0.0
+
 [sub_resource type="AudioEffectPanner" id="AudioEffectPanner_5tfch"]
 pan = -1.0
+
+[sub_resource type="AudioEffectReverb" id="AudioEffectReverb_dudgq"]
+predelay_msec = 15.0
+room_size = 0.29
+damping = 0.3
+hipass = 0.05
+wet = 0.0
+
+[sub_resource type="AudioEffectChorus" id="AudioEffectChorus_8b5om"]
+wet = 0.0
 
 [resource]
 bus/1/name = &"ClefMaster"
@@ -81,6 +241,10 @@ bus/2/volume_db = -2.0760744
 bus/2/send = &"ClefMaster"
 bus/2/effect/0/effect = SubResource("AudioEffectPanner_2g6t7")
 bus/2/effect/0/enabled = true
+bus/2/effect/1/effect = SubResource("AudioEffectReverb_hnxjo")
+bus/2/effect/1/enabled = true
+bus/2/effect/2/effect = SubResource("AudioEffectChorus_3r1kf")
+bus/2/effect/2/enabled = true
 bus/3/name = &"clef_ch_1"
 bus/3/solo = false
 bus/3/mute = false
@@ -89,6 +253,10 @@ bus/3/volume_db = -2.0760744
 bus/3/send = &"ClefMaster"
 bus/3/effect/0/effect = SubResource("AudioEffectPanner_y2dp7")
 bus/3/effect/0/enabled = true
+bus/3/effect/1/effect = SubResource("AudioEffectReverb_nf0co")
+bus/3/effect/1/enabled = true
+bus/3/effect/2/effect = SubResource("AudioEffectChorus_w8t7n")
+bus/3/effect/2/enabled = true
 bus/4/name = &"clef_ch_2"
 bus/4/solo = false
 bus/4/mute = false
@@ -97,6 +265,10 @@ bus/4/volume_db = -2.0760744
 bus/4/send = &"ClefMaster"
 bus/4/effect/0/effect = SubResource("AudioEffectPanner_dapn3")
 bus/4/effect/0/enabled = true
+bus/4/effect/1/effect = SubResource("AudioEffectReverb_7h8fu")
+bus/4/effect/1/enabled = true
+bus/4/effect/2/effect = SubResource("AudioEffectChorus_2lqp5")
+bus/4/effect/2/enabled = true
 bus/5/name = &"clef_ch_3"
 bus/5/solo = false
 bus/5/mute = false
@@ -105,6 +277,10 @@ bus/5/volume_db = -2.0760744
 bus/5/send = &"ClefMaster"
 bus/5/effect/0/effect = SubResource("AudioEffectPanner_e2wrs")
 bus/5/effect/0/enabled = true
+bus/5/effect/1/effect = SubResource("AudioEffectReverb_pu3yg")
+bus/5/effect/1/enabled = true
+bus/5/effect/2/effect = SubResource("AudioEffectChorus_sk1wo")
+bus/5/effect/2/enabled = true
 bus/6/name = &"clef_ch_4"
 bus/6/solo = false
 bus/6/mute = false
@@ -113,6 +289,10 @@ bus/6/volume_db = -2.0760744
 bus/6/send = &"ClefMaster"
 bus/6/effect/0/effect = SubResource("AudioEffectPanner_ro4dx")
 bus/6/effect/0/enabled = true
+bus/6/effect/1/effect = SubResource("AudioEffectReverb_shvw8")
+bus/6/effect/1/enabled = true
+bus/6/effect/2/effect = SubResource("AudioEffectChorus_hupnq")
+bus/6/effect/2/enabled = true
 bus/7/name = &"clef_ch_5"
 bus/7/solo = false
 bus/7/mute = false
@@ -121,6 +301,10 @@ bus/7/volume_db = -2.0760744
 bus/7/send = &"ClefMaster"
 bus/7/effect/0/effect = SubResource("AudioEffectPanner_51bpa")
 bus/7/effect/0/enabled = true
+bus/7/effect/1/effect = SubResource("AudioEffectReverb_5iqlm")
+bus/7/effect/1/enabled = true
+bus/7/effect/2/effect = SubResource("AudioEffectChorus_qi87n")
+bus/7/effect/2/enabled = true
 bus/8/name = &"clef_ch_6"
 bus/8/solo = false
 bus/8/mute = false
@@ -129,6 +313,10 @@ bus/8/volume_db = -2.0760744
 bus/8/send = &"ClefMaster"
 bus/8/effect/0/effect = SubResource("AudioEffectPanner_2mq3o")
 bus/8/effect/0/enabled = true
+bus/8/effect/1/effect = SubResource("AudioEffectReverb_g8vdu")
+bus/8/effect/1/enabled = true
+bus/8/effect/2/effect = SubResource("AudioEffectChorus_82uw8")
+bus/8/effect/2/enabled = true
 bus/9/name = &"clef_ch_7"
 bus/9/solo = false
 bus/9/mute = false
@@ -137,6 +325,10 @@ bus/9/volume_db = -2.0760744
 bus/9/send = &"ClefMaster"
 bus/9/effect/0/effect = SubResource("AudioEffectPanner_5tfch")
 bus/9/effect/0/enabled = true
+bus/9/effect/1/effect = SubResource("AudioEffectReverb_dudgq")
+bus/9/effect/1/enabled = true
+bus/9/effect/2/effect = SubResource("AudioEffectChorus_8b5om")
+bus/9/effect/2/enabled = true
 bus/10/name = &"clef_ch_8"
 bus/10/solo = false
 bus/10/mute = false
@@ -145,6 +337,10 @@ bus/10/volume_db = -2.0760744
 bus/10/send = &"ClefMaster"
 bus/10/effect/0/effect = SubResource("AudioEffectPanner_j3pel")
 bus/10/effect/0/enabled = true
+bus/10/effect/1/effect = SubResource("AudioEffectReverb_g28q7")
+bus/10/effect/1/enabled = true
+bus/10/effect/2/effect = SubResource("AudioEffectChorus_n8wo2")
+bus/10/effect/2/enabled = true
 bus/11/name = &"clef_ch_9"
 bus/11/solo = false
 bus/11/mute = false
@@ -153,6 +349,10 @@ bus/11/volume_db = -2.0760744
 bus/11/send = &"ClefMaster"
 bus/11/effect/0/effect = SubResource("AudioEffectPanner_g28q7")
 bus/11/effect/0/enabled = true
+bus/11/effect/1/effect = SubResource("AudioEffectReverb_5t1r3")
+bus/11/effect/1/enabled = true
+bus/11/effect/2/effect = SubResource("AudioEffectChorus_cenje")
+bus/11/effect/2/enabled = true
 bus/12/name = &"clef_ch_10"
 bus/12/solo = false
 bus/12/mute = false
@@ -161,6 +361,10 @@ bus/12/volume_db = -2.0760744
 bus/12/send = &"ClefMaster"
 bus/12/effect/0/effect = SubResource("AudioEffectPanner_n8wo2")
 bus/12/effect/0/enabled = true
+bus/12/effect/1/effect = SubResource("AudioEffectReverb_dqt2m")
+bus/12/effect/1/enabled = true
+bus/12/effect/2/effect = SubResource("AudioEffectChorus_7kkex")
+bus/12/effect/2/enabled = true
 bus/13/name = &"clef_ch_11"
 bus/13/solo = false
 bus/13/mute = false
@@ -169,6 +373,10 @@ bus/13/volume_db = -2.0760744
 bus/13/send = &"ClefMaster"
 bus/13/effect/0/effect = SubResource("AudioEffectPanner_5t1r3")
 bus/13/effect/0/enabled = true
+bus/13/effect/1/effect = SubResource("AudioEffectReverb_k2ilm")
+bus/13/effect/1/enabled = true
+bus/13/effect/2/effect = SubResource("AudioEffectChorus_2g6t7")
+bus/13/effect/2/enabled = true
 bus/14/name = &"clef_ch_12"
 bus/14/solo = false
 bus/14/mute = false
@@ -177,6 +385,10 @@ bus/14/volume_db = -2.0760744
 bus/14/send = &"ClefMaster"
 bus/14/effect/0/effect = SubResource("AudioEffectPanner_cenje")
 bus/14/effect/0/enabled = true
+bus/14/effect/1/effect = SubResource("AudioEffectReverb_y2dp7")
+bus/14/effect/1/enabled = true
+bus/14/effect/2/effect = SubResource("AudioEffectChorus_dapn3")
+bus/14/effect/2/enabled = true
 bus/15/name = &"clef_ch_13"
 bus/15/solo = false
 bus/15/mute = false
@@ -185,6 +397,10 @@ bus/15/volume_db = -2.0760744
 bus/15/send = &"ClefMaster"
 bus/15/effect/0/effect = SubResource("AudioEffectPanner_dqt2m")
 bus/15/effect/0/enabled = true
+bus/15/effect/1/effect = SubResource("AudioEffectReverb_e2wrs")
+bus/15/effect/1/enabled = true
+bus/15/effect/2/effect = SubResource("AudioEffectChorus_ro4dx")
+bus/15/effect/2/enabled = true
 bus/16/name = &"clef_ch_14"
 bus/16/solo = false
 bus/16/mute = false
@@ -193,6 +409,10 @@ bus/16/volume_db = -2.0760744
 bus/16/send = &"ClefMaster"
 bus/16/effect/0/effect = SubResource("AudioEffectPanner_7kkex")
 bus/16/effect/0/enabled = true
+bus/16/effect/1/effect = SubResource("AudioEffectReverb_51bpa")
+bus/16/effect/1/enabled = true
+bus/16/effect/2/effect = SubResource("AudioEffectChorus_2mq3o")
+bus/16/effect/2/enabled = true
 bus/17/name = &"clef_ch_15"
 bus/17/solo = false
 bus/17/mute = false
@@ -201,3 +421,7 @@ bus/17/volume_db = -2.0760744
 bus/17/send = &"ClefMaster"
 bus/17/effect/0/effect = SubResource("AudioEffectPanner_k2ilm")
 bus/17/effect/0/enabled = true
+bus/17/effect/1/effect = SubResource("AudioEffectReverb_5tfch")
+bus/17/effect/1/enabled = true
+bus/17/effect/2/effect = SubResource("AudioEffectChorus_sjxdv")
+bus/17/effect/2/enabled = true

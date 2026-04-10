@@ -1,6 +1,6 @@
 agents:
   clef-composer:
-    model_alias: deepseek-think
+    model_alias: anthropic-opus
     prompt_md: .claude\agents\clef-composer.md
     skills:
     - melody
@@ -13,7 +13,7 @@ agents:
     - validate_abc
     - abc_lint
   clef-harmonist:
-    model_alias: deepseek-think
+    model_alias: anthropic-opus
     prompt_md: .claude\agents\clef-harmonist.md
     skills:
     - harmony
@@ -25,7 +25,7 @@ agents:
     - validate_abc
     - abc_lint
   clef-orchestrator:
-    model_alias: deepseek-think
+    model_alias: anthropic-sonnet
     prompt_md: .claude\agents\clef-orchestrator.md
     skills:
     - orchestration
@@ -37,7 +37,7 @@ agents:
     - abc_to_midi
     - inject_expression
   clef-reviewer:
-    model_alias: deepseek-think
+    model_alias: anthropic-sonnet
     prompt_md: .claude\agents\clef-reviewer.md
     skills:
     - structure
@@ -49,7 +49,7 @@ agents:
     - validate_abc
     - abc_lint
   clef-revision:
-    model_alias: deepseek-chat
+    model_alias: anthropic-haiku
     prompt_md: .claude\agents\clef-revision.md
     skills:
     - abc
@@ -58,7 +58,7 @@ agents:
     - read_file
     - write_file
   clef-rhythmist:
-    model_alias: deepseek-think
+    model_alias: anthropic-sonnet
     prompt_md: .claude\agents\clef-rhythmist.md
     skills:
     - rhythm

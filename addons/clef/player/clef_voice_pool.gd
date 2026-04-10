@@ -25,10 +25,12 @@ func start_note(p_channel: int, p_key: int, velocity: int,
 
 	# Legato: 同通道不同音高的活跃音符快速释放
 	# 跳过 ATTACK 状态防止和弦音符互相触发 legato
-	for voice in _voices:
-		if voice.channel == p_channel and not voice.is_idle() and voice.key != p_key:
-			if voice.state != ClefVoice.State.ATTACK:
-				voice.stop_note_legato()
+	# 跳过鼓组通道 (ch=9)，鼓组允许多音同时叠加
+	if p_channel != 9:
+		for voice in _voices:
+			if voice.channel == p_channel and not voice.is_idle() and voice.key != p_key:
+				if voice.state != ClefVoice.State.ATTACK:
+					voice.stop_note_legato()
 
 	var first_voice: ClefVoice = null
 	var layer_count: int = inst_infos.size()

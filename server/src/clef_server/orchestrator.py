@@ -701,7 +701,7 @@ class ComposeOrchestrator:
                 Message(role="user", contents=[message]),
             ]
             temperature = agent_def.get("temperature", 0.7)
-            response = await client.get_response(messages, temperature=temperature)
+            response = await client.get_response(messages, client_kwargs={"temperature": temperature})
 
             # Extract text from response
             content = ""
@@ -922,7 +922,8 @@ class ComposeOrchestrator:
             if rhythm_blocks:
                 for sub_label in rhythm_blocks:
                     fragments[sub_label] = rhythm_blocks[sub_label]
-                abc_parts.extend(f"{label}\n{content}" for label, content in rhythm_blocks.items())
+                if abc_parts is not None:
+                    abc_parts.extend(f"{label}\n{content}" for label, content in rhythm_blocks.items())
                 return
             logger.warning("Rhythmist output had no V:3/V:4 labels, storing as %s", voice_label)
         fragments[voice_label] = abc_text

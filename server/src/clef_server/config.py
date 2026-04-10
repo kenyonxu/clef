@@ -73,7 +73,8 @@ def load_provider_config(path: Path) -> ProviderConfig:
     if not path.exists():
         raise FileNotFoundError(f"Provider config not found: {path}")
     with open(path, "r", encoding="utf-8") as f:
-        raw = yaml.safe_load(f)
+        text = f.read().replace("\t", "    ")
+    raw = yaml.safe_load(text)
     expanded = _expand_dict(raw)
 
     config = ProviderConfig()
@@ -85,12 +86,16 @@ def load_provider_config(path: Path) -> ProviderConfig:
             base_url=ant.get("base_url"),
         )
     for alias, cfg in expanded.get("openai_compat", {}).items():
+        if not isinstance(cfg, dict):
+            continue
         config.openai_compat[alias] = OpenAICompatConfig(
             model_id=cfg["model_id"],
             base_url=cfg["base_url"],
             api_key=cfg["api_key"],
         )
     for alias, cfg in expanded.get("anthropic_compat", {}).items():
+        if not isinstance(cfg, dict):
+            continue
         config.anthropic_compat[alias] = AnthropicCompatConfig(
             model_id=cfg["model_id"],
             base_url=cfg["base_url"],

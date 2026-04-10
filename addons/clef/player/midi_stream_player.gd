@@ -681,10 +681,9 @@ func _process_event(event: Dictionary) -> void:
 			for v in _voice_pool.get_active_voices_for_channel(channel):
 				if v.key == key:
 					v.set_master_pitch_scale(pitch_scale)
-					v.set_pitch_bend(ch_state.pitch_bend, ch_state.pitch_bend_sensitivity)
-					v.set_modulation(ch_state.modulation, ch_state.modulation_sensitivity)
-					if channel == 9:
-						v._auto_release = true
+					if channel != 9:
+						v.set_pitch_bend(ch_state.pitch_bend, ch_state.pitch_bend_sensitivity)
+						v.set_modulation(ch_state.modulation, ch_state.modulation_sensitivity)
 				_debug_note_counts[channel] = 0
 			_debug_note_counts[channel] += 1
 			note_triggered.emit(channel, key, velocity)

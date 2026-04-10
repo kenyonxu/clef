@@ -23,6 +23,7 @@ export function AgentTable() {
 
   const providerAliases = [
     providers?.anthropic ? 'anthropic' : null,
+    ...(providers?.anthropic_compat.map((p) => p.alias) ?? []),
     ...(providers?.openai_compat.map((p) => p.alias) ?? []),
   ].filter(Boolean)
 
