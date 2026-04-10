@@ -28,36 +28,36 @@ class TestReadFile:
     def test_reads_existing_file(self, tmp_path: Path) -> None:
         f = tmp_path / "hello.txt"
         f.write_text("hello world", encoding="utf-8")
-        result = read_file(str(f))
+        result = read_file(str(f), workdir=str(tmp_path))
         assert result == "hello world"
 
-    def test_raises_on_missing_file(self) -> None:
+    def test_raises_on_missing_file(self, tmp_path: Path) -> None:
         with pytest.raises(FileNotFoundError, match="File not found"):
-            read_file("/nonexistent/path/file.txt")
+            read_file(str(tmp_path / "nonexistent.txt"), workdir=str(tmp_path))
 
     def test_reads_unicode_content(self, tmp_path: Path) -> None:
         f = tmp_path / "unicode.txt"
         content = "MIDI channel 1 \u4e2d\u6587"
         f.write_text(content, encoding="utf-8")
-        assert read_file(str(f)) == content
+        assert read_file(str(f), workdir=str(tmp_path)) == content
 
 
 class TestWriteFile:
     def test_writes_file(self, tmp_path: Path) -> None:
         f = tmp_path / "subdir" / "out.txt"
-        result = write_file(str(f), "content")
+        result = write_file(str(f), "content", workdir=str(tmp_path))
         assert result["path"] == str(f)
         assert f.read_text(encoding="utf-8") == "content"
 
     def test_creates_parent_directories(self, tmp_path: Path) -> None:
         f = tmp_path / "a" / "b" / "c" / "file.txt"
-        write_file(str(f), "nested")
+        write_file(str(f), "nested", workdir=str(tmp_path))
         assert f.exists()
 
     def test_overwrites_existing_file(self, tmp_path: Path) -> None:
         f = tmp_path / "overwrite.txt"
         f.write_text("old", encoding="utf-8")
-        write_file(str(f), "new")
+        write_file(str(f), "new", workdir=str(tmp_path))
         assert f.read_text(encoding="utf-8") == "new"
 
 
