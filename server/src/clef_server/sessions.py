@@ -17,6 +17,22 @@ VALID_TRANSITIONS = {
     "cancelled": set(),
 }
 
+TERMINAL_STATES = frozenset({"done", "failed", "cancelled"})
+
+
+@dataclass
+class ToolPermissions:
+    """Per-session tool permission overrides: deny > override > base."""
+    denied_tools: frozenset[str] = frozenset()
+    allowed_overrides: frozenset[str] = frozenset()
+
+    def is_tool_allowed(self, tool: str, agent: str, base_map: dict[str, list[str]]) -> bool:
+        if tool in self.denied_tools:
+            return False
+        if tool in self.allowed_overrides:
+            return tool in base_map.get(agent, [])
+        return tool in base_map.get(agent, [])
+
 # Legacy 4-step numeric workflow — kept for backward compatibility (routes.py)
 WORKFLOW_STEPS = [
     {"id": 0, "name": "parse", "label": "Requirement Parsing"},
@@ -57,8 +73,31 @@ class ComposeSession:
     current_step: int = 0
     created_at: float = field(default_factory=time.time)
     updated_at: float = field(default_factory=time.time)
+    _cancel_requested: bool = False
+    tool_permissions: ToolPermissions = field(default_factory=ToolPermissions)
+
+    @property
+    def is_terminal(self) -> bool:
+        """True if session is in a terminal state (done/failed/cancelled)."""
+        return self.status in TERMINAL_STATES
+
+    @property
+    def cancel_requested(self) -> bool:
+        """True if cancellation has been requested."""
+        return self._cancel_requested
+
+    def request_cancel(self) -> None:
+        """Mark cancellation intent. Allows current phase to complete."""
+        if self.is_terminal:
+            return
+        self._cancel_requested = True
+        self.updated_at = time.time()
 
     def _transition(self, new_status: str) -> None:
+        if self.is_terminal:
+            raise ValueError(
+                f"Session is terminal ({self.status}), cannot transition to {new_status}"
+            )
         allowed = VALID_TRANSITIONS.get(self.status, set())
         if new_status not in allowed:
             raise ValueError(
@@ -189,10 +228,11 @@ class ComposeSession:
 
 
 class SessionManager:
-    """In-memory session store."""
+    """In-memory session store with optional TTL."""
 
-    def __init__(self):
+    def __init__(self, ttl_seconds: float | None = None):
         self._sessions: dict[str, ComposeSession] = {}
+        self._ttl_seconds = ttl_seconds
 
     def create(self, user_prompt: str, workdir: str, plan: dict | None = None, session_id: str | None = None) -> ComposeSession:
         if session_id is None:
@@ -207,7 +247,15 @@ class SessionManager:
         return session
 
     def get(self, session_id: str) -> ComposeSession | None:
-        return self._sessions.get(session_id)
+        session = self._sessions.get(session_id)
+        if session is None:
+            return None
+        if self._ttl_seconds is not None:
+            age = time.time() - session.created_at
+            if age > self._ttl_seconds:
+                del self._sessions[session_id]
+                return None
+        return session
 
     def list_sessions(self) -> list[ComposeSession]:
         return list(self._sessions.values())

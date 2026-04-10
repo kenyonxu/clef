@@ -5,6 +5,8 @@ Each function wraps a public API from .claude/skills/clef-compose/scripts/.
 
 import json
 import sys
+from dataclasses import dataclass
+from enum import Enum
 from pathlib import Path
 from typing import Annotated
 
@@ -31,10 +33,58 @@ if str(_SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(_SCRIPTS_DIR))
 
 
+# === Tool Safety Metadata ===
+
+class ToolSafety(Enum):
+    READ_ONLY = "read_only"
+    IDEMPOTENT_WRITE = "idempotent"
+    EXCLUSIVE_WRITE = "exclusive"
+
+
+@dataclass(frozen=True)
+class ToolMeta:
+    safety: ToolSafety
+    estimated_tokens: int = 500
+
+
+_TOOL_META: dict[str, ToolMeta] = {
+    "read_file": ToolMeta(ToolSafety.READ_ONLY, 1000),
+    "write_file": ToolMeta(ToolSafety.EXCLUSIVE_WRITE, 200),
+    "validate_abc": ToolMeta(ToolSafety.READ_ONLY, 800),
+    "abc_lint": ToolMeta(ToolSafety.READ_ONLY, 400),
+    "abc_to_midi": ToolMeta(ToolSafety.READ_ONLY, 100),
+    "merge_abc": ToolMeta(ToolSafety.EXCLUSIVE_WRITE, 200),
+    "inject_expression": ToolMeta(ToolSafety.EXCLUSIVE_WRITE, 100),
+    "snapshot": ToolMeta(ToolSafety.IDEMPOTENT_WRITE, 50),
+}
+
+
+def _validate_path(path: str, workdir: str | None = None) -> Path:
+    """Resolve path and validate it stays within workdir boundary.
+
+    Raises ValueError if path escapes workdir (path traversal).
+    If workdir is None, skips validation (backward compat).
+    """
+    resolved = Path(path).resolve()
+    if workdir is None:
+        return resolved
+    workdir_resolved = Path(workdir).resolve()
+    try:
+        resolved.relative_to(workdir_resolved)
+    except ValueError:
+        raise ValueError(
+            f"Path '{path}' is outside workdir '{workdir}' (path traversal blocked)"
+        )
+    return resolved
+
+
 @tool
-def read_file(path: Annotated[str, "Absolute or relative file path to read"]) -> str:
+def read_file(
+    path: Annotated[str, "Absolute or relative file path to read"],
+    workdir: Annotated[str | None, "Working directory for path validation"] = None,
+) -> str:
     """Read file contents as UTF-8 text."""
-    p = Path(path)
+    p = _validate_path(path, workdir)
     if not p.exists():
         raise FileNotFoundError(f"File not found: {path}")
     return p.read_text(encoding="utf-8")
@@ -44,9 +94,10 @@ def read_file(path: Annotated[str, "Absolute or relative file path to read"]) ->
 def write_file(
     path: Annotated[str, "Absolute or relative file path to write"],
     content: Annotated[str, "File content to write (UTF-8 text)"],
+    workdir: Annotated[str | None, "Working directory for path validation"] = None,
 ) -> dict:
     """Write content to file, creating parent directories as needed."""
-    p = Path(path)
+    p = _validate_path(path, workdir)
     p.parent.mkdir(parents=True, exist_ok=True)
     p.write_text(content, encoding="utf-8")
     return {"path": str(p)}

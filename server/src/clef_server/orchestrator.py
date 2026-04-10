@@ -4,9 +4,13 @@ Phase flow:
   parse (confirm) -> sample (confirm) -> create -> iterate -> review (confirm) -> express -> done
 """
 
+import asyncio
+import hashlib
 import json
 import logging
 import re
+import time
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -14,6 +18,7 @@ from agent_framework import Message
 from pydantic import BaseModel, Field, model_validator
 
 from clef_server.sessions import PHASES, PHASE_ORDER, SessionManager
+from clef_server.tools import ToolMeta, ToolSafety
 
 logger = logging.getLogger(__name__)
 
@@ -66,6 +71,45 @@ def get_session_manager() -> SessionManager:
     return _session_manager
 
 
+# === Concurrency batching ===
+
+@dataclass
+class _CallBatch:
+    safe: bool
+    calls: list[dict]
+
+
+# === Microcompact ===
+
+_COMPRESSIBLE_TOOLS = frozenset({"validate_abc", "abc_lint"})
+
+
+# === File cache ===
+
+@dataclass
+class _FileCache:
+    """Cross-iteration file change detection (MD5 hash)."""
+    _hashes: dict[str, str] = field(default_factory=dict)
+    _contents: dict[str, str] = field(default_factory=dict)
+
+    def get_if_unchanged(self, path: str) -> str | None:
+        """Return cached content if file unchanged, else None (first read or changed)."""
+        try:
+            current = Path(path).read_text(encoding="utf-8")
+        except FileNotFoundError:
+            return None
+        h = hashlib.md5(current.encode()).hexdigest()
+        if self._hashes.get(path) == h:
+            return self._contents[path]
+        self._hashes[path] = h
+        self._contents[path] = current
+        return None
+
+    def invalidate(self, path: str) -> None:
+        self._hashes.pop(path, None)
+        self._contents.pop(path, None)
+
+
 class ComposeOrchestrator:
     """Drives a single compose session through the 6-phase workflow.
 
@@ -116,9 +160,85 @@ class ComposeOrchestrator:
         self.review_threshold = self._settings.get("review_threshold", 7)
         self.skip_review = self._settings.get("skip_review", False)
         self._validation_failures: list[dict] = []
+        self._file_cache = _FileCache()
+        self._iteration_history: list[dict] = []
 
         # Load agent configs from agents.yaml (falls back to hardcoded defaults)
         self._agent_defs = self._load_agent_defs()
+
+    # ------------------------------------------------------------------
+    # Concurrency helpers (改进 1)
+    # ------------------------------------------------------------------
+
+    def _partition_agent_calls(self, calls: list[dict]) -> list[_CallBatch]:
+        """Partition agent calls into safe/unsafe batches."""
+        from clef_server.tools import _TOOL_META, ToolSafety
+
+        batches: list[_CallBatch] = []
+        for call in calls:
+            tools = call.get("tools", [])
+            all_safe = all(
+                _TOOL_META.get(t, ToolMeta(ToolSafety.EXCLUSIVE_WRITE)).safety != ToolSafety.EXCLUSIVE_WRITE
+                for t in tools
+            )
+            if all_safe and batches and batches[-1].safe:
+                batches[-1].calls.append(call)
+            else:
+                batches.append(_CallBatch(safe=all_safe, calls=[call]))
+        return batches
+
+    async def _run_agent_batch_raw(self, coros: list) -> list:
+        """Run coroutines concurrently with error isolation (return_exceptions)."""
+        if not coros:
+            return []
+        return list(await asyncio.gather(*coros, return_exceptions=True))
+
+    # ------------------------------------------------------------------
+    # Microcompact (改进 2)
+    # ------------------------------------------------------------------
+
+    def _microcompact_messages(self, messages: list[dict]) -> list[dict]:
+        """Compress compressible tool output to pass/fail summary."""
+        compressed = []
+        for msg in messages:
+            if msg.get("role") == "tool" and msg.get("name") in _COMPRESSIBLE_TOOLS:
+                try:
+                    result = json.loads(msg.get("content", "{}"))
+                    summary = {
+                        "tool": msg["name"],
+                        "pass": result.get("pass", result.get("is_valid", result.get("report", {}).get("is_valid"))),
+                        "issues_count": result.get("count", len(result.get("issues", []))),
+                        "has_failures": result.get("has_failures", False),
+                    }
+                    if result.get("issues"):
+                        fails = [i for i in result["issues"] if i.get("severity") == "FAIL"]
+                        if fails:
+                            summary["fail_items"] = [i.get("check", i.get("rule", str(i))) for i in fails]
+                    compressed.append({
+                        "role": "tool",
+                        "content": json.dumps(summary, ensure_ascii=False),
+                        "name": msg.get("name"),
+                    })
+                except (json.JSONDecodeError, KeyError):
+                    compressed.append(msg)
+            else:
+                compressed.append(msg)
+        return compressed
+
+    # ------------------------------------------------------------------
+    # Agent metadata (改进 4)
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _stamp_agent_meta(content: str, agent: str, voice: str, round_num: int) -> str:
+        """Inject % ClefMeta comment at top of ABC content."""
+        meta = json.dumps({
+            "agent": agent,
+            "voice": voice,
+            "round": round_num,
+            "timestamp": time.time(),
+        }, ensure_ascii=False)
+        return f"% ClefMeta: {meta}\n{content}"
 
     # ------------------------------------------------------------------
     # Session access (always fresh from the manager)
@@ -228,6 +348,12 @@ class ComposeOrchestrator:
         For non-confirm phases, sets ``current_phase``, records "running", and
         immediately invokes the phase method.
         """
+        # Graceful cancel: check at phase boundary
+        if self.session.cancel_requested:
+            self.session.set_cancelled()
+            logger.info("Session %s cancelled after phase %s", self.session_id, from_phase)
+            return
+
         next_id = self._next_phase(from_phase)
         if next_id is None:
             # Workflow complete
@@ -784,8 +910,13 @@ class ComposeOrchestrator:
         abc_parts: list[str],
         voice_label: str,
         abc_text: str,
+        round_num: int = 0,
     ) -> None:
         """Store ABC text into fragments, splitting multi-voice rhythm output (V:3+V:4)."""
+        # Stamp agent metadata
+        agent = self._VOICE_TO_AGENT.get(voice_label, "unknown")
+        abc_text = self._stamp_agent_meta(abc_text, agent, voice_label, round_num)
+
         if "+" in voice_label:
             rhythm_blocks = self._parse_voice_blocks(abc_text)
             if rhythm_blocks:
@@ -1461,6 +1592,9 @@ class ComposeOrchestrator:
         score_path = Path(self.workdir) / "score.abc"
 
         for round_num in range(1, self.max_iteration_rounds + 1):
+            # Compress accumulated iteration history before each round
+            self._iteration_history = self._microcompact_messages(self._iteration_history)
+
             self.session.iteration_count = round_num
             self.session.record_sub_step(
                 f"迭代轮次 {round_num}/{self.max_iteration_rounds}", "running"
@@ -1472,6 +1606,13 @@ class ComposeOrchestrator:
             iter_review_path = Path(self.workdir) / f"review_iter_r{round_num}.json"
             iter_review_path.write_text(json.dumps(review, indent=2, ensure_ascii=False), encoding="utf-8")
             self.session.record_sub_step("完整审查", "done", agent="clef-reviewer")
+
+            # Track review as a tool-like message for microcompact
+            self._iteration_history.append({
+                "role": "tool",
+                "name": "validate_abc",
+                "content": json.dumps(review),
+            })
 
             # Leader decides tasks
             self.session.record_sub_step("任务调度", "running", agent="clef-leader")

@@ -66,6 +66,13 @@ class ConfirmRequest(BaseModel):
     feedback: str | None = Field(None, description="Optional user feedback text", max_length=2000)
 
 
+class PermissionUpdateRequest(BaseModel):
+    denied_tools: list[str] = Field(default_factory=list, description="Tools to deny")
+    allowed_overrides: list[str] = Field(default_factory=list, description="Tools to re-enable (intersected with base map)")
+
+    model_config = {"extra": "forbid"}
+
+
 # === Settings Models ===
 
 class SettingsResponse(BaseModel):
@@ -331,6 +338,46 @@ async def cancel_session(session_id: str):
 async def list_sessions():
     sessions = _session_manager.list_sessions()
     return SessionsResponse(sessions=[s.to_dict() for s in sessions])
+
+
+@router.patch("/sessions/{session_id}/permissions")
+async def update_permissions(session_id: str, req: PermissionUpdateRequest):
+    session = _session_manager.get(session_id)
+    if session is None:
+        raise HTTPException(status_code=404, detail="Session not found")
+    from clef_server.sessions import ToolPermissions
+    session.tool_permissions = ToolPermissions(
+        denied_tools=frozenset(req.denied_tools),
+        allowed_overrides=frozenset(req.allowed_overrides),
+    )
+    return {
+        "denied_tools": sorted(session.tool_permissions.denied_tools),
+        "allowed_overrides": sorted(session.tool_permissions.allowed_overrides),
+    }
+
+
+@router.get("/sessions/{session_id}/permissions")
+async def get_permissions(session_id: str):
+    session = _session_manager.get(session_id)
+    if session is None:
+        raise HTTPException(status_code=404, detail="Session not found")
+    return {
+        "denied_tools": sorted(session.tool_permissions.denied_tools),
+        "allowed_overrides": sorted(session.tool_permissions.allowed_overrides),
+    }
+
+
+@router.get("/tools")
+async def list_tools():
+    from clef_server.tools import TOOLS_REGISTRY, _TOOL_META
+    result = []
+    for name in TOOLS_REGISTRY:
+        meta = _TOOL_META.get(name)
+        result.append({
+            "name": name,
+            "safety": meta.safety.value if meta else "unknown",
+        })
+    return result
 
 
 # === Settings Endpoints ===
