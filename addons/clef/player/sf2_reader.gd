@@ -469,11 +469,18 @@ func _parse_instruments(
 		else:
 			end_bag = bags.size()
 
+		var global_zone: Sf2Data.Sf2InstrumentZone = null
+
 		for bag_i in range(start_bag, end_bag):
 			if bag_i >= bags.size():
 				break
 
-			var zone := Sf2Data.Sf2InstrumentZone.new()
+			# Inherit from global zone (matches reference plugin's global_bag.duplicate())
+			var zone: Sf2Data.Sf2InstrumentZone
+			if global_zone != null:
+				zone = global_zone.duplicate()
+			else:
+				zone = Sf2Data.Sf2InstrumentZone.new()
 			var gen_start: int = bags[bag_i]["gen_ndx"]
 			var gen_end: int
 			if bag_i + 1 < bags.size():
@@ -550,8 +557,11 @@ func _parse_instruments(
 					GEN_MOD_ENV_TO_FILTER_FC:
 						zone.mod_env_to_filter_fc = gen_svalue
 
-			zone.is_global = not has_sample
-			instrument.zones.append(zone)
+			if not has_sample:
+				# Global zone: update reference for subsequent zones to inherit
+				global_zone = zone
+			else:
+				instrument.zones.append(zone)
 
 		sf2_data.instruments.append(instrument)
 

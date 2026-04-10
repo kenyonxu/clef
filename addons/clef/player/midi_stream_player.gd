@@ -668,19 +668,19 @@ func _process_event(event: Dictionary) -> void:
 			var key: int = event["pitch"]
 			var velocity: int = event["velocity"]
 			var preset_index: int = _channel_instruments.get(channel, 0)
-			var inst_info: ClefInstrumentInfo = _clef_bank.get_instrument(preset_index, key, velocity, channel)
-			if inst_info == null:
+			var inst_infos: Array[ClefInstrumentInfo] = _clef_bank.get_instruments(preset_index, key, velocity, channel)
+			if inst_infos.is_empty():
 				return
-			var voice := _voice_pool.start_note(channel, key, velocity, inst_info, release_multiplier)
-			if voice != null:
-				var ch_state: MidiChannelState = _channel_states[channel]
-				voice.set_master_pitch_scale(pitch_scale)
-				voice.set_pitch_bend(ch_state.pitch_bend, ch_state.pitch_bend_sensitivity)
-				voice.set_modulation(ch_state.modulation, ch_state.modulation_sensitivity)
-				# 鼓组通道: ADS 完成后自动释放
-				if channel == 9:
-					voice._auto_release = true
-			if not _debug_note_counts.has(channel):
+			_voice_pool.start_note(channel, key, velocity, inst_infos, release_multiplier)
+			# Set control params for all voices matching this key
+			var ch_state: MidiChannelState = _channel_states[channel]
+			for v in _voice_pool.get_active_voices_for_channel(channel):
+				if v.key == key:
+					v.set_master_pitch_scale(pitch_scale)
+					v.set_pitch_bend(ch_state.pitch_bend, ch_state.pitch_bend_sensitivity)
+					v.set_modulation(ch_state.modulation, ch_state.modulation_sensitivity)
+					if channel == 9:
+						v._auto_release = true
 				_debug_note_counts[channel] = 0
 			_debug_note_counts[channel] += 1
 			note_triggered.emit(channel, key, velocity)
