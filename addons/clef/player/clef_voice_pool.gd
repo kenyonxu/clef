@@ -4,9 +4,9 @@
 class_name ClefVoicePool extends RefCounted
 
 var _voices: Array[ClefVoice] = []
-var _max_voices: int = 32
+var _max_voices: int = 64
 
-func _init(parent: Node, max_voices: int = 32) -> void:
+func _init(parent: Node, max_voices: int = 64) -> void:
 	_max_voices = max_voices
 	for i in range(_max_voices):
 		var voice := ClefVoice.new()
@@ -23,7 +23,15 @@ func start_note(p_channel: int, p_key: int, velocity: int,
 		if voice.channel == p_channel and voice.key == p_key and not voice.is_idle():
 			voice.stop_note()
 
+	# Legato: 同通道不同音高的活跃音符快速释放
+	# 跳过 ATTACK 状态防止和弦音符互相触发 legato
+	for voice in _voices:
+		if voice.channel == p_channel and not voice.is_idle() and voice.key != p_key:
+			if voice.state != ClefVoice.State.ATTACK:
+				voice.stop_note_legato()
+
 	var first_voice: ClefVoice = null
+	var layer_count: int = inst_infos.size()
 
 	for inst_info in inst_infos:
 		# 统计该通道活跃语音数
@@ -33,13 +41,13 @@ func start_note(p_channel: int, p_key: int, velocity: int,
 				channel_active += 1
 
 		# 通道达到上限, 先窃取该通道最老的释放中语音
-		if channel_active >= 8:
+		if channel_active >= 16:
 			_steal_voice(p_channel, true)
 
 		# 查找 IDLE 语音
 		var found: ClefVoice = _find_idle_voice()
 		if found != null:
-			found.start_note(inst_info, p_channel, p_key, velocity, rel_mult)
+			found.start_note(inst_info, p_channel, p_key, velocity, rel_mult, layer_count)
 			found.bus = "clef_ch_%d" % p_channel
 			if first_voice == null:
 				first_voice = found
@@ -49,7 +57,7 @@ func start_note(p_channel: int, p_key: int, velocity: int,
 		found = _steal_oldest_releasing()
 		if found != null:
 			print("[STEAL_RELEASING] stolen ch=%d key=%d -> ch=%d key=%d" % [found.channel, found.key, p_channel, p_key])
-			found.start_note(inst_info, p_channel, p_key, velocity, rel_mult)
+			found.start_note(inst_info, p_channel, p_key, velocity, rel_mult, layer_count)
 			found.bus = "clef_ch_%d" % p_channel
 			if first_voice == null:
 				first_voice = found
@@ -59,7 +67,7 @@ func start_note(p_channel: int, p_key: int, velocity: int,
 		found = _steal_oldest_active()
 		if found != null:
 			print("[STEAL_ACTIVE] stolen ch=%d key=%d -> ch=%d key=%d" % [found.channel, found.key, p_channel, p_key])
-			found.start_note(inst_info, p_channel, p_key, velocity, rel_mult)
+			found.start_note(inst_info, p_channel, p_key, velocity, rel_mult, layer_count)
 			found.bus = "clef_ch_%d" % p_channel
 			if first_voice == null:
 				first_voice = found

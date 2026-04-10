@@ -11,6 +11,10 @@ var expression: float = 1.0
 var pan: float = 0.5
 ## CC1: 调制深度 (归一化 0.0-1.0, 默认 0)
 var modulation: float = 0.0
+## CC91: Reverb Send (归一化 0.0-1.0, 默认 0)
+var reverb: float = 0.0
+## CC93: Chorus Send (归一化 0.0-1.0, 默认 0)
+var chorus: float = 0.0
 ## Pitch Bend 归一化值 (-1.0 ~ +1.0, 0=居中)
 var pitch_bend: float = 0.0
 ## Pitch Bend Sensitivity (半音, 默认 2)
@@ -31,6 +35,8 @@ func reset() -> void:
 	expression = 1.0
 	pan = 0.5
 	modulation = 0.0
+	reverb = 0.0
+	chorus = 0.0
 	pitch_bend = 0.0
 	pitch_bend_sensitivity = 2.0
 	modulation_sensitivity = 0.25

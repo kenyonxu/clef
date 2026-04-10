@@ -305,30 +305,7 @@ func _setup_audio_buses() -> void:
 		AudioServer.add_bus_effect(_clef_master_bus_idx, eq)
 		AudioServer.set_bus_effect_enabled(_clef_master_bus_idx,
 			AudioServer.get_bus_effect_count(_clef_master_bus_idx) - 1, eq_enabled)
-	# --- Reverb/Chorus (ensure existence on ClefMaster) ---
-	var has_reverb := false
-	for k in range(AudioServer.get_bus_effect_count(_clef_master_bus_idx)):
-		if AudioServer.get_bus_effect(_clef_master_bus_idx, k) is AudioEffectReverb:
-			has_reverb = true
-			break
-	if not has_reverb:
-		var reverb := AudioEffectReverb.new()
-		reverb.predelay_msec = 15.0
-		reverb.room_size = reverb_room_size
-		reverb.damping = 0.3
-		reverb.hipass = 0.05
-		reverb.wet = reverb_wet
-		AudioServer.add_bus_effect(_clef_master_bus_idx, reverb)
-	var has_chorus := false
-	for k in range(AudioServer.get_bus_effect_count(_clef_master_bus_idx)):
-		if AudioServer.get_bus_effect(_clef_master_bus_idx, k) is AudioEffectChorus:
-			has_chorus = true
-			break
-	if not has_chorus:
-		var chorus := AudioEffectChorus.new()
-		chorus.wet = chorus_wet
-		AudioServer.add_bus_effect(_clef_master_bus_idx, chorus)
-	# 为每个通道创建子总线（如已存在则跳过）
+	# 为每个通道创建子总线（含 Panner + Reverb + Chorus）
 	for i in range(16):
 		var ch_name := "clef_ch_%d" % i
 		var ch_idx := AudioServer.get_bus_index(ch_name)
@@ -338,9 +315,34 @@ func _setup_audio_buses() -> void:
 			AudioServer.set_bus_name(ch_idx, ch_name)
 			AudioServer.set_bus_send(ch_idx, "ClefMaster")
 			AudioServer.set_bus_volume_db(ch_idx, 0.0)
+		# 确保效果器存在（Panner + Reverb + Chorus）
+		var has_panner := false
+		var has_reverb := false
+		var has_chorus := false
+		for k in range(AudioServer.get_bus_effect_count(ch_idx)):
+			var fx = AudioServer.get_bus_effect(ch_idx, k)
+			if fx is AudioEffectPanner:
+				has_panner = true
+			elif fx is AudioEffectReverb:
+				has_reverb = true
+			elif fx is AudioEffectChorus:
+				has_chorus = true
+		if not has_panner:
 			var panner := AudioEffectPanner.new()
 			panner.pan = 0.0
 			AudioServer.add_bus_effect(ch_idx, panner)
+		if not has_reverb:
+			var reverb := AudioEffectReverb.new()
+			reverb.predelay_msec = 15.0
+			reverb.room_size = reverb_room_size
+			reverb.damping = 0.3
+			reverb.hipass = 0.05
+			reverb.wet = 0.0
+			AudioServer.add_bus_effect(ch_idx, reverb)
+		if not has_chorus:
+			var chorus := AudioEffectChorus.new()
+			chorus.wet = 0.0
+			AudioServer.add_bus_effect(ch_idx, chorus)
 func start_playback(from_position: float = 0.0) -> void:
 	if _clef_master_bus_idx >= 0:
 		AudioServer.set_bus_volume_db(_clef_master_bus_idx, volume_db)
@@ -375,6 +377,8 @@ func stop() -> void:
 		state.reset()
 	for i in range(16):
 		_apply_channel_volume(i)
+		_apply_channel_reverb(i)
+		_apply_channel_chorus(i)
 
 
 ## 暂停播放 (真暂停 — 静音但保留所有语音状态)
@@ -743,6 +747,12 @@ func _process_cc(event: Dictionary) -> void:
 			else:
 				state._sustain = false
 				_release_sustained_notes(ch)
+		91:  # Reverb Send
+			state.reverb = float(value) / 127.0
+			_apply_channel_reverb(ch)
+		93:  # Chorus Send
+			state.chorus = float(value) / 127.0
+			_apply_channel_chorus(ch)
 		100: # RPN LSB
 			state._rpn_lsb = value
 		101: # RPN MSB
@@ -811,3 +821,28 @@ func _apply_channel_pan(ch: int) -> void:
 			effect.pan = (state.pan * 2.0) - 1.0
 			break
 
+
+## 应用通道混响深度 (CC91)
+func _apply_channel_reverb(ch: int) -> void:
+	var state: MidiChannelState = _channel_states[ch]
+	var bus_idx: int = AudioServer.get_bus_index("clef_ch_%d" % ch)
+	if bus_idx < 0:
+		return
+	for i in range(AudioServer.get_bus_effect_count(bus_idx)):
+		var effect = AudioServer.get_bus_effect(bus_idx, i)
+		if effect is AudioEffectReverb:
+			effect.wet = state.reverb * reverb_wet
+			break
+
+
+## 应用通道合唱深度 (CC93)
+func _apply_channel_chorus(ch: int) -> void:
+	var state: MidiChannelState = _channel_states[ch]
+	var bus_idx: int = AudioServer.get_bus_index("clef_ch_%d" % ch)
+	if bus_idx < 0:
+		return
+	for i in range(AudioServer.get_bus_effect_count(bus_idx)):
+		var effect = AudioServer.get_bus_effect(bus_idx, i)
+		if effect is AudioEffectChorus:
+			effect.wet = state.chorus * chorus_wet
+			break

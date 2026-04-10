@@ -92,7 +92,7 @@ func _process(delta: float) -> void:
 
 ## 启动音符
 func start_note(inst_info: ClefInstrumentInfo, p_channel: int, p_key: int,
-		velocity: int, rel_mult: float = 1.0) -> void:
+		velocity: int, rel_mult: float = 1.0, layer_count: int = 1) -> void:
 	_inst_info = inst_info
 	channel = p_channel
 	key = p_key
@@ -115,6 +115,9 @@ func start_note(inst_info: ClefInstrumentInfo, p_channel: int, p_key: int,
 	# 力度
 	_velocity_db = linear_to_db(float(velocity) / 127.0)
 
+	# Multi-zone 复音补偿: N 层叠加时每层降低 N 倍，防止削波
+	if layer_count > 1:
+		_velocity_db -= linear_to_db(float(layer_count))
 
 	# 重置状态
 	_adsr_timer = 0.0
