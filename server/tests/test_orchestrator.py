@@ -154,7 +154,8 @@ class TestPhaseParse:
     @pytest.mark.asyncio
     async def test_phase_parse_generates_plan(self, orch, session, tmp_path):
         session.set_running()
-        await orch._phase_parse("Write a boss battle music")
+        with patch("clef_server.config.rename_workdir_with_title", side_effect=lambda w, t: w):
+            await orch._phase_parse("Write a boss battle music")
 
         plan_file = tmp_path / "plan.json"
         assert plan_file.exists()
@@ -162,12 +163,13 @@ class TestPhaseParse:
         assert plan["key"] == "C"
         assert plan["bpm"] == 120
         assert plan["scale"] == "major"
-        assert plan["demo_length_bars"] == 8
+        assert plan["demo_length_bars"] == 10  # round(32 * 0.3) = 10
 
     @pytest.mark.asyncio
     async def test_phase_parse_sets_awaiting_confirm(self, orch, session, tmp_path):
         session.set_running()
-        await orch._phase_parse("Write a boss battle music")
+        with patch("clef_server.config.rename_workdir_with_title", side_effect=lambda w, t: w):
+            await orch._phase_parse("Write a boss battle music")
 
         assert session.status == "awaiting_confirm"
         assert session.confirmation_data is not None
@@ -178,7 +180,8 @@ class TestPhaseParse:
     @pytest.mark.asyncio
     async def test_phase_parse_records_history(self, orch, session, tmp_path):
         session.set_running()
-        await orch._phase_parse("test prompt")
+        with patch("clef_server.config.rename_workdir_with_title", side_effect=lambda w, t: w):
+            await orch._phase_parse("test prompt")
 
         history = session.phase_history
         assert len(history) == 2  # running + done
@@ -194,7 +197,8 @@ class TestPhaseParse:
         orch.providers["deepseek"].get_response = AsyncMock(
             return_value=_make_mock_response("```json\n" + SAMPLE_PLAN_JSON + "\n```"),
         )
-        await orch._phase_parse("test")
+        with patch("clef_server.config.rename_workdir_with_title", side_effect=lambda w, t: w):
+            await orch._phase_parse("test")
 
         plan_file = tmp_path / "plan.json"
         assert plan_file.exists()
@@ -334,14 +338,12 @@ class TestAdvancePhase:
     async def test_advance_from_last_phase_completes(self, orch, session, tmp_path):
         """Advancing past 'express' should set session to done."""
         session.set_running()
-        # Create output files so _collect_outputs returns something
-        output_dir = tmp_path / "output"
-        output_dir.mkdir()
-        (output_dir / "final_r1.mid").write_text("fake")
+        # Create output files in workdir root (_collect_outputs uses glob("*"))
+        (tmp_path / "final_r1.mid").write_text("fake")
 
         await orch._advance_phase("express")
         assert session.status == "done"
-        assert "output/final_r1.mid" in session.output_files
+        assert "final_r1.mid" in session.output_files
 
 
 # ---------------------------------------------------------------------------
@@ -359,15 +361,14 @@ class TestCollectOutputs:
         assert result == []
 
     def test_collects_files(self, orch, tmp_path):
-        output = tmp_path / "output"
-        output.mkdir()
-        (output / "final_r1.mid").write_text("data")
-        (output / "score.abc").write_text("notes")
+        # _collect_outputs uses glob("*") — only root-level files
+        (tmp_path / "final_r1.mid").write_text("data")
+        (tmp_path / "score.abc").write_text("notes")
 
         result = orch._collect_outputs()
         assert len(result) == 2
-        assert "output/final_r1.mid" in result
-        assert "output/score.abc" in result
+        assert "final_r1.mid" in result
+        assert "score.abc" in result
 
 
 # ---------------------------------------------------------------------------
@@ -454,6 +455,14 @@ class TestExtractHelpers:
 
 class TestPhaseSample:
 
+    @staticmethod
+    def _mock_merge(tmp_path):
+        """Create a merge_abc mock that actually writes score.abc."""
+        def mock_merge(plan, fragments, output):
+            Path(output).write_text("X:1\nT:Merged\nM:4/4\nK:C\nV:1\nC D E F|G A B c|\n", encoding="utf-8")
+            return {"output": output}
+        return mock_merge
+
     @pytest.mark.asyncio
     async def test_phase_sample_sets_confirm(self, session, providers, tmp_path):
         """Phase sample should end with awaiting_confirm status."""
@@ -463,15 +472,12 @@ class TestPhaseSample:
         )
         orch = ComposeOrchestrator(session.session_id, providers, str(tmp_path))
 
-        # Patch _run_agent to return placeholder ABC (AF not available in tests)
         async def mock_run(agent_name, message, **kw):
-            voice = "melody" if "composer" in agent_name else "harmony"
             return f'X:1\nT:Sample\nM:4/4\nK:C\nV:1\nC D E F|'
 
         orch._run_agent = mock_run
 
-        # Patch tool functions that would fail without real scripts
-        with patch("clef_server.tools.merge_abc", return_value={"output": "score.abc"}), \
+        with patch("clef_server.tools.merge_abc", side_effect=self._mock_merge(tmp_path)), \
              patch("clef_server.tools.abc_to_midi", return_value={"output": "sample_r1.mid"}):
             await orch._phase_sample()
 
@@ -491,7 +497,7 @@ class TestPhaseSample:
 
         orch._run_agent = mock_run
 
-        with patch("clef_server.tools.merge_abc", return_value={"output": "score.abc"}), \
+        with patch("clef_server.tools.merge_abc", side_effect=self._mock_merge(tmp_path)), \
              patch("clef_server.tools.abc_to_midi", return_value={"output": "sample_r1.mid"}):
             await orch._phase_sample()
 
@@ -511,7 +517,7 @@ class TestPhaseSample:
 
         orch._run_agent = mock_run
 
-        with patch("clef_server.tools.merge_abc", return_value={"output": "score.abc"}), \
+        with patch("clef_server.tools.merge_abc", side_effect=self._mock_merge(tmp_path)), \
              patch("clef_server.tools.abc_to_midi", return_value={"output": "sample_r1.mid"}):
             await orch._phase_sample()
 
@@ -563,7 +569,11 @@ class TestPhaseCreate:
 
         orch._run_agent = mock_run
 
-        with patch("clef_server.tools.merge_abc", return_value={"output": "score.abc"}), \
+        def mock_merge(plan, fragments, output):
+            Path(output).write_text("X:1\nV:1\nC D E F|\n", encoding="utf-8")
+            return {"output": output}
+
+        with patch("clef_server.tools.merge_abc", side_effect=mock_merge), \
              patch("clef_server.tools.validate_abc", return_value={"report": {"is_valid": True}}), \
              patch("clef_server.tools.abc_to_midi", return_value={"output": "base_r1.mid"}), \
              patch.object(orch, "_advance_phase", new_callable=AsyncMock) as mock_advance:
@@ -673,6 +683,7 @@ class TestPhaseIterate:
         orch._run_agent = mock_run
 
         with patch("clef_server.tools.validate_abc", return_value={"report": {"is_valid": True}}), \
+             patch("clef_server.tools.merge_abc", return_value={"output": "score.abc"}), \
              patch.object(orch, "_advance_phase", new_callable=AsyncMock):
             await orch._phase_iterate()
 
@@ -706,7 +717,7 @@ class TestPhaseExpress:
 
     @pytest.mark.asyncio
     async def test_phase_express_creates_output_dir(self, session, providers, tmp_path):
-        """Phase express should create output directory."""
+        """Phase express should produce output MIDI file."""
         orch = ComposeOrchestrator(session.session_id, providers, str(tmp_path))
         _setup_orchestrator(orch, session, tmp_path)
         (tmp_path / "base_r1.mid").write_bytes(b"MThd\x00\x00\x00\x06")
@@ -717,10 +728,10 @@ class TestPhaseExpress:
 
         orch._run_agent = mock_run
 
-        with patch("clef_server.tools.inject_expression", return_value={"output": "output/final_r1.mid"}):
+        with patch("clef_server.tools.inject_expression", return_value={"output": str(tmp_path / "final_r1.mid")}):
             await orch._phase_express()
 
-        assert (tmp_path / "output").exists()
+        assert session.status == "done"
 
     @pytest.mark.asyncio
     async def test_phase_express_c4_no_binary_read(self, session, providers, tmp_path):

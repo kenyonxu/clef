@@ -211,7 +211,7 @@ class ComposeOrchestrator:
                         "has_failures": result.get("has_failures", False),
                     }
                     if result.get("issues"):
-                        fails = [i for i in result["issues"] if i.get("severity") == "FAIL"]
+                        fails = [i for i in result["issues"] if isinstance(i, dict) and i.get("severity") == "FAIL"]
                         if fails:
                             summary["fail_items"] = [i.get("check", i.get("rule", str(i))) for i in fails]
                     compressed.append({
