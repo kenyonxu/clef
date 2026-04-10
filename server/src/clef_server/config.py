@@ -48,6 +48,7 @@ def _expand_dict(d: dict) -> dict:
 class AnthropicConfig:
     api_key: str
     default_model: str = "claude-sonnet-4-20250514"
+    base_url: str | None = None
 
 
 @dataclass
@@ -57,10 +58,14 @@ class OpenAICompatConfig:
     api_key: str
 
 
+AnthropicCompatConfig = OpenAICompatConfig  # Same shape: model_id, base_url, api_key
+
+
 @dataclass
 class ProviderConfig:
     anthropic: AnthropicConfig | None = None
     openai_compat: dict[str, OpenAICompatConfig] = field(default_factory=dict)
+    anthropic_compat: dict[str, AnthropicCompatConfig] = field(default_factory=dict)
 
 
 def load_provider_config(path: Path) -> ProviderConfig:
@@ -77,9 +82,16 @@ def load_provider_config(path: Path) -> ProviderConfig:
         config.anthropic = AnthropicConfig(
             api_key=ant["api_key"],
             default_model=ant.get("default_model", "claude-sonnet-4-20250514"),
+            base_url=ant.get("base_url"),
         )
     for alias, cfg in expanded.get("openai_compat", {}).items():
         config.openai_compat[alias] = OpenAICompatConfig(
+            model_id=cfg["model_id"],
+            base_url=cfg["base_url"],
+            api_key=cfg["api_key"],
+        )
+    for alias, cfg in expanded.get("anthropic_compat", {}).items():
+        config.anthropic_compat[alias] = AnthropicCompatConfig(
             model_id=cfg["model_id"],
             base_url=cfg["base_url"],
             api_key=cfg["api_key"],

@@ -162,12 +162,15 @@ export interface ProviderInfo {
 
 export interface ProviderList {
   anthropic: ProviderInfo | null
+  anthropic_compat: ProviderInfo[]
   openai_compat: ProviderInfo[]
 }
 
 export interface ProviderUpdate {
   anthropic_api_key?: string
   anthropic_model?: string
+  anthropic_compat?: Record<string, { model_id: string; base_url: string; api_key: string }>
+  remove_anthropic_compat?: string[]
   openai_compat?: Record<string, { model_id: string; base_url: string; api_key: string }>
   remove_openai_compat?: string[]
 }

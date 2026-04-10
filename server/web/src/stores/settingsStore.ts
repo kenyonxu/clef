@@ -16,6 +16,7 @@ interface SettingsState {
   diagnostics: Diagnostics | null
   isLoading: boolean
   isSaving: boolean
+  providerError: string | null
 
   loadSettings: () => Promise<void>
   saveSettings: (update: Partial<Settings>) => Promise<void>
@@ -34,6 +35,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   diagnostics: null,
   isLoading: false,
   isSaving: false,
+  providerError: null,
 
   loadSettings: async () => {
     set({ isLoading: true })
@@ -60,9 +62,9 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   loadProviders: async () => {
     try {
       const data = await apiClient.get<ProviderList>('/settings/providers')
-      set({ providers: data })
-    } catch {
-      // Silent fail
+      set({ providers: data, providerError: null })
+    } catch (err) {
+      set({ providerError: err instanceof Error ? err.message : 'Failed to load providers' })
     }
   },
 

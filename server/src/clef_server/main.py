@@ -1,5 +1,9 @@
 """Clef Server entry point."""
 
+import os
+
+os.environ.setdefault("OTEL_SDK_DISABLED", "true")
+
 import uvicorn
 
 

@@ -5,6 +5,8 @@ import type { ProviderUpdate } from '../../api/types'
 
 export function ProviderList() {
   const providers = useSettingsStore((s) => s.providers)
+  const providerError = useSettingsStore((s) => s.providerError)
+  const loadProviders = useSettingsStore((s) => s.loadProviders)
   const saveProviders = useSettingsStore((s) => s.saveProviders)
   const isSaving = useSettingsStore((s) => s.isSaving)
   const showToast = useUIStore((s) => s.showToast)
@@ -25,9 +27,14 @@ export function ProviderList() {
     if (editing === 'anthropic') {
       if (editKey) update.anthropic_api_key = editKey
       if (editModel) update.anthropic_model = editModel
-    } else {
+    } else if (editing && editing.startsWith('ac:')) {
+      const alias = editing.slice(3)
+      update.anthropic_compat = {
+        [alias]: { model_id: editModel, base_url: editBaseUrl, api_key: editKey },
+      }
+    } else if (editing) {
       update.openai_compat = {
-        [editing!]: { model_id: editModel, base_url: editBaseUrl, api_key: editKey },
+        [editing]: { model_id: editModel, base_url: editBaseUrl, api_key: editKey },
       }
     }
     try {
@@ -68,6 +75,14 @@ export function ProviderList() {
   }
 
   if (!providers) {
+    if (providerError) {
+      return (
+        <div className="space-y-2">
+          <p className="text-sm text-error">{providerError}</p>
+          <button onClick={loadProviders} className="text-xs text-info hover:underline">Retry</button>
+        </div>
+      )
+    }
     return <p className="text-sm text-muted">Loading providers...</p>
   }
 
@@ -109,6 +124,48 @@ export function ProviderList() {
         </div>
       )}
 
+      {providers.anthropic_compat.length > 0 && (
+        <label className="block text-xs font-bold text-muted uppercase tracking-wider mt-2">Anthropic-Compatible</label>
+      )}
+      {providers.anthropic_compat.map((p) => (
+        <div key={p.alias} className="rounded-lg border border-border-subtle bg-surface p-3 space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-bold text-white">{p.alias}</span>
+            <div className="flex items-center gap-2">
+              {p.is_configured ? (
+                <span className="text-xs text-brand">configured</span>
+              ) : (
+                <span className="text-xs text-error">no key</span>
+              )}
+              <button onClick={() => { setEditing(`ac:${p.alias}`); setEditModel(p.model_id); setEditBaseUrl(p.base_url); setEditKey('') }}
+                className="text-xs text-info hover:underline">Edit</button>
+            </div>
+          </div>
+          <p className="text-xs font-mono text-muted">{p.model_id}</p>
+          <p className="text-xs font-mono text-muted truncate">{p.base_url}</p>
+          <p className="text-xs font-mono text-muted">Key: {p.api_key_masked}</p>
+          {editing === `ac:${p.alias}` ? (
+            <div className="space-y-2 border-t border-border-subtle pt-2">
+              <input type="text" placeholder="API Key" value={editKey} onChange={(e) => setEditKey(e.target.value)}
+                className="w-full rounded-lg bg-surface-mid px-3 py-1.5 text-xs text-white placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-brand" />
+              <input type="text" placeholder="Model ID" value={editModel} onChange={(e) => setEditModel(e.target.value)}
+                className="w-full rounded-lg bg-surface-mid px-3 py-1.5 text-xs text-white placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-brand" />
+              <input type="text" placeholder="Base URL" value={editBaseUrl} onChange={(e) => setEditBaseUrl(e.target.value)}
+                className="w-full rounded-lg bg-surface-mid px-3 py-1.5 text-xs text-white placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-brand" />
+              <div className="flex gap-2">
+                <button onClick={handleSaveEdit} disabled={isSaving}
+                  className="rounded-[500px] bg-brand px-4 py-1 text-xs font-bold uppercase tracking-wider text-black hover:opacity-90 disabled:opacity-40">Save</button>
+                <button onClick={() => setEditing(null)}
+                  className="rounded-[500px] border border-border-standard px-4 py-1 text-xs font-bold uppercase tracking-wider text-silver hover:opacity-80">Cancel</button>
+              </div>
+            </div>
+          ) : null}
+        </div>
+      ))}
+
+      {providers.openai_compat.length > 0 && (
+        <label className="block text-xs font-bold text-muted uppercase tracking-wider mt-2">OpenAI-Compatible</label>
+      )}
       {providers.openai_compat.map((p) => (
         <div key={p.alias} className="rounded-lg border border-border-subtle bg-surface p-3 space-y-2">
           <div className="flex items-center justify-between">

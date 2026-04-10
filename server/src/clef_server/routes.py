@@ -103,6 +103,7 @@ class ProviderInfo(BaseModel):
 
 class ProviderListResponse(BaseModel):
     anthropic: ProviderInfo | None = None
+    anthropic_compat: list[ProviderInfo] = []
     openai_compat: list[ProviderInfo] = []
 
 
@@ -115,6 +116,8 @@ class OpenAICompatEntry(BaseModel):
 class ProviderUpdateRequest(BaseModel):
     anthropic_api_key: str | None = Field(None, min_length=1)
     anthropic_model: str | None = Field(None, min_length=1)
+    anthropic_compat: dict[str, OpenAICompatEntry] | None = None
+    remove_anthropic_compat: list[str] | None = None
     openai_compat: dict[str, OpenAICompatEntry] | None = None
     remove_openai_compat: list[str] | None = None
 
@@ -464,7 +467,17 @@ async def get_providers():
             is_configured=bool(cfg.api_key),
         ))
 
-    return ProviderListResponse(anthropic=anthropic, openai_compat=openai_compat)
+    anthropic_compat = []
+    for alias, cfg in config.anthropic_compat.items():
+        anthropic_compat.append(ProviderInfo(
+            alias=alias,
+            model_id=cfg.model_id,
+            base_url=cfg.base_url,
+            api_key_masked=_mask_api_key(cfg.api_key),
+            is_configured=bool(cfg.api_key),
+        ))
+
+    return ProviderListResponse(anthropic=anthropic, anthropic_compat=anthropic_compat, openai_compat=openai_compat)
 
 
 @router.put("/settings/providers", response_model=ProviderListResponse)
@@ -491,6 +504,17 @@ async def update_providers(req: ProviderUpdateRequest):
             raw["openai_compat"] = {}
         for alias, cfg in req.openai_compat.items():
             raw["openai_compat"][alias] = cfg.model_dump() if hasattr(cfg, "model_dump") else cfg
+
+    if req.remove_anthropic_compat:
+        ac = raw.get("anthropic_compat", {})
+        for alias in req.remove_anthropic_compat:
+            ac.pop(alias, None)
+
+    if req.anthropic_compat:
+        if "anthropic_compat" not in raw:
+            raw["anthropic_compat"] = {}
+        for alias, cfg in req.anthropic_compat.items():
+            raw["anthropic_compat"][alias] = cfg.model_dump() if hasattr(cfg, "model_dump") else cfg
 
     save_provider_config(path, raw)
     return await get_providers()
