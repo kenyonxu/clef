@@ -130,6 +130,7 @@ func start_note(inst_info: ClefInstrumentInfo, p_channel: int, p_key: int,
 	_request_release = false
 	_request_release_second = 0.0
 	_stream_play_duration = 0.0
+	_auto_release = false
 	state = State.ATTACK
 
 	# 从静音开始，ADSR 会渐入
