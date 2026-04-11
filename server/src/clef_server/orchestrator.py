@@ -827,6 +827,24 @@ class ComposeOrchestrator:
             or not any(c in lower for c in "|abcdefg'")
         )
 
+    def _quick_lint_check(self, abc_text: str, plan_path: Path) -> str | bool:
+        """Run abc_lint on extracted ABC. Returns True if clean, or error string for feedback."""
+        from clef_server.tools import abc_lint
+        result = abc_lint(abc_text, str(plan_path))
+        if "error" in result:
+            return True  # Lint itself failed — don't block, accept as-is
+        if result.get("pass", True):
+            return True
+        issues = result.get("issues", [])
+        if not issues:
+            return True
+        lines = [f"ABC 格式检查发现 {len(issues)} 个问题："]
+        for issue in issues[:5]:
+            lines.append(f"- {issue}")
+        if len(issues) > 5:
+            lines.append(f"- ...还有 {len(issues) - 5} 个问题")
+        return "\n".join(lines)
+
     def _extract_json(self, text: str) -> dict:
         """Extract JSON from agent response, handling markdown fencing."""
         text = text.strip()
@@ -1557,16 +1575,42 @@ class ComposeOrchestrator:
             self.session.record_sub_step(voice_display, "running", agent=agent_name)
 
             message = self._build_create_message(voice, plan)
+            repair_feedback = ""
 
-            # Retry up to 2 times if agent returns placeholder
+            # Validate + repair loop: placeholder check → abc_lint → retry with feedback
             for attempt in range(3):
-                response = await self._run_agent(agent_name, message, plan=plan)
+                full_message = message
+                if repair_feedback:
+                    full_message = (
+                        f"{message}\n\n---\n"
+                        f"**上一轮验证反馈（请修正以下问题）：**\n{repair_feedback}"
+                    )
+
+                response = await self._run_agent(agent_name, full_message, plan=plan)
                 abc_text = self._extract_abc(response)
-                if not self._is_placeholder(abc_text):
+
+                if self._is_placeholder(abc_text):
+                    repair_feedback = (
+                        "输出不是有效的 ABC 记谱法。"
+                        "请只输出包含音符的 ABC 片段，"
+                        "不要包含思考过程、解释或非音符文字。"
+                    )
+                    logger.warning(
+                        "Agent %s returned placeholder for %s (attempt %d/3)",
+                        agent_name, voice, attempt + 1,
+                    )
+                    continue
+
+                # Quick lint check on extracted ABC
+                lint_ok = self._quick_lint_check(abc_text, plan_path)
+                if lint_ok:
                     break
+
+                repair_feedback = lint_ok  # contains formatted issues
                 logger.warning(
-                    "Agent %s returned placeholder for %s (attempt %d/3), retrying",
+                    "Agent %s ABC lint issues for %s (attempt %d/3): %s",
                     agent_name, voice, attempt + 1,
+                    repair_feedback[:200],
                 )
             else:
                 raise RuntimeError(
