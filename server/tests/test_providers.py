@@ -14,11 +14,12 @@ class TestCreateProviders:
         config = ProviderConfig(
             anthropic=AnthropicConfig(api_key="test-key", default_model="claude-sonnet-4-20250514"),
         )
-        with patch("clef_server.providers.AnthropicClient") as mock_cls:
+        with patch("clef_server.providers.ChatCompletionsClient") as mock_cls:
             providers = create_providers(config)
             mock_cls.assert_called_once_with(
-                api_key="test-key",
                 model="claude-sonnet-4-20250514",
+                base_url="https://api.anthropic.com",
+                api_key="test-key",
             )
             assert "anthropic" in providers
 

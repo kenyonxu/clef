@@ -1,4 +1,9 @@
-"""LLM Provider factory — creates AF client instances from config."""
+"""LLM Provider factory — creates ChatCompletionsClient instances from config.
+
+All providers use ChatCompletionsClient, which auto-detects API format:
+- OpenAI Chat Completions (base_url contains /v1)
+- Anthropic Messages API (base_url contains /anthropic)
+"""
 
 # Patch OpenTelemetry Meter.create_histogram to accept advisory kwargs
 # that agent_framework passes but opentelemetry-sdk doesn't yet support.
@@ -16,8 +21,6 @@ try:
 except Exception:
     pass
 
-from agent_framework.anthropic import AnthropicClient
-
 from clef_server.chat_completions_client import ChatCompletionsClient
 from clef_server.config import ProviderConfig
 
@@ -26,19 +29,20 @@ def create_providers(config: ProviderConfig) -> dict:
     """Create client instances from ProviderConfig.
 
     Returns:
-        Dict mapping alias → client instance.
-        "anthropic" → AnthropicClient (uses AF Responses API)
-        "<alias>" → ChatCompletionsClient or AnthropicClient
+        Dict mapping alias → ChatCompletionsClient instance.
     """
     providers: dict = {}
 
+    # Standard Anthropic (direct API)
     if config.anthropic and config.anthropic.api_key:
-        providers["anthropic"] = _make_anthropic_client(
-            api_key=config.anthropic.api_key,
+        base_url = config.anthropic.base_url or "https://api.anthropic.com"
+        providers["anthropic"] = ChatCompletionsClient(
             model=config.anthropic.default_model,
-            base_url=config.anthropic.base_url,
+            base_url=base_url,
+            api_key=config.anthropic.api_key,
         )
 
+    # OpenAI-compatible providers (DeepSeek, SiliconFlow, etc.)
     for alias, cfg in config.openai_compat.items():
         if not cfg.api_key:
             continue
@@ -48,25 +52,14 @@ def create_providers(config: ProviderConfig) -> dict:
             api_key=cfg.api_key,
         )
 
+    # Anthropic-compatible providers (GLM via Anthropic proxy, etc.)
     for alias, cfg in config.anthropic_compat.items():
         if not cfg.api_key:
             continue
-        providers[alias] = _make_anthropic_client(
-            api_key=cfg.api_key,
+        providers[alias] = ChatCompletionsClient(
             model=cfg.model_id,
             base_url=cfg.base_url,
+            api_key=cfg.api_key,
         )
 
     return providers
-
-
-def _make_anthropic_client(api_key: str, model: str, base_url: str | None = None) -> AnthropicClient:
-    """Create an AnthropicClient, optionally with custom base_url for compatible proxies."""
-    kwargs: dict = {"api_key": api_key, "model": model}
-    if base_url:
-        from anthropic import AsyncAnthropic
-        kwargs["anthropic_client"] = AsyncAnthropic(
-            api_key=api_key,
-            base_url=base_url,
-        )
-    return AnthropicClient(**kwargs)
