@@ -11,7 +11,7 @@ from typing import Any
 
 import httpx
 
-from agent_framework import ChatResponse, Message
+from agent_framework import ChatResponse, Content, Message
 from agent_framework.exceptions import (
     ChatClientException,
     ChatClientInvalidAuthException,
@@ -55,8 +55,36 @@ class ChatCompletionsClient:
         openai_messages = []
         for msg in messages:
             role = msg.role
+            text_parts = []
+            tool_calls_list = []
+
             for content in msg.contents:
-                openai_messages.append({"role": role, "content": str(content)})
+                ctype = getattr(content, "type", None)
+                if ctype == "function_call":
+                    tool_calls_list.append({
+                        "id": getattr(content, "call_id", ""),
+                        "type": "function",
+                        "function": {
+                            "name": getattr(content, "name", ""),
+                            "arguments": getattr(content, "arguments", "{}"),
+                        },
+                    })
+                elif ctype == "function_result":
+                    openai_messages.append({
+                        "role": "tool",
+                        "tool_call_id": getattr(content, "call_id", ""),
+                        "content": str(getattr(content, "result", "")),
+                    })
+                else:
+                    text_parts.append(str(content))
+
+            if text_parts or tool_calls_list:
+                entry: dict[str, Any] = {"role": role}
+                if text_parts:
+                    entry["content"] = "\n".join(text_parts)
+                if tool_calls_list:
+                    entry["tool_calls"] = tool_calls_list
+                openai_messages.append(entry)
 
         payload: dict[str, Any] = {
             "model": self._model,
@@ -147,21 +175,13 @@ class ChatCompletionsClient:
 
         # Handle tool calls if present
         if tool_calls_raw:
-            from agent_framework import FunctionCall
-            tool_calls = []
             for tc in tool_calls_raw:
-                tool_calls.append(
-                    FunctionCall(
-                        name=tc["function"]["name"],
-                        arguments=tc["function"]["arguments"],
-                        call_id=tc["id"],
-                    )
+                fc = Content.from_function_call(
+                    call_id=tc["id"],
+                    name=tc["function"]["name"],
+                    arguments=tc["function"]["arguments"],
                 )
-            response_msg = Message(
-                role="assistant",
-                contents=assistant_content,
-                tool_calls=tool_calls,
-            )
+                assistant_content.append(fc)
 
         usage = data.get("usage", {})
         usage_details = None
