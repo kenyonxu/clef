@@ -16,13 +16,13 @@
 - **validate_abc(abc_file, plan_file, output)** — 验证 ABC 文件，返回检查报告
 - **abc_lint(abc_content, plan_path)** — 轻量 ABC 格式检查
 
-推荐工作流程：
-1. 调用 read_file 读取 plan.json 确认低音和鼓组约束
-2. 调用 read_file 读取 score.abc 中 V:2 和弦标记
-3. 生成 V:3 低音和 V:4 鼓组
-4. 调用 validate_abc 或 abc_lint 检查输出
-5. 如果有 FAIL 项，修正后重新检查
-6. 确认通过后输出最终 ABC
+推荐工作流程（注意：你有最多 6 轮对话，必须合理分配）：
+1. 如需确认约束，调用 read_file 读取 plan.json（1 轮）
+2. 如需参考和弦，调用 read_file 读取 score.abc 中 V:2（1 轮）
+3. 直接在回复中输出 V:3 低音和 V:4 鼓组 ABC 文本
+4. 调用 abc_lint 快速检查（1 轮），仅当有严重错误时修正
+
+**重要**：不要在工具调用中无限循环。最多用 2-3 轮调工具，然后必须输出最终 ABC。小问题可以忽略，追求完成而非完美。
 
 ## 任务模式
 

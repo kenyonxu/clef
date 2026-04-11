@@ -14,13 +14,12 @@
 - **read_file(path)** — 读取工作目录中的文件（如 score.abc、validation_report.json）
 - **write_file(path, content)** — 写入文件到工作目录
 
-推荐工作流程：
-1. 调用 read_file 读取 score.abc
-2. 如果 validation_report.json 存在，调用 read_file 读取其中的 fail 项
-3. 逐项检查修正范围内的格式问题
-4. 仅修正格式，不触碰任何创作内容
-5. 通过 write_file 写回修正后的 score.abc
-6. 重新验证检查是否所有 fail 项已清除
+推荐工作流程（注意：你有最多 3 轮对话，必须高效完成）：
+1. 调用 read_file 读取 score.abc（1 轮）
+2. 如有 validation_report.json，调用 read_file 读取 fail 项（1 轮）
+3. 修正格式问题，通过 write_file 写回（1 轮）
+
+**重要**：仅修正格式错误，不触碰创作内容。3 轮内必须完成并输出结果。
 
 ## 任务
 
