@@ -1,12 +1,13 @@
 agents:
   clef-composer:
     model_alias: anthropic-opus
-    prompt_md: .claude\agents\clef-composer.md
+    prompt_md: server/config/prompts/clef-composer.md
     skills:
     - melody
     - orchestration
     - abc
     temperature: 0.8
+    max_turns: 6
     tools:
     - read_file
     - write_file
@@ -14,11 +15,12 @@ agents:
     - abc_lint
   clef-harmonist:
     model_alias: anthropic-opus
-    prompt_md: .claude\agents\clef-harmonist.md
+    prompt_md: server/config/prompts/clef-harmonist.md
     skills:
     - harmony
     - abc
     temperature: 0.8
+    max_turns: 6
     tools:
     - read_file
     - write_file
@@ -26,11 +28,12 @@ agents:
     - abc_lint
   clef-orchestrator:
     model_alias: anthropic-sonnet
-    prompt_md: .claude\agents\clef-orchestrator.md
+    prompt_md: server/config/prompts/clef-orchestrator.md
     skills:
     - orchestration
     - abc
     temperature: 0.5
+    max_turns: 4
     tools:
     - read_file
     - write_file
@@ -38,32 +41,35 @@ agents:
     - inject_expression
   clef-reviewer:
     model_alias: anthropic-sonnet
-    prompt_md: .claude\agents\clef-reviewer.md
+    prompt_md: server/config/prompts/clef-reviewer.md
     skills:
     - structure
     - orchestration
     - abc
     temperature: 0.3
+    max_turns: 3
     tools:
     - read_file
     - validate_abc
     - abc_lint
   clef-revision:
     model_alias: anthropic-haiku
-    prompt_md: .claude\agents\clef-revision.md
+    prompt_md: server/config/prompts/clef-revision.md
     skills:
     - abc
     temperature: 0.2
+    max_turns: 3
     tools:
     - read_file
     - write_file
   clef-rhythmist:
     model_alias: anthropic-sonnet
-    prompt_md: .claude\agents\clef-rhythmist.md
+    prompt_md: server/config/prompts/clef-rhythmist.md
     skills:
     - rhythm
     - abc
     temperature: 0.7
+    max_turns: 6
     tools:
     - read_file
     - write_file

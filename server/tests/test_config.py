@@ -70,7 +70,7 @@ class TestAgentConfigs:
     def test_load_agent_configs(self, project_root: Path):
         configs = load_agent_configs(project_root / "server" / "config" / "agents.yaml")
         assert "clef-composer" in configs
-        assert configs["clef-composer"].model_alias == "deepseek-think"
+        assert configs["clef-composer"].model_alias == "anthropic-opus"
         assert configs["clef-composer"].temperature == 0.8
         assert "melody" in configs["clef-composer"].skills
         assert "validate_abc" in configs["clef-composer"].tools

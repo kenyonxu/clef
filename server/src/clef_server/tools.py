@@ -235,3 +235,80 @@ def get_tools_for_agent(agent_name: str) -> list:
     """Return the list of @tool functions assigned to a given agent."""
     tool_names = _AGENT_TOOL_MAP.get(agent_name, [])
     return [TOOLS_REGISTRY[n] for n in tool_names if n in TOOLS_REGISTRY]
+
+
+_PYTHON_TO_JSON_TYPE = {
+    str: "string", int: "integer", float: "number",
+    bool: "boolean", dict: "object", list: "array",
+}
+
+
+def get_tool_schemas(agent_name: str) -> list[dict]:
+    """Generate OpenAI-format tool schemas for an agent's tools."""
+    import inspect
+
+    tool_names = _AGENT_TOOL_MAP.get(agent_name, [])
+    schemas = []
+
+    for name in tool_names:
+        func = TOOLS_REGISTRY.get(name)
+        if func is None:
+            continue
+
+        # Unwrap FunctionTool to get the underlying Python function
+        raw_func = getattr(func, "func", func)
+
+        sig = inspect.signature(raw_func)
+        properties = {}
+        required = []
+
+        for param_name, param in sig.parameters.items():
+            if param_name == "self":
+                continue
+
+            annotation = param.annotation
+            if annotation is inspect.Parameter.empty:
+                param_type = "string"
+            elif hasattr(annotation, "__origin__"):
+                args = getattr(annotation, "__args__", ())
+                raw_type = args[0] if args else str
+                param_type = _PYTHON_TO_JSON_TYPE.get(raw_type, "string")
+            else:
+                param_type = _PYTHON_TO_JSON_TYPE.get(annotation, "string")
+
+            description = ""
+            if hasattr(annotation, "__metadata__"):
+                for meta in annotation.__metadata__:
+                    if isinstance(meta, str):
+                        description = meta
+                        break
+            elif hasattr(annotation, "__args__") and len(getattr(annotation, "__args__", ())) > 1:
+                for arg in annotation.__args__[1:]:
+                    if isinstance(arg, str):
+                        description = arg
+                        break
+
+            properties[param_name] = {"type": param_type}
+            if description:
+                properties[param_name]["description"] = description
+
+            if param.default is inspect.Parameter.empty:
+                required.append(param_name)
+
+        doc = inspect.getdoc(raw_func) or f"Execute the {name} tool."
+
+        schema = {
+            "type": "function",
+            "function": {
+                "name": name,
+                "description": doc.split("\n")[0],
+                "parameters": {
+                    "type": "object",
+                    "properties": properties,
+                    "required": required,
+                },
+            },
+        }
+        schemas.append(schema)
+
+    return schemas

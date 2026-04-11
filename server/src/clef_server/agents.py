@@ -1,5 +1,6 @@
 """Agent factory — creates AF Agent instances from config."""
 
+from dataclasses import dataclass
 from pathlib import Path
 
 from clef_server.config import AgentConfig
@@ -13,6 +14,52 @@ except ImportError:
     Agent = None
 
 
+@dataclass
+class AgentInstructions:
+    """Structured agent instructions with separated layers."""
+
+    system_prompt: str          # Agent markdown (constraints + rules)
+    reference_materials: str    # Theory skills (truncated to budget)
+    session_context: str        # Plan + score (injected into user message)
+
+    def build_system_message(self) -> str:
+        """Combine system_prompt and reference_materials into one system message."""
+        if self.reference_materials:
+            return (
+                f"{self.system_prompt}\n\n"
+                f"---\n\n"
+                f"# Reference Materials\n\n"
+                f"{self.reference_materials}"
+            )
+        return self.system_prompt
+
+    def build_user_message(self, task: str) -> str:
+        """Prepend session context to the user task message."""
+        if self.session_context:
+            return f"{self.session_context}\n\n---\n\n{task}"
+        return task
+
+
+def build_instructions(
+    prompt_md: Path,
+    middleware: ClefContextMiddleware,
+    plan: dict | None = None,
+    score_abc: str | None = None,
+    workdir: str = "",
+) -> AgentInstructions:
+    """Build structured agent instructions with separated layers."""
+    system_prompt = prompt_md.read_text(encoding="utf-8")
+    reference_materials = middleware.build_skills_section()
+    session_context = middleware.build_session_context(
+        plan=plan, score_abc=score_abc, workdir=workdir,
+    )
+    return AgentInstructions(
+        system_prompt=system_prompt,
+        reference_materials=reference_materials,
+        session_context=session_context,
+    )
+
+
 def _build_instructions(
     prompt_md: Path,
     middleware: ClefContextMiddleware,
@@ -20,11 +67,15 @@ def _build_instructions(
     score_abc: str | None = None,
     workdir: str = "",
 ) -> str:
-    base = prompt_md.read_text(encoding="utf-8")
-    ctx = middleware.build_context(plan=plan, score_abc=score_abc, workdir=workdir)
-    if ctx:
-        return f"{base}\n\n---\n\n# Reference Materials\n\n{ctx}"
-    return base
+    """Backward-compatible wrapper returning a single system message string."""
+    instructions = build_instructions(
+        prompt_md=prompt_md,
+        middleware=middleware,
+        plan=plan,
+        score_abc=score_abc,
+        workdir=workdir,
+    )
+    return instructions.build_system_message()
 
 
 def create_agent(

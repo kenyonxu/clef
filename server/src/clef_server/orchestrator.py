@@ -603,26 +603,31 @@ class ComposeOrchestrator:
             "prompt_md": "clef-composer.md",
             "model_alias": "deepseek",
             "skills": ["melody", "orchestration", "abc"],
+            "max_turns": 6,
         },
         "clef-harmonist": {
             "prompt_md": "clef-harmonist.md",
             "model_alias": "deepseek",
             "skills": ["harmony", "abc"],
+            "max_turns": 6,
         },
         "clef-rhythmist": {
             "prompt_md": "clef-rhythmist.md",
             "model_alias": "deepseek",
             "skills": ["rhythm", "abc"],
+            "max_turns": 6,
         },
         "clef-reviewer": {
             "prompt_md": "clef-reviewer.md",
             "model_alias": "deepseek",
             "skills": ["structure", "orchestration", "abc"],
+            "max_turns": 3,
         },
         "clef-orchestrator": {
             "prompt_md": "clef-orchestrator.md",
             "model_alias": "deepseek",
             "skills": ["orchestration", "abc"],
+            "max_turns": 4,
         },
     }
 
@@ -639,6 +644,7 @@ class ComposeOrchestrator:
                     "model_alias": cfg.model_alias,
                     "skills": cfg.skills,
                     "temperature": cfg.temperature,
+                    "max_turns": cfg.max_turns,
                 }
             logger.info("Loaded agent configs from agents.yaml: %s", list(defs.keys()))
             return defs
@@ -653,10 +659,11 @@ class ComposeOrchestrator:
         plan: dict | None = None,
         score_abc: str | None = None,
     ) -> str:
-        """Run an agent by building its system prompt and calling LLM directly.
+        """Run an agent with agentic tool-use loop.
 
-        Bypasses AF AgentExecutor (which requires WorkflowContext) and
-        uses ChatCompletionsClient with the agent's instructions + skills.
+        Builds a 3-layer prompt (instructions / skills / context),
+        provides tool schemas, and runs a ReAct loop until the LLM
+        stops calling tools or max_turns is reached.
         """
         agent_def = self._agent_defs.get(agent_name)
         if not agent_def:
@@ -664,14 +671,16 @@ class ComposeOrchestrator:
             return f"[placeholder ABC for {agent_name}]"
 
         try:
-            from clef_server.agents import _build_instructions
+            from clef_server.agent_loop import run_agent_loop
+            from clef_server.agents import build_instructions
             from clef_server.middleware import ClefContextMiddleware
+            from clef_server.tools import _AGENT_TOOL_MAP, TOOLS_REGISTRY, get_tool_schemas
 
-            # Build system prompt from agent markdown + skills + context
+            # Build 3-layer instructions
             prompt_md = agent_def["prompt_md"]
             prompt_path = Path(prompt_md)
             if not prompt_path.is_absolute():
-                prompt_path = self.project_root / ".claude" / "agents" / prompt_md
+                prompt_path = self.project_root / prompt_md
             if not prompt_path.exists():
                 logger.warning("Agent prompt not found: %s", prompt_path)
                 return f"[placeholder ABC for {agent_name}]"
@@ -681,7 +690,7 @@ class ComposeOrchestrator:
                 skills=agent_def["skills"],
                 skills_dir=skills_dir,
             )
-            instructions = _build_instructions(
+            instructions = build_instructions(
                 prompt_md=prompt_path,
                 middleware=middleware,
                 plan=plan,
@@ -689,28 +698,105 @@ class ComposeOrchestrator:
                 workdir=self.workdir,
             )
 
-            # Get LLM client (resolve model_alias, fall back to first available)
+            # Resolve LLM client with explicit fallback logging
             model_alias = agent_def["model_alias"]
-            client = self.providers.get(model_alias) or next(iter(self.providers.values()), None)
+            client = self.providers.get(model_alias)
+            if client is None:
+                available = list(self.providers.keys())
+                logger.warning(
+                    "Agent %s: model_alias '%s' not found in providers %s, "
+                    "falling back to first available",
+                    agent_name, model_alias, available,
+                )
+                client = next(iter(self.providers.values()), None)
             if not client:
                 raise RuntimeError(f"No LLM client available for {agent_name} (alias={model_alias})")
 
-            # Call LLM with system prompt + user message
-            messages = [
-                Message(role="system", contents=[instructions]),
-                Message(role="user", contents=[message]),
-            ]
-            temperature = agent_def.get("temperature", 0.7)
-            response = await client.get_response(messages, client_kwargs={"temperature": temperature})
+            # Build tool schemas and executor
+            tool_schemas = get_tool_schemas(agent_name)
+            tool_executor = self._make_tool_executor(agent_name)
 
-            # Extract text from response
-            content = ""
-            if response.messages and response.messages[0].contents:
-                content = str(response.messages[0].contents[0])
-            return content
+            # Build system + user messages using 3-layer structure
+            system_prompt = instructions.build_system_message()
+            user_message = instructions.build_user_message(message)
+
+            max_turns = agent_def.get("max_turns", 5)
+            temperature = agent_def.get("temperature", 0.7)
+
+            logger.info(
+                "Agent %s: starting loop (max_turns=%d, tools=%s, model=%s)",
+                agent_name, max_turns, [s["function"]["name"] for s in tool_schemas], model_alias,
+            )
+
+            result = await run_agent_loop(
+                client=client,
+                system_prompt=system_prompt,
+                user_message=user_message,
+                tools=tool_schemas,
+                tool_executor=tool_executor,
+                temperature=temperature,
+                max_turns=max_turns,
+            )
+
+            logger.info(
+                "Agent %s: loop completed (turns=%d, tool_calls=%d)",
+                agent_name, result.turns_used, result.tool_calls_count,
+            )
+
+            return result.text
+
         except Exception as exc:
             logger.error("Agent %s execution failed: %s", agent_name, exc)
             raise RuntimeError(f"Agent {agent_name} failed: {exc}") from exc
+
+    def _make_tool_executor(self, agent_name: str):
+        """Create a tool executor closure for the given agent.
+
+        The executor resolves tool calls by name from TOOLS_REGISTRY,
+        injecting ``workdir`` automatically for path-based tools.
+        """
+        from clef_server.tools import TOOLS_REGISTRY, _AGENT_TOOL_MAP
+
+        agent_tool_names = set(_AGENT_TOOL_MAP.get(agent_name, []))
+        workdir = self.workdir
+
+        def executor(call: dict) -> dict:
+            tool_name = call.get("name", "")
+            raw_args = call.get("arguments", {})
+
+            # Normalize arguments: may be JSON string or dict
+            if isinstance(raw_args, str):
+                try:
+                    args = json.loads(raw_args)
+                except json.JSONDecodeError:
+                    return {"error": f"Invalid JSON arguments for {tool_name}: {raw_args[:200]}"}
+            else:
+                args = raw_args
+
+            if tool_name not in agent_tool_names:
+                return {"error": f"Tool '{tool_name}' not allowed for agent '{agent_name}'"}
+
+            func = TOOLS_REGISTRY.get(tool_name)
+            if func is None:
+                return {"error": f"Tool '{tool_name}' not found in registry"}
+
+            # Unwrap FunctionTool to get the underlying Python function
+            raw_func = getattr(func, "func", func)
+
+            # Enforce workdir for path-based tools (agent cannot override)
+            if tool_name in ("read_file", "write_file", "validate_abc", "abc_lint"):
+                args = {**args, "workdir": workdir}
+
+            # Security: limit write_file content size (256KB max)
+            if tool_name == "write_file" and len(args.get("content", "")) > 262144:
+                return {"error": f"write_file content exceeds 256KB limit ({len(args.get('content', ''))} bytes)"}
+
+            try:
+                return raw_func(**args)
+            except Exception as e:
+                return {"error": str(e)}
+
+        return executor
 
     def _extract_abc(self, text: str) -> str:
         """Extract ABC notation from agent response text.

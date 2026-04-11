@@ -11,6 +11,7 @@ from clef_server.tools import (
     _AGENT_TOOL_MAP,
     abc_lint,
     abc_to_midi,
+    get_tool_schemas,
     get_tools_for_agent,
     inject_expression,
     merge_abc,
@@ -303,3 +304,31 @@ class TestSnapshot:
         assert history_dir.exists()
         backups = list(history_dir.glob("score_v*.abc"))
         assert len(backups) >= 1
+
+
+# ── get_tool_schemas ────────────────────────────────────────────────────
+
+
+class TestGetToolSchemas:
+    def test_get_tool_schemas_composer(self) -> None:
+        schemas = get_tool_schemas("clef-composer")
+        assert len(schemas) == 4
+        names = {s["function"]["name"] for s in schemas}
+        assert names == {"read_file", "write_file", "validate_abc", "abc_lint"}
+
+    def test_get_tool_schemas_structure(self) -> None:
+        schemas = get_tool_schemas("clef-composer")
+        for schema in schemas:
+            assert schema["type"] == "function"
+            func = schema["function"]
+            assert "name" in func
+            assert "description" in func
+            assert "parameters" in func
+            params = func["parameters"]
+            assert params["type"] == "object"
+            assert "properties" in params
+            assert "required" in params
+
+    def test_get_tool_schemas_unknown_agent(self) -> None:
+        schemas = get_tool_schemas("nonexistent-agent")
+        assert schemas == []

@@ -109,6 +109,7 @@ class AgentConfig:
     prompt_md: Path
     model_alias: str
     temperature: float = 0.7
+    max_turns: int = 5
     skills: list[str] = field(default_factory=list)
     tools: list[str] = field(default_factory=list)
 
@@ -133,6 +134,7 @@ def load_agent_configs(path: Path, base_dir: Path | None = None) -> dict[str, Ag
             prompt_md=prompt_path,
             model_alias=cfg["model_alias"],
             temperature=cfg.get("temperature", 0.7),
+            max_turns=cfg.get("max_turns", 5),
             skills=cfg.get("skills", []),
             tools=cfg.get("tools", []),
         )
@@ -262,6 +264,7 @@ def save_agent_configs(path: Path, configs: dict[str, AgentConfig]) -> None:
             "prompt_md": str(cfg.prompt_md),
             "model_alias": cfg.model_alias,
             "temperature": cfg.temperature,
+            "max_turns": cfg.max_turns,
             "skills": cfg.skills,
             "tools": cfg.tools,
         }
