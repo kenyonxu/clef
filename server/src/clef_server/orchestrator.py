@@ -1400,6 +1400,195 @@ class ComposeOrchestrator:
         return "\n".join(lines)
 
     # ------------------------------------------------------------------
+    # Best-of-N generation with repair
+    # ------------------------------------------------------------------
+
+    async def _generate_with_best_of_n(
+        self,
+        agent_name: str,
+        message: str,
+        plan: dict,
+        plan_path: Path,
+        max_rounds: int = 2,
+        voice_label: str = "",
+    ) -> tuple[str, int]:
+        """Generate ABC with best-of-N selection and repair.
+
+        Returns (best_abc_text, fail_count).
+        """
+        from clef_server.tools import fix_measure_duration
+
+        candidates: list[dict] = []
+        feedback = ""
+
+        for round_idx in range(max_rounds):
+            full_message = message
+            if feedback:
+                full_message = (
+                    f"{message}\n\n---\n"
+                    f"**上一轮验证反馈（请修正）：**\n{feedback}"
+                )
+
+            response = await self._run_agent(agent_name, full_message, plan=plan)
+            abc_text = self._extract_abc(response)
+
+            if not abc_text or self._is_placeholder(abc_text):
+                candidates.append({
+                    "round": round_idx, "abc": abc_text or "",
+                    "fail_count": 999, "failures": [],
+                })
+                feedback = "输出不是有效的 ABC 记谱法，请直接输出 ABC 内容。"
+                continue
+
+            # Deterministic fix
+            fix_result = fix_measure_duration(abc_text)
+            if fix_result["fixes"]:
+                logger.info(
+                    "fix_measure_duration: %d fixes in round %d",
+                    len(fix_result["fixes"]), round_idx,
+                )
+                abc_text = fix_result["abc"]
+
+            # Quick lint check
+            lint_ok = self._quick_lint_check(abc_text, plan_path)
+            if lint_ok is not True and lint_ok:
+                feedback = str(lint_ok)
+                candidates.append({
+                    "round": round_idx, "abc": abc_text,
+                    "fail_count": 100, "failures": [],
+                })
+                continue
+
+            # Validate via validate_abc
+            report_path = Path(self.workdir) / f"_candidate_r{round_idx}_report.json"
+            failures = self._run_validation_from_abc(
+                abc_text, plan_path, report_path, voice_label,
+            )
+            fail_count = len(failures)
+
+            candidates.append({
+                "round": round_idx, "abc": abc_text,
+                "fail_count": fail_count, "failures": failures,
+            })
+
+            logger.info(
+                "Best-of-N round %d: %d FAILs (agent=%s)",
+                round_idx, fail_count, agent_name,
+            )
+
+            if fail_count == 0:
+                break
+
+            # Prepare feedback for next round
+            feedback = self._format_validation_feedback(failures)
+
+        # Select best candidate
+        if not candidates:
+            return "", 999
+        best = min(candidates, key=lambda c: c["fail_count"])
+
+        # If best still has failures, try repair agent
+        if best["fail_count"] > 0 and best["abc"]:
+            repaired = await self._attempt_repair(
+                best["abc"], best["failures"], plan, plan_path, voice_label,
+            )
+            if repaired["fail_count"] < best["fail_count"]:
+                logger.info(
+                    "Repair agent improved: %d -> %d FAILs",
+                    best["fail_count"], repaired["fail_count"],
+                )
+                best = repaired
+
+        return best["abc"], best["fail_count"]
+
+    def _run_validation_from_abc(
+        self,
+        abc_text: str,
+        plan_path: Path,
+        report_path: Path,
+        voice_label: str = "",
+    ) -> list[dict]:
+        """Write ABC to temp file, validate, return failures."""
+        from clef_server.tools import validate_abc as validate_tool
+
+        safe_label = voice_label.replace(":", "_").replace("+", "_").replace(" ", "_")
+        tmp_abc = Path(self.workdir) / f"_tmp_{safe_label}.abc"
+        tmp_abc.write_text(abc_text, encoding="utf-8")
+
+        try:
+            result = validate_tool(str(tmp_abc), str(plan_path), str(report_path))
+        except Exception as e:
+            logger.warning("Validation failed: %s", e)
+            return [{"category": "validation_error", "voice": voice_label, "message": str(e)}]
+
+        if isinstance(result, dict) and "error" in result:
+            return [{"category": "validation_error", "voice": voice_label, "message": result["error"]}]
+
+        # Read report
+        if report_path.exists():
+            try:
+                report = json.loads(report_path.read_text(encoding="utf-8"))
+                fails = [
+                    {"category": f.get("category", ""), "voice": f.get("voice", voice_label), "message": f.get("message", "")}
+                    for f in report.get("fails", [])
+                    if not f.get("known_artifact", False)
+                ]
+                return fails
+            except (json.JSONDecodeError, OSError) as e:
+                logger.warning("Report parse failed: %s", e)
+                return []
+        return []
+
+    async def _attempt_repair(
+        self,
+        abc_text: str,
+        failures: list[dict],
+        plan: dict,
+        plan_path: Path,
+        voice_label: str = "",
+    ) -> dict:
+        """Attempt repair via clef-repair agent."""
+        from clef_server.tools import fix_measure_duration
+
+        if not abc_text:
+            return {"abc": "", "fail_count": 999, "failures": failures}
+
+        feedback = self._format_validation_feedback(failures)
+        repair_msg = (
+            f"修复以下 ABC 内容中的验证错误：\n\n"
+            f"## 验证失败项\n{feedback}\n\n"
+            f"## 待修复的 ABC\n```\n{abc_text}\n```\n\n"
+            f"请修复后通过 write_file 输出完整的修正版本。"
+        )
+
+        try:
+            response = await self._run_agent("clef-repair", repair_msg, plan=plan)
+            repaired_abc = self._extract_abc(response)
+        except Exception as e:
+            logger.warning("Repair agent failed: %s", e)
+            return {"abc": abc_text, "fail_count": len(failures), "failures": failures}
+
+        if not repaired_abc:
+            return {"abc": abc_text, "fail_count": len(failures), "failures": failures}
+
+        # Deterministic fix on repaired version
+        fix_result = fix_measure_duration(repaired_abc)
+        if fix_result["fixes"]:
+            repaired_abc = fix_result["abc"]
+
+        # Validate repaired version
+        report_path = Path(self.workdir) / "_repair_report.json"
+        new_failures = self._run_validation_from_abc(
+            repaired_abc, plan_path, report_path, voice_label,
+        )
+
+        return {
+            "abc": repaired_abc,
+            "fail_count": len(new_failures),
+            "failures": new_failures,
+        }
+
+    # ------------------------------------------------------------------
     # Phase 1: Sample (方向小样)
     # ------------------------------------------------------------------
 
@@ -1416,7 +1605,9 @@ class ComposeOrchestrator:
         fragments: dict[str, str] = {}
         abc_parts: list[str] = []
 
-        # Step 1: Generate voice parts in generation_order
+        # Step 1: Generate voice parts with best-of-N validation
+        from clef_server.tools import merge_abc
+
         for voice in generation_order:
             agent_name = self.VOICE_AGENT_MAP.get(voice)
             if not agent_name:
@@ -1437,14 +1628,20 @@ class ComposeOrchestrator:
                 f"Output only ABC notation."
             )
 
-            response = await self._run_agent(agent_name, message, plan=plan)
-            abc_text = self._extract_abc(response)
-            self._store_fragment(fragments, abc_parts, voice_label, abc_text)
+            best_abc, fail_count = await self._generate_with_best_of_n(
+                agent_name=agent_name,
+                message=message,
+                plan=plan,
+                plan_path=plan_path,
+                max_rounds=2,
+                voice_label=voice_label,
+            )
 
+            self._store_fragment(fragments, abc_parts, voice_label, best_abc or "")
             self.session.record_sub_step(voice_display, "done", agent=agent_name)
+            logger.info("Sample voice %s: %d FAILs", voice_label, fail_count)
 
-        # C1/C2: merge_abc takes positional (plan, fragments, output), returns dict (side-effect)
-        from clef_server.tools import merge_abc
+        # Merge all fragments
         self.session.record_sub_step("合并声部", "running")
         merge_result = merge_abc(str(plan_path), fragments, str(score_path))
         if "error" in merge_result:
@@ -1453,39 +1650,6 @@ class ComposeOrchestrator:
 
         self._inject_midi_programs(score_path, plan)
         self.session.record_sub_step("合并声部", "done")
-        self.session.record_sub_step("技术验证", "running")
-
-        # Step 1.5: Validate and fix technical issues before melody gate
-        validation_report = Path(self.workdir) / "validation_report_sample.json"
-        failures = self._run_validation(score_path, plan_path, validation_report)
-        if failures:
-            # Re-generate failed voices with validation feedback
-            val_feedback = self._format_validation_feedback(failures)
-            for f in failures:
-                voice = f.get("voice", "")
-                agent_name = self._VOICE_TO_AGENT.get(voice)
-                if not agent_name:
-                    continue
-                response = await self._run_agent(
-                    agent_name,
-                    f"Fix validation errors in your {voice} part:\n{val_feedback}\n\n"
-                    f"Output only the corrected ABC for {voice}.",
-                    plan=plan,
-                    score_abc=score_path.read_text(encoding="utf-8") if score_path.exists() else "",
-                )
-                abc_text = self._extract_abc(response)
-                fragments[voice] = abc_text
-
-            # Re-merge with fixed fragments
-            merge_result = merge_abc(str(plan_path), fragments, str(score_path))
-            if "error" in merge_result:
-                logger.error("merge_abc (validation fix) failed: %s", merge_result["error"])
-            else:
-                self._inject_midi_programs(score_path, plan)
-                # Re-validate to confirm fixes
-                failures = self._run_validation(score_path, plan_path, validation_report)
-
-        self.session.record_sub_step("技术验证", "done")
 
         # Step 2: Melody gate — review melody only up to 3 times
         self.session.record_sub_step("旋律审查", "running", agent="clef-reviewer")
@@ -1582,47 +1746,17 @@ class ComposeOrchestrator:
             self.session.record_sub_step(voice_display, "running", agent=agent_name)
 
             message = self._build_create_message(voice, plan)
-            repair_feedback = ""
 
-            # Validate + repair loop: placeholder check → abc_lint → retry with feedback
-            for attempt in range(3):
-                full_message = message
-                if repair_feedback:
-                    full_message = (
-                        f"{message}\n\n---\n"
-                        f"**上一轮验证反馈（请修正以下问题）：**\n{repair_feedback}"
-                    )
-
-                response = await self._run_agent(agent_name, full_message, plan=plan)
-                abc_text = self._extract_abc(response)
-
-                if self._is_placeholder(abc_text):
-                    repair_feedback = (
-                        "输出不是有效的 ABC 记谱法。"
-                        "请只输出包含音符的 ABC 片段，"
-                        "不要包含思考过程、解释或非音符文字。"
-                    )
-                    logger.warning(
-                        "Agent %s returned placeholder for %s (attempt %d/3)",
-                        agent_name, voice, attempt + 1,
-                    )
-                    continue
-
-                # Quick lint check on extracted ABC
-                lint_ok = self._quick_lint_check(abc_text, plan_path)
-                if lint_ok:
-                    break
-
-                repair_feedback = lint_ok  # contains formatted issues
-                logger.warning(
-                    "Agent %s ABC lint issues for %s (attempt %d/3): %s",
-                    agent_name, voice, attempt + 1,
-                    repair_feedback[:200],
-                )
-            else:
-                raise RuntimeError(
-                    f"Agent {agent_name} failed to generate {voice} after 3 attempts"
-                )
+            # Best-of-N generation with validation + repair
+            best_abc, fail_count = await self._generate_with_best_of_n(
+                agent_name=agent_name,
+                message=message,
+                plan=plan,
+                plan_path=plan_path,
+                max_rounds=2,
+                voice_label=voice_label,
+            )
+            abc_text = best_abc
 
             self._store_fragment(fragments, None, voice_label, abc_text)
 
@@ -1658,36 +1792,25 @@ class ComposeOrchestrator:
         self._validation_failures = failures  # Persist for iterate phase
 
         if failures:
-            # Re-generate failed voices with validation feedback (one retry pass)
-            val_feedback = self._format_validation_feedback(failures)
-            failed_voices = {f.get("voice", "") for f in failures}
-            for voice_str in failed_voices:
-                agent_name = self._VOICE_TO_AGENT.get(voice_str)
-                if not agent_name:
-                    continue
-                voice_key = {v: k for k, v in self.VOICE_MAP.items()}.get(voice_str)
-                if not voice_key:
-                    continue
-                voice_label = self.VOICE_MAP.get(voice_key, voice_str)
-                response = await self._run_agent(
-                    agent_name,
-                    f"Fix validation errors in your {voice_str} part:\n{val_feedback}\n\n"
-                    f"Output only the corrected ABC for {voice_label}.",
-                    plan=plan,
-                    score_abc=score_path.read_text(encoding="utf-8") if score_path.exists() else "",
+            # Repair agent approach for post-merge failures
+            logger.info("Phase create: %d FAILs after merge, attempting repair", len(failures))
+            score_abc = score_path.read_text(encoding="utf-8")
+            repaired = await self._attempt_repair(
+                abc_text=score_abc,
+                failures=failures,
+                plan=plan,
+                plan_path=plan_path,
+            )
+            if repaired["fail_count"] < len(failures):
+                logger.info(
+                    "Repair improved: %d -> %d FAILs",
+                    len(failures), repaired["fail_count"],
                 )
-                abc_text = self._extract_abc(response)
-                if self._is_placeholder(abc_text):
-                    continue
-                fragments[voice_label] = abc_text
-
-            # Re-merge and re-check bar counts
-            merge_result = merge_abc(str(plan_path), fragments, str(score_path))
-            if "error" not in merge_result:
+                score_path.write_text(repaired["abc"], encoding="utf-8")
                 self._inject_midi_programs(score_path, plan)
-                failures = self._run_validation(score_path, plan_path, report_path)
-                self._validation_failures = failures
-                # Re-enforce bar limits after validation retry
+                # Re-validate
+                self._validation_failures = self._run_validation(score_path, plan_path, report_path)
+                # Re-enforce bar limits after repair
                 if target_bars > 0:
                     for label in list(fragments):
                         actual = self._count_bars(fragments[label])
@@ -1696,6 +1819,8 @@ class ComposeOrchestrator:
                             merge_result = merge_abc(str(plan_path), fragments, str(score_path))
                             if "error" not in merge_result:
                                 self._inject_midi_programs(score_path, plan)
+            else:
+                logger.info("Repair did not improve, keeping original")
 
         self.session.record_sub_step("技术验证", "done")
 
