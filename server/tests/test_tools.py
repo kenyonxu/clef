@@ -11,6 +11,7 @@ from clef_server.tools import (
     _AGENT_TOOL_MAP,
     abc_lint,
     abc_to_midi,
+    fix_measure_duration,
     get_tool_schemas,
     get_tools_for_agent,
     inject_expression,
@@ -66,11 +67,11 @@ class TestWriteFile:
 
 
 class TestToolsRegistry:
-    def test_has_all_eight_tools(self) -> None:
+    def test_has_all_nine_tools(self) -> None:
         expected = {
             "read_file", "write_file", "validate_abc",
             "abc_to_midi", "abc_lint", "merge_abc",
-            "inject_expression", "snapshot",
+            "inject_expression", "snapshot", "fix_measure_duration",
         }
         assert set(TOOLS_REGISTRY.keys()) == expected
 
@@ -332,3 +333,99 @@ class TestGetToolSchemas:
     def test_get_tool_schemas_unknown_agent(self) -> None:
         schemas = get_tool_schemas("nonexistent-agent")
         assert schemas == []
+
+
+# === fix_measure_duration tests ===
+
+
+class TestFixMeasureDuration:
+    def test_correct_measure_unchanged(self):
+        """Correct measures should not be modified."""
+        abc = "X:1\nM:4/4\nL:1/8\nK:C\nV:1\nc2 d2 e2 f2 |"
+        result = fix_measure_duration(abc)
+        assert result["passed"] is True
+        assert result["fixes"] == []
+        assert result["abc"] == abc
+
+    def test_short_by_one_extends_last_note(self):
+        """Missing 1 unit: extend last note."""
+        # 7/8 units: c2(2) + d2(2) + e2(2) + f(1) = 7
+        abc = "X:1\nM:4/4\nL:1/8\nK:C\nV:1\nc2 d2 e2 f |"
+        result = fix_measure_duration(abc)
+        assert result["passed"] is False
+        assert len(result["fixes"]) == 1
+        assert "f2" in result["abc"]
+        assert result["fixes"][0]["measure"] == 1
+        assert result["fixes"][0]["action"] == "extend"
+
+    def test_long_by_one_shortens_last_note(self):
+        """Extra 1 unit: shorten or remove last note."""
+        # 9/8 units: c2(2) + d2(2) + e2(2) + f2(2) + g(1) = 9
+        abc = "X:1\nM:4/4\nL:1/8\nK:C\nV:1\nc2 d2 e2 f2 g |"
+        result = fix_measure_duration(abc)
+        assert result["passed"] is False
+        assert len(result["fixes"]) == 1
+
+    def test_multiple_measures_only_fixes_wrong(self):
+        """Multiple measures: only incorrect ones are fixed."""
+        # M1: 8 units (correct), M2: 7 units (short by 1)
+        abc = "X:1\nM:4/4\nL:1/8\nK:C\nV:1\nc2 d2 e2 f2 | c2 d2 e2 f |"
+        result = fix_measure_duration(abc)
+        assert result["passed"] is False
+        assert len(result["fixes"]) == 1
+        assert result["fixes"][0]["measure"] == 2
+
+    def test_large_deviation_skipped(self):
+        """Off by >2 units: skip (no fix applied)."""
+        # 5/8 units -- off by 3
+        abc = "X:1\nM:4/4\nL:1/8\nK:C\nV:1\nc2 d2 e |"
+        result = fix_measure_duration(abc)
+        assert result["passed"] is False
+        # Should be skipped
+        skipped_fixes = [f for f in result["fixes"] if f.get("skipped")]
+        assert len(skipped_fixes) == 1 or len(result["fixes"]) == 0
+
+    def test_rest_extension(self):
+        """Missing unit: extend rest."""
+        # 7/8 units: c2(2) + d2(2) + e2(2) + z(1) = 7
+        abc = "X:1\nM:4/4\nL:1/8\nK:C\nV:1\nc2 d2 e2 z |"
+        result = fix_measure_duration(abc)
+        assert result["passed"] is False
+        assert len(result["fixes"]) == 1
+        assert "z2" in result["abc"]
+
+    def test_chord_counted_as_single_event(self):
+        """Chord [CEG]2 counts as one event with duration 2, not three notes."""
+        # [CEG]2(2) + [DFA]2(2) + [CEG]2(2) + [DFA]2(2) = 8 (correct)
+        abc = "X:1\nM:4/4\nL:1/8\nK:C\nV:1\n[CEG]2 [DFA]2 [CEG]2 [DFA]2 |"
+        result = fix_measure_duration(abc)
+        assert result["passed"] is True
+        assert result["fixes"] == []
+
+    def test_tuplet_counted_correctly(self):
+        """Triplet (3c d e should count as divided by 3, not raw sum."""
+        # (3e f g = triplet: 3 notes in 2 units' time. With duration 1 each = 3*2/3 = 2
+        # Total: c2(2) + d2(2) + triplet(2) + f2(2) = 8
+        abc = "X:1\nM:4/4\nL:1/8\nK:C\nV:1\nc2 d2 (3e f g f2 |"
+        result = fix_measure_duration(abc)
+        assert result["passed"] is True
+
+    def test_default_L_is_quarter(self):
+        """When L: not specified, default is 1/4 (ABC standard)."""
+        # No L: header, M:4/4 -> target = 4 * 4 / 4 = 4 units
+        # c(1) + d(1) + e(1) + f(1) = 4 (correct)
+        abc = "X:1\nM:4/4\nK:C\nV:1\nc d e f |"
+        result = fix_measure_duration(abc)
+        assert result["passed"] is True
+
+    def test_target_per_measure_override(self):
+        """Explicit target_per_measure overrides auto-detect."""
+        abc = "X:1\nM:4/4\nL:1/8\nK:C\nV:1\nc2 d2 |"
+        result = fix_measure_duration(abc, target_per_measure=4.0)
+        assert result["passed"] is True
+
+    def test_measures_checked_count(self):
+        """measures_checked reflects actual number of measures."""
+        abc = "X:1\nM:4/4\nL:1/8\nK:C\nV:1\nc2 d2 e2 f2 | c2 d2 e2 f2 | c2 d2 e2 f2 |"
+        result = fix_measure_duration(abc)
+        assert result["measures_checked"] == 3

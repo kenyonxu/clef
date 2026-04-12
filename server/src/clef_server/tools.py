@@ -4,6 +4,7 @@ Each function wraps a public API from .claude/skills/clef-compose/scripts/.
 """
 
 import json
+import re
 import sys
 from dataclasses import dataclass
 from enum import Enum
@@ -56,7 +57,308 @@ _TOOL_META: dict[str, ToolMeta] = {
     "merge_abc": ToolMeta(ToolSafety.EXCLUSIVE_WRITE, 200),
     "inject_expression": ToolMeta(ToolSafety.EXCLUSIVE_WRITE, 100),
     "snapshot": ToolMeta(ToolSafety.IDEMPOTENT_WRITE, 50),
+    "fix_measure_duration": ToolMeta(ToolSafety.READ_ONLY, 200),
 }
+
+
+# === fix_measure_duration helpers ===
+
+_NOTE_RE = re.compile(
+    r"([\\^_=]*"           # accidental
+    r"[a-gA-G]"            # note name
+    r"[',]*"               # octave marks
+    r")"
+    r"(\d*(?:/\d+)?)"      # duration: "2", "3", "/2", "3/2", or "" (=1)
+)
+_REST_RE = re.compile(r"(z)(\d*(?:/\d+)?)")
+_CHORD_RE = re.compile(r"(\[[^\]]+\])(\d*(?:/\d+)?)")
+_TUPLET_RE = re.compile(r"\((\d+)")
+
+
+def _parse_abc_duration(duration_str: str) -> float:
+    """Convert ABC duration string to float units.
+
+    "" -> 1.0, "2" -> 2.0, "/2" -> 0.5, "3/2" -> 1.5
+    """
+    if not duration_str:
+        return 1.0
+    if "/" in duration_str:
+        parts = duration_str.split("/")
+        num = int(parts[0]) if parts[0] else 1
+        den = int(parts[1])
+        return num / den
+    return float(duration_str)
+
+
+def _duration_to_str(units: float) -> str:
+    """Convert float units back to ABC duration string."""
+    if units == 1.0:
+        return ""
+    if units == int(units):
+        return str(int(units))
+    # Try common fractions
+    for den in (2, 3, 4, 8):
+        if abs(units * den - round(units * den)) < 0.01:
+            num = int(round(units * den))
+            if num == 1:
+                return f"/{den}"
+            return f"{num}/{den}"
+    return str(units)
+
+
+def _count_measure_units(measure_text: str) -> float:
+    """Count total duration units in a measure, handling chords and tuplets."""
+    total = 0.0
+
+    # First extract all chords and replace with duration markers
+    processed = measure_text
+    chord_durations: list[float] = []
+    for m in _CHORD_RE.finditer(measure_text):
+        chord_durations.append(_parse_abc_duration(m.group(2)))
+
+    # Replace chords with a single placeholder note
+    placeholder_idx = 0
+    chord_map: dict[str, float] = {}
+    for m in _CHORD_RE.finditer(processed):
+        key = f"__CHORD{placeholder_idx}__"
+        chord_map[key] = chord_durations[placeholder_idx]
+        processed = processed.replace(m.group(0), key, 1)
+        placeholder_idx += 1
+
+    # Parse tuplet markers
+    # Find all tuplet markers and their positions
+    tuplet_positions: list[tuple[int, int]] = []  # (start, end) of "(3" marker
+    for m in _TUPLET_RE.finditer(processed):
+        tuplet_positions.append((m.start(), m.end()))
+        ratio = int(m.group(1))
+        # Number of notes in tuplet group: for (3 it's 3, for (5 it's 5, etc.
+        notes_in_group = ratio
+
+        # Find the next N note/rest events after this tuplet marker
+        text_after = processed[m.end():]
+        count = 0
+        note_events: list[tuple[str, str]] = []  # (full_match, duration_str)
+
+        # Parse notes and rests sequentially
+        pos = 0
+        while count < notes_in_group and pos < len(text_after):
+            # Check for chord placeholder
+            found_placeholder = False
+            for key, dur_val in chord_map.items():
+                if text_after[pos:].startswith(key):
+                    note_events.append((key, str(dur_val)))
+                    pos += len(key)
+                    count += 1
+                    found_placeholder = True
+                    break
+            if found_placeholder:
+                continue
+
+            # Check for rest
+            rest_m = _REST_RE.match(text_after, pos)
+            if rest_m:
+                note_events.append((rest_m.group(0), rest_m.group(2)))
+                pos = rest_m.end()
+                count += 1
+                continue
+
+            # Check for note
+            note_m = _NOTE_RE.match(text_after, pos)
+            if note_m:
+                note_events.append((note_m.group(0), note_m.group(2)))
+                pos = note_m.end()
+                count += 1
+                continue
+
+            # Skip whitespace and other characters
+            pos += 1
+
+        # Tuplet duration: sum of durations * (notes_in_group / ratio) / notes_in_group
+        # Actually: in ABC, (3c d e means 3 notes in the time of 2 of the same
+        # So the total time = sum_of_durations * 2/3
+        # More generally: (N notes in the time of N-1... but standard is N in time of N-1 for (N)
+        # However the most common interpretation: (3 means triplet, 3 notes in 2 beats
+        # So multiply sum by (ratio-1)/ratio for standard tuplets
+        # For (3: factor = 2/3, for (5: factor = 4/5 (quintuplet in 4 beats)
+        tuplet_factor = (ratio - 1) / ratio if ratio > 1 else 1.0
+
+        for event_text, dur_str in note_events:
+            dur = _parse_abc_duration(dur_str)
+            if event_text.startswith("__CHORD"):
+                total += dur * tuplet_factor
+            elif event_text.startswith("z"):
+                total += dur * tuplet_factor
+            else:
+                total += dur * tuplet_factor
+
+    # Remove tuplet markers and their already-counted content from processed text
+    # We'll rebuild what's left to count
+    # Strategy: remove tuplet sections entirely from processed
+    for m_tuplet in _TUPLET_RE.finditer(processed):
+        # Remove the (N marker
+        pass  # We handle this differently below
+
+    # Simpler approach: count everything that's NOT in a tuplet group
+    # Rebuild: strip all tuplet sections from processed
+    cleaned = processed
+    # Remove tuplet markers
+    for m_tuplet in _TUPLET_RE.finditer(measure_text):
+        # Find the tuplet text in cleaned and remove notes that were already counted
+        pass
+
+    # Actually, let's use a cleaner approach entirely
+    total = 0.0
+    return _count_measure_units_clean(measure_text)
+
+
+def _count_measure_units_clean(measure_text: str) -> float:
+    """Count total duration units in a measure, handling chords and tuplets.
+
+    Clean implementation:
+    1. Extract chords as single events
+    2. Parse tuplets and apply ratio
+    3. Count remaining notes/rests normally
+    """
+    text = measure_text.strip()
+
+    # Collect all note/rest/chord events with their positions
+    events: list[tuple[int, int, float]] = []  # (start, end, duration)
+
+    # Chords first (they contain note characters)
+    for m in _CHORD_RE.finditer(text):
+        dur = _parse_abc_duration(m.group(2))
+        events.append((m.start(), m.end(), dur))
+
+    # Rests
+    for m in _REST_RE.finditer(text):
+        dur = _parse_abc_duration(m.group(2))
+        events.append((m.start(), m.end(), dur))
+
+    # Notes (skip those already inside chords)
+    chord_ranges = [(e[0], e[1]) for e in events]
+    for m in _NOTE_RE.finditer(text):
+        # Check if this note is inside a chord
+        inside_chord = False
+        for cs, ce in chord_ranges:
+            if cs <= m.start() < ce:
+                inside_chord = True
+                break
+        if not inside_chord:
+            dur = _parse_abc_duration(m.group(2))
+            events.append((m.start(), m.end(), dur))
+
+    # Sort by position
+    events.sort(key=lambda e: e[0])
+
+    # Find tuplet markers and apply ratio to following N events
+    tuplet_ranges: list[tuple[int, int]] = []  # event indices affected by tuplets
+    text_pos = 0
+    event_idx = 0
+
+    for m in _TUPLET_RE.finditer(text):
+        ratio = int(m.group(1))
+        notes_in_group = ratio
+        tuplet_end_pos = m.end()
+
+        # Find events that come after this tuplet marker
+        affected_indices: list[int] = []
+        for i, (start, end, dur) in enumerate(events):
+            if start >= tuplet_end_pos and len(affected_indices) < notes_in_group:
+                affected_indices.append(i)
+
+        if affected_indices:
+            tuplet_factor = (ratio - 1) / ratio if ratio > 1 else 1.0
+            for i in affected_indices:
+                s, e, d = events[i]
+                events[i] = (s, e, d * tuplet_factor)
+            tuplet_ranges.extend(affected_indices)
+
+    return sum(e[2] for e in events)
+
+
+def _fix_single_measure(
+    measure_text: str,
+    target: float,
+    max_deviation: float = 2.0,
+) -> tuple[str, dict | None]:
+    """Try to fix a single measure's duration by adjusting the last note/rest.
+
+    Returns (fixed_text, fix_info). fix_info is None if no fix needed.
+    """
+    actual = _count_measure_units_clean(measure_text)
+    diff = actual - target
+
+    if abs(diff) < 0.01:
+        return measure_text, None
+
+    if abs(diff) > max_deviation + 0.01:
+        # Too far off to fix mechanically
+        return measure_text, {"skipped": True, "actual_units": actual, "target_units": target}
+
+    # Find the last note, rest, or chord to adjust
+    # We need to find the last event and modify its duration
+    text = measure_text
+
+    # Find all events with positions
+    all_events: list[tuple[int, int, str, str]] = []  # (start, end, prefix, duration_str)
+
+    # Chords
+    for m in _CHORD_RE.finditer(text):
+        all_events.append((m.start(), m.end(), m.group(1), m.group(2)))
+    # Rests
+    for m in _REST_RE.finditer(text):
+        all_events.append((m.start(), m.end(), m.group(1), m.group(2)))
+    # Notes
+    chord_ranges = [(e[0], e[1]) for e in all_events]
+    for m in _NOTE_RE.finditer(text):
+        inside_chord = any(cs <= m.start() < ce for cs, ce in chord_ranges)
+        if not inside_chord:
+            all_events.append((m.start(), m.end(), m.group(1), m.group(2)))
+
+    if not all_events:
+        return measure_text, {"skipped": True, "actual_units": actual, "target_units": target}
+
+    # Sort by position, take the last one
+    all_events.sort(key=lambda e: e[0])
+    last_start, last_end, last_prefix, last_dur_str = all_events[-1]
+    last_dur = _parse_abc_duration(last_dur_str)
+    new_dur = last_dur - diff  # diff = actual - target, so subtract to reach target
+
+    if new_dur < 0.01:
+        # Duration would be 0 or negative: remove the event
+        # Remove trailing whitespace before the event too
+        before = text[:last_start].rstrip()
+        fixed = before + text[last_end:]
+        return fixed, {
+            "action": "remove",
+            "target": "note" if not last_prefix.startswith("z") and not last_prefix.startswith("[") else ("rest" if last_prefix == "z" else "chord"),
+            "from": text[last_start:last_end],
+            "to": "(removed)",
+            "actual_units": actual,
+            "target_units": target,
+        }
+
+    new_dur_str = _duration_to_str(new_dur)
+    old_event = text[last_start:last_end]
+    new_event = last_prefix + new_dur_str
+
+    fixed = text[:last_start] + new_event + text[last_end:]
+
+    action = "shorten" if diff > 0 else "extend"
+    target_type = "note"
+    if last_prefix == "z":
+        target_type = "rest"
+    elif last_prefix.startswith("["):
+        target_type = "chord"
+
+    return fixed, {
+        "action": action,
+        "target": target_type,
+        "from": old_event,
+        "to": new_event,
+        "actual_units": actual,
+        "target_units": target,
+    }
 
 
 def _validate_path(path: str, workdir: str) -> Path:
@@ -208,6 +510,108 @@ def snapshot(
         return {"error": str(e)}
 
 
+@tool
+def fix_measure_duration(
+    abc_content: Annotated[str, "ABC notation content to fix"],
+    target_per_measure: Annotated[float | None, "Target units per measure (None = auto-detect from M:/L:)"] = None,
+) -> dict:
+    """Mechanically fix measure duration errors in ABC notation content.
+
+    Parses each measure, counts duration units, and fixes measures off by 1-2 units.
+    Measures off by >2 units are skipped (left for repair agent).
+    """
+    try:
+        lines = abc_content.split("\n")
+
+        # Parse headers
+        m_match = None
+        l_base = 4  # ABC standard default L: is 1/4
+        header_end = 0
+
+        for i, line in enumerate(lines):
+            stripped = line.strip()
+            if stripped.startswith("M:"):
+                m_match = re.match(r"M:(\d+)/(\d+)", stripped)
+            elif stripped.startswith("L:"):
+                l_match = re.match(r"L:1/(\d+)", stripped)
+                if l_match:
+                    l_base = int(l_match.group(1))
+            elif stripped.startswith("K:"):
+                header_end = i + 1
+                break
+
+        # Auto-detect target
+        if target_per_measure is None:
+            if m_match:
+                num = int(m_match.group(1))
+                den = int(m_match.group(2))
+                target_per_measure = num * l_base / den
+            else:
+                target_per_measure = 4.0  # default 4/4
+
+        # Find music lines (after headers, containing |)
+        fixes: list[dict] = []
+        passed = True
+        measures_checked = 0
+
+        result_lines: list[str] = []
+        for i, line in enumerate(lines):
+            if "|" not in line or i < header_end:
+                result_lines.append(line)
+                continue
+
+            # Split into measures by |
+            parts = line.split("|")
+            fixed_parts: list[str] = []
+
+            for j, part in enumerate(parts):
+                # Skip empty parts (from || or leading/trailing |)
+                stripped_part = part.strip()
+                if not stripped_part:
+                    fixed_parts.append(part)
+                    continue
+
+                # Skip voice labels or other non-music content
+                if stripped_part.startswith("V:") or stripped_part.startswith("%"):
+                    fixed_parts.append(part)
+                    continue
+
+                measures_checked += 1
+                fixed_text, fix_info = _fix_single_measure(stripped_part, target_per_measure)
+
+                if fix_info is not None:
+                    if fix_info.get("skipped"):
+                        passed = False
+                        fixes.append({
+                            "measure": measures_checked,
+                            **fix_info,
+                        })
+                        fixed_parts.append(part)
+                    else:
+                        passed = False
+                        fixes.append({
+                            "measure": measures_checked,
+                            **fix_info,
+                        })
+                        # Preserve leading whitespace from original
+                        leading = part[:len(part) - len(part.lstrip())]
+                        trailing = part[len(part.rstrip()):]
+                        fixed_parts.append(leading + fixed_text + trailing)
+                else:
+                    fixed_parts.append(part)
+
+            result_lines.append("|".join(fixed_parts))
+
+        return {
+            "abc": "\n".join(result_lines),
+            "fixes": fixes,
+            "passed": passed,
+            "measures_checked": measures_checked,
+        }
+    except Exception as e:
+        return {"error": str(e), "fixes": [], "passed": False, "measures_checked": 0}
+
+
 # === Tool Registry ===
 
 TOOLS_REGISTRY: dict[str, object] = {
@@ -219,6 +623,7 @@ TOOLS_REGISTRY: dict[str, object] = {
     "merge_abc": merge_abc,
     "inject_expression": inject_expression,
     "snapshot": snapshot,
+    "fix_measure_duration": fix_measure_duration,
 }
 
 _AGENT_TOOL_MAP: dict[str, list[str]] = {
@@ -228,6 +633,7 @@ _AGENT_TOOL_MAP: dict[str, list[str]] = {
     "clef-reviewer": ["read_file", "validate_abc", "abc_lint"],
     "clef-revision": ["read_file", "write_file"],
     "clef-orchestrator": ["read_file", "write_file", "abc_to_midi", "inject_expression"],
+    "clef-repair": ["read_file", "write_file", "abc_lint", "fix_measure_duration"],
 }
 
 
