@@ -1632,7 +1632,8 @@ class ComposeOrchestrator:
             # Retry once with feedback
             bad = [m for m in rhythm_result["measures"] if not m.get("passed")]
             bad_summary = ", ".join(
-                f"M{m['measure']}={m['sum']}(need {m['target']})" for m in bad
+                f"M{m['measure']}={m.get('sum', 'PARSE_ERROR')}(need {m.get('target', 8)})"
+                for m in bad
             )
             rhythm_msg += f"\n\nPrevious attempt had errors: {bad_summary}. Fix and output corrected skeleton."
             rhythm_response = await self._run_agent(agent_name, rhythm_msg, plan=plan)
