@@ -13,6 +13,7 @@ agents:
     - write_file
     - validate_abc
     - abc_lint
+    - validate_rhythm_skeleton
   clef-harmonist:
     model_alias: anthropic-opus
     prompt_md: server/config/prompts/clef-harmonist.md
@@ -26,6 +27,7 @@ agents:
     - write_file
     - validate_abc
     - abc_lint
+    - validate_rhythm_skeleton
   clef-orchestrator:
     model_alias: anthropic-sonnet
     prompt_md: server/config/prompts/clef-orchestrator.md
@@ -87,3 +89,4 @@ agents:
     - write_file
     - validate_abc
     - abc_lint
+    - validate_rhythm_skeleton

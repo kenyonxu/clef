@@ -452,7 +452,7 @@ def fix_measure_duration(
                 continue
 
             # Skip %%MIDI and other directive lines that happen to contain |
-            if stripped.startswith("%%"):
+            if line.strip().startswith("%%"):
                 result_lines.append(line)
                 continue
 
