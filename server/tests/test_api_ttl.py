@@ -128,7 +128,7 @@ class TestGetTools:
         resp = client.get("/api/tools")
         assert resp.status_code == 200
         data = resp.json()
-        assert len(data) == 8
+        assert len(data) == 9
         names = {t["name"] for t in data}
         assert "read_file" in names
         assert "write_file" in names

@@ -629,6 +629,13 @@ class ComposeOrchestrator:
             "skills": ["orchestration", "abc"],
             "max_turns": 4,
         },
+        "clef-repair": {
+            "prompt_md": "server/config/prompts/clef-repair.md",
+            "model_alias": "anthropic-haiku",
+            "skills": ["abc"],
+            "temperature": 0.2,
+            "max_turns": 3,
+        },
     }
 
     def _load_agent_defs(self) -> dict[str, dict[str, Any]]:
