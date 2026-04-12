@@ -1429,8 +1429,21 @@ class ComposeOrchestrator:
                     f"**上一轮验证反馈（请修正）：**\n{feedback}"
                 )
 
-            response = await self._run_agent(agent_name, full_message, plan=plan)
-            abc_text = self._extract_abc(response)
+            # Round 0: try two-pass generation (rhythm skeleton → pitch fill)
+            abc_text = ""
+            if round_idx == 0 and voice_label:
+                bars = plan.get("demo_length_bars", plan.get("total_bars", 8))
+                two_pass_abc = await self._generate_two_pass(
+                    agent_name, plan, plan_path, bars, voice_label,
+                )
+                if two_pass_abc:
+                    abc_text = two_pass_abc
+                    logger.info("Two-pass generation succeeded for %s", voice_label)
+
+            # Fallback to single-pass generation
+            if not abc_text:
+                response = await self._run_agent(agent_name, full_message, plan=plan)
+                abc_text = self._extract_abc(response)
 
             if not abc_text or self._is_placeholder(abc_text):
                 candidates.append({
