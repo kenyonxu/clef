@@ -386,9 +386,8 @@ class TestFixMeasureDuration:
         abc = "X:1\nM:4/4\nL:1/8\nK:C\nV:1\nc2 d2 e |"
         result = fix_measure_duration(abc)
         assert result["passed"] is False
-        # Should be skipped
-        skipped_fixes = [f for f in result["fixes"] if f.get("skipped")]
-        assert len(skipped_fixes) == 1 or len(result["fixes"]) == 0
+        assert len(result["fixes"]) == 1
+        assert result["fixes"][0].get("skipped") is True
 
     def test_rest_extension(self):
         """Missing unit: extend rest."""

@@ -146,10 +146,6 @@ def _count_measure_units_clean(measure_text: str) -> float:
     events.sort(key=lambda e: e[0])
 
     # Find tuplet markers and apply ratio to following N events
-    tuplet_ranges: list[tuple[int, int]] = []  # event indices affected by tuplets
-    text_pos = 0
-    event_idx = 0
-
     for m in _TUPLET_RE.finditer(text):
         ratio = int(m.group(1))
         notes_in_group = ratio
@@ -166,7 +162,6 @@ def _count_measure_units_clean(measure_text: str) -> float:
             for i in affected_indices:
                 s, e, d = events[i]
                 events[i] = (s, e, d * tuplet_factor)
-            tuplet_ranges.extend(affected_indices)
 
     return sum(e[2] for e in events)
 
@@ -452,6 +447,11 @@ def fix_measure_duration(
         result_lines: list[str] = []
         for i, line in enumerate(lines):
             if "|" not in line or i < header_end:
+                result_lines.append(line)
+                continue
+
+            # Skip %%MIDI and other directive lines that happen to contain |
+            if stripped.startswith("%%"):
                 result_lines.append(line)
                 continue
 
