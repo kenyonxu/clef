@@ -115,7 +115,10 @@ func _build_sample_for_zone(
 			if vel_span < best_vel_span:
 				best_inst_zone = izone
 			elif vel_span == best_vel_span:
-				best_inst_zone = izone  # 同等具体度: 后定义优先
+				# 同等具体度: 优先选有循环的 zone (sustain layer),
+				# 只有当新 zone 也有循环时才覆盖
+				if izone.sample_modes == 1 or izone.sample_modes == 3:
+					best_inst_zone = izone
 
 	if best_inst_zone == null:
 		return null
