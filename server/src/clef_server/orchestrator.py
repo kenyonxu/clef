@@ -1588,6 +1588,73 @@ class ComposeOrchestrator:
             "failures": new_failures,
         }
 
+    async def _generate_two_pass(
+        self,
+        agent_name: str,
+        plan: dict,
+        plan_path: Path,
+        bars: int,
+        voice_label: str = "",
+    ) -> str:
+        """Two-pass generation: rhythm skeleton first, then pitch fill.
+
+        Returns ABC text, or empty string if two-pass fails (caller should fallback).
+        """
+        from clef_server.tools import validate_rhythm_skeleton
+
+        # Pass 1: Generate rhythm skeleton
+        rhythm_msg = (
+            f"Generate a {bars}-measure rhythm skeleton for {voice_label}. "
+            f"M:4/4 L:1/8. Each measure MUST sum to exactly 8. "
+            f"Output ONLY duration values (1,2,3,4,6,8,0.5) separated by spaces, "
+            f"measures separated by |. Rests: z=1, z2=2. "
+            f"Example: 2 2 2 2 | 4 4 | 2 2 1 1 2 |"
+        )
+        rhythm_response = await self._run_agent(agent_name, rhythm_msg, plan=plan)
+        rhythm_text = self._extract_rhythm(rhythm_response)
+
+        # Validate rhythm
+        rhythm_result = validate_rhythm_skeleton(rhythm_text)
+        if not rhythm_result["passed"]:
+            # Retry once with feedback
+            bad = [m for m in rhythm_result["measures"] if not m.get("passed")]
+            bad_summary = ", ".join(
+                f"M{m['measure']}={m['sum']}(need {m['target']})" for m in bad
+            )
+            rhythm_msg += f"\n\nPrevious attempt had errors: {bad_summary}. Fix and output corrected skeleton."
+            rhythm_response = await self._run_agent(agent_name, rhythm_msg, plan=plan)
+            rhythm_text = self._extract_rhythm(rhythm_response)
+            rhythm_result = validate_rhythm_skeleton(rhythm_text)
+
+        if not rhythm_result["passed"]:
+            logger.warning("Two-pass: rhythm still invalid after retry, falling back to single-pass")
+            return ""
+
+        # Pass 2: Fill pitches into validated rhythm
+        pitch_msg = (
+            f"Fill pitches into this validated rhythm skeleton for {voice_label}. "
+            f"Key: {plan.get('key', 'C')}, Scale: {plan.get('scale', 'major')}. "
+            f"Each number is a duration in L:1/8 units. Add a pitch letter before each number. "
+            f"Duration 1 = just letter (e.g., c), 2 = letter+2 (e.g., c2), 4 = letter+4 (e.g., c4). "
+            f"Do NOT change any durations. Output ABC notes only.\n\n"
+            f"Rhythm: {rhythm_text}"
+        )
+        pitch_response = await self._run_agent(agent_name, pitch_msg, plan=plan)
+        return self._extract_abc(pitch_response)
+
+    def _extract_rhythm(self, response: str) -> str:
+        """Extract rhythm skeleton from agent response."""
+        import re as _re
+        match = _re.search(r"```(?:rhythm)?\s*\n?(.*?)```", response, _re.DOTALL)
+        if match:
+            return match.group(1).strip()
+        # Fallback: look for | separated numbers
+        lines = response.strip().split("\n")
+        for line in lines:
+            if "|" in line and any(c.isdigit() for c in line):
+                return line.strip()
+        return response.strip()
+
     # ------------------------------------------------------------------
     # Phase 1: Sample (方向小样)
     # ------------------------------------------------------------------

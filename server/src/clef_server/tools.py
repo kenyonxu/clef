@@ -58,6 +58,7 @@ _TOOL_META: dict[str, ToolMeta] = {
     "inject_expression": ToolMeta(ToolSafety.EXCLUSIVE_WRITE, 100),
     "snapshot": ToolMeta(ToolSafety.IDEMPOTENT_WRITE, 50),
     "fix_measure_duration": ToolMeta(ToolSafety.READ_ONLY, 200),
+    "validate_rhythm_skeleton": ToolMeta(ToolSafety.READ_ONLY, 100),
 }
 
 
@@ -507,6 +508,66 @@ def fix_measure_duration(
         return {"error": str(e), "fixes": [], "passed": False, "measures_checked": 0}
 
 
+@tool
+def validate_rhythm_skeleton(
+    skeleton: Annotated[str, "Rhythm skeleton: duration values separated by spaces, measures by |"],
+    target_per_measure: Annotated[float | None, "Target units per measure (None = auto-detect)"] = None,
+) -> dict:
+    """Validate a rhythm skeleton (durations only, no pitches).
+
+    Each value represents one note/rest duration in L:1/8 units.
+    Rests use 'z' prefix: z=1, z2=2, z4=4.
+    Returns per-measure validation results.
+    """
+    if target_per_measure is None or target_per_measure <= 0:
+        target = 8.0  # Default: M:4/4 + L:1/8
+    else:
+        target = target_per_measure
+
+    measures = skeleton.strip().split("|")
+    results = []
+    fail_count = 0
+
+    for i, meas in enumerate(measures):
+        meas = meas.strip()
+        if not meas:
+            continue
+        try:
+            durations = []
+            for token in meas.split():
+                token = token.strip()
+                if not token:
+                    continue
+                if token.startswith("z"):
+                    rest_val = token[1:]
+                    durations.append(float(rest_val) if rest_val else 1.0)
+                else:
+                    durations.append(float(token))
+        except ValueError:
+            results.append({"measure": i + 1, "error": "PARSE_ERROR", "text": meas})
+            fail_count += 1
+            continue
+
+        total = sum(durations)
+        ok = abs(total - target) < 0.01
+        if not ok:
+            fail_count += 1
+        results.append({
+            "measure": i + 1,
+            "durations": durations,
+            "sum": total,
+            "target": target,
+            "passed": ok,
+        })
+
+    return {
+        "passed": fail_count == 0,
+        "measures": results,
+        "fail_count": fail_count,
+        "measures_checked": len(results),
+    }
+
+
 # === Tool Registry ===
 
 TOOLS_REGISTRY: dict[str, object] = {
@@ -519,12 +580,13 @@ TOOLS_REGISTRY: dict[str, object] = {
     "inject_expression": inject_expression,
     "snapshot": snapshot,
     "fix_measure_duration": fix_measure_duration,
+    "validate_rhythm_skeleton": validate_rhythm_skeleton,
 }
 
 _AGENT_TOOL_MAP: dict[str, list[str]] = {
-    "clef-composer": ["read_file", "write_file", "validate_abc", "abc_lint"],
-    "clef-harmonist": ["read_file", "write_file", "validate_abc", "abc_lint"],
-    "clef-rhythmist": ["read_file", "write_file", "validate_abc", "abc_lint"],
+    "clef-composer": ["read_file", "write_file", "validate_abc", "abc_lint", "validate_rhythm_skeleton"],
+    "clef-harmonist": ["read_file", "write_file", "validate_abc", "abc_lint", "validate_rhythm_skeleton"],
+    "clef-rhythmist": ["read_file", "write_file", "validate_abc", "abc_lint", "validate_rhythm_skeleton"],
     "clef-reviewer": ["read_file", "validate_abc", "abc_lint"],
     "clef-revision": ["read_file", "write_file"],
     "clef-orchestrator": ["read_file", "write_file", "abc_to_midi", "inject_expression"],
