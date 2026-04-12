@@ -116,6 +116,11 @@ class TestGetToolsForAgent:
         assert "abc_to_midi" in names
         assert "inject_expression" in names
 
+    def test_clef_repair_tools(self) -> None:
+        tools = get_tools_for_agent("clef-repair")
+        names = {t.name for t in tools}
+        assert names == {"read_file", "write_file", "abc_lint", "fix_measure_duration"}
+
     def test_unknown_agent_returns_empty(self) -> None:
         tools = get_tools_for_agent("nonexistent-agent")
         assert tools == []
