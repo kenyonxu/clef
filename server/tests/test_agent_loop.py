@@ -107,6 +107,44 @@ async def test_tool_call_then_final_response(mock_client, echo_tool_executor):
 
 
 @pytest.mark.asyncio
+async def test_max_turns_final_response_filters_function_calls(mock_client, echo_tool_executor):
+    """When max_turns is reached, function_call Content items in the final
+    response must be filtered out — they should NOT appear in result.text."""
+    fc = Content.from_function_call(
+        call_id="call_1",
+        name="write_file",
+        arguments='{"path": "score.abc", "content": "V:1\\nc2 d2 |"}',
+    )
+
+    mock_client.get_response.side_effect = [
+        # Turn 1: tool call (consumes turn)
+        _make_response(["Writing..."], tool_calls_content=[fc]),
+        # Turn 2: tool call again (consumes turn, max_turns=2 reached)
+        _make_response(["Writing more..."], tool_calls_content=[fc]),
+        # Forced final response: contains BOTH text AND a function_call
+        _make_response(
+            ["Here is my ABC"],
+            tool_calls_content=[Content.from_function_call(
+                call_id="call_2",
+                name="validate_abc",
+                arguments='{"abc": "V:1\\nc2 d2 |"}',
+            )],
+        ),
+    ]
+
+    result = await run_agent_loop(
+        client=mock_client,
+        system_prompt="You are a composer.",
+        user_message="Compose.",
+        tools=[{"type": "function", "function": {"name": "write_file", "parameters": {"type": "object", "properties": {"path": {"type": "string"}, "content": {"type": "string"}}, "required": ["path", "content"]}}}],
+        tool_executor=echo_tool_executor,
+        max_turns=2,
+    )
+
+    # Text should contain the actual text response, NOT "Content(type=function_call)"
+    assert "Content(type=" not in result.text
+    assert "Here is my ABC" in result.text
+    assert result.turns_used == 3  # 2 tool turns + 1 final
 async def test_max_turns_limit(mock_client, echo_tool_executor):
     fc = Content.from_function_call(
         call_id="call_1",

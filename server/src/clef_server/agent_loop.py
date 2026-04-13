@@ -33,6 +33,20 @@ def _extract_tool_calls(message: Message) -> list[Content]:
     return [c for c in message.contents if hasattr(c, "type") and c.type == "function_call"]
 
 
+def _extract_text(message: Message) -> str:
+    """Extract text content from a Message, skipping function_call/function_result items."""
+    if not message.contents:
+        return ""
+    parts = []
+    for c in message.contents:
+        if hasattr(c, "type") and c.type in ("function_call", "function_result"):
+            continue
+        text = c.text if hasattr(c, "text") and c.text else str(c)
+        if text:
+            parts.append(str(text))
+    return "\n".join(parts)
+
+
 async def run_agent_loop(
     client: Any,
     system_prompt: str,
@@ -84,12 +98,7 @@ async def run_agent_loop(
         tool_calls = _extract_tool_calls(assistant_msg)
 
         if not tool_calls:
-            content = ""
-            if assistant_msg.contents:
-                content = "\n".join(
-                    str(c.text if hasattr(c, "text") and c.text else c)
-                    for c in assistant_msg.contents
-                )
+            content = _extract_text(assistant_msg)
             return AgentLoopResult(
                 text=content,
                 tool_calls_count=total_tool_calls,
@@ -178,10 +187,7 @@ async def run_agent_loop(
     )
     content = ""
     if response.messages and response.messages[0].contents:
-        content = "\n".join(
-            str(c.text if hasattr(c, "text") and c.text else c)
-            for c in response.messages[0].contents
-        )
+        content = _extract_text(response.messages[0])
 
     return AgentLoopResult(
         text=content,

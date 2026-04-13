@@ -848,6 +848,10 @@ class ComposeOrchestrator:
         Also trims trailing rest-only bars.
         """
         text = text.strip()
+        # Guard against raw Content objects leaking into text
+        if "Content(type=" in text:
+            logger.warning("_extract_abc: received raw Content object, returning empty")
+            return ""
         # Try fenced block first
         fence_match = re.search(r"```(?:abc)?\s*\n(.*?)```", text, re.DOTALL)
         if fence_match:
