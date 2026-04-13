@@ -6,6 +6,7 @@ import { Sf2Setting } from '../components/settings/Sf2Setting'
 import { WorkflowParams } from '../components/settings/WorkflowParams'
 import { ProviderList } from '../components/settings/ProviderList'
 import { AgentTable } from '../components/settings/AgentTable'
+import { ProfileManager } from '../components/settings/ProfileManager'
 import { DiagnosticsPanel } from '../components/settings/DiagnosticsPanel'
 
 type Tab = 'general' | 'providers' | 'agents' | 'diagnostics'
@@ -34,6 +35,7 @@ export function Settings() {
   const loadProviders = useSettingsStore((s) => s.loadProviders)
   const loadAgents = useSettingsStore((s) => s.loadAgents)
   const loadDiagnostics = useSettingsStore((s) => s.loadDiagnostics)
+  const loadProfiles = useSettingsStore((s) => s.loadProfiles)
   const showToast = useUIStore((s) => s.showToast)
 
   // Sync form state when settings load from server
@@ -51,7 +53,8 @@ export function Settings() {
     loadSettings()
     loadProviders()
     loadAgents()
-  }, [loadSettings, loadProviders, loadAgents])
+    loadProfiles()
+  }, [loadSettings, loadProviders, loadAgents, loadProfiles])
 
   const handleTabChange = (tab: Tab) => {
     setActiveTab(tab)
@@ -137,6 +140,7 @@ export function Settings() {
         {activeTab === 'agents' && (
           <div className="rounded-xl border border-border-subtle bg-surface p-5">
             <AgentTable />
+            <ProfileManager />
           </div>
         )}
 

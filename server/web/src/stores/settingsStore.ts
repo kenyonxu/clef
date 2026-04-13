@@ -7,6 +7,8 @@ import type {
   AgentList,
   AgentUpdate,
   Diagnostics,
+  ProfileItem,
+  ProfileListResponse,
 } from '../api/types'
 
 interface SettingsState {
@@ -24,11 +26,15 @@ interface SettingsState {
   saveProviders: (update: ProviderUpdate) => Promise<void>
   loadAgents: () => Promise<void>
   saveAgents: (update: AgentUpdate) => Promise<void>
+  profiles: ProfileItem[]
+  loadProfiles: () => Promise<void>
+  saveProfile: (id: string, display_name: string, agents: Record<string, string>) => Promise<void>
+  deleteProfile: (id: string) => Promise<void>
   loadDiagnostics: () => Promise<void>
   cleanupSessions: () => Promise<number>
 }
 
-export const useSettingsStore = create<SettingsState>((set) => ({
+export const useSettingsStore = create<SettingsState>((set, get) => ({
   settings: null,
   providers: null,
   agents: null,
@@ -36,6 +42,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   isLoading: false,
   isSaving: false,
   providerError: null,
+  profiles: [],
 
   loadSettings: async () => {
     set({ isLoading: true })
@@ -95,6 +102,30 @@ export const useSettingsStore = create<SettingsState>((set) => ({
     } finally {
       set({ isSaving: false })
     }
+  },
+
+  loadProfiles: async () => {
+    try {
+      const data = await apiClient.get<ProfileListResponse>('/profiles')
+      set({ profiles: data.profiles })
+    } catch {
+      // Silent fail
+    }
+  },
+
+  saveProfile: async (id: string, display_name: string, agents: Record<string, string>) => {
+    set({ isSaving: true })
+    try {
+      await apiClient.post('/profiles', { id, display_name, agents })
+      await get().loadProfiles()
+    } finally {
+      set({ isSaving: false })
+    }
+  },
+
+  deleteProfile: async (id: string) => {
+    await apiClient.delete(`/profiles/${id}`)
+    await get().loadProfiles()
   },
 
   loadDiagnostics: async () => {

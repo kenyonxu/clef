@@ -99,6 +99,12 @@ export interface ProfileListResponse {
   profiles: ProfileItem[]
 }
 
+export interface ProfileSaveRequest {
+  id: string
+  display_name: string
+  agents: Record<string, string>
+}
+
 export interface StatusResponse {
   session_id: string
   status: SessionStatus

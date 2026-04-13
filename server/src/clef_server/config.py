@@ -283,6 +283,35 @@ def load_profiles(path: Path) -> dict[str, ProfileInfo]:
     return profiles
 
 
+def save_profile(path: Path, profile_id: str, display_name: str, agents: dict[str, str]) -> None:
+    """Save or update a single profile to profiles.yaml."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    raw = {}
+    if path.exists():
+        with open(path, "r", encoding="utf-8") as f:
+            raw = yaml.safe_load(f) or {}
+    if "profiles" not in raw:
+        raw["profiles"] = {}
+    raw["profiles"][profile_id] = {"display_name": display_name, "agents": agents}
+    yaml_str = yaml.dump(raw, allow_unicode=True, default_flow_style=False)
+    path.write_text(yaml_str, encoding="utf-8")
+
+
+def delete_profile(path: Path, profile_id: str) -> bool:
+    """Delete a profile from profiles.yaml. Returns True if found and deleted."""
+    if not path.exists():
+        return False
+    with open(path, "r", encoding="utf-8") as f:
+        raw = yaml.safe_load(f) or {}
+    profiles = raw.get("profiles", {})
+    if profile_id not in profiles:
+        return False
+    del profiles[profile_id]
+    yaml_str = yaml.dump(raw, allow_unicode=True, default_flow_style=False)
+    path.write_text(yaml_str, encoding="utf-8")
+    return True
+
+
 def save_agent_configs(path: Path, configs: dict[str, AgentConfig]) -> None:
     """Save agent configs back to YAML, preserving all fields."""
     raw: dict = {"agents": {}}

@@ -184,6 +184,12 @@ async def _run_workflow(session_id: str, prompt: str, plan: dict | None, workdir
 
 # === Endpoints ===
 
+class ProfileSaveRequest(BaseModel):
+    id: str = Field(..., min_length=1, max_length=64, pattern=r'^[a-zA-Z0-9_-]+$')
+    display_name: str = Field(..., min_length=1, max_length=128)
+    agents: dict[str, str]
+
+
 @router.get("/profiles")
 async def list_profiles():
     """Return available provider profiles."""
@@ -194,6 +200,24 @@ async def list_profiles():
         for p in profiles.values()
     ]
     return {"profiles": items}
+
+
+@router.post("/profiles")
+async def save_profile(req: ProfileSaveRequest):
+    """Save or update a provider profile."""
+    from clef_server.config import save_profile as _save
+    _save(_get_server_root() / "config" / "profiles.yaml", req.id, req.display_name, req.agents)
+    return {"id": req.id, "display_name": req.display_name}
+
+
+@router.delete("/profiles/{profile_id}")
+async def delete_profile(profile_id: str):
+    """Delete a provider profile."""
+    from clef_server.config import delete_profile as _delete
+    path = _get_server_root() / "config" / "profiles.yaml"
+    if not _delete(path, profile_id):
+        raise HTTPException(status_code=404, detail=f"Profile '{profile_id}' not found")
+    return {"deleted": profile_id}
 
 
 @router.post("/compose", response_model=ComposeResponse)

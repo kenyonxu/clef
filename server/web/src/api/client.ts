@@ -58,4 +58,18 @@ export const apiClient = {
       throw new Error('Cannot connect to Clef Server')
     }
   },
+
+  async delete<T>(path: string): Promise<T> {
+    try {
+      const res = await fetch(path, { method: 'DELETE' })
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({ detail: res.statusText }))
+        throw new ApiError(body.detail ?? res.statusText, res.status)
+      }
+      return res.json() as Promise<T>
+    } catch (err) {
+      if (err instanceof ApiError) throw err
+      throw new Error('Cannot connect to Clef Server')
+    }
+  },
 }
