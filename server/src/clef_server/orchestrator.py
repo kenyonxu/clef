@@ -864,24 +864,43 @@ class ComposeOrchestrator:
 
         return executor
 
+    @staticmethod
+    def _looks_like_abc(text: str) -> bool:
+        """Heuristic: does the text look like valid ABC notation?"""
+        stripped = text.strip()
+        if not stripped:
+            return False
+        # Must start with a standard ABC header or voice label
+        has_abc_header = any(stripped.startswith(h) for h in ("X:", "T:", "M:", "K:", "L:", "V:"))
+        # Must contain at least one bar line (|) or note letters
+        has_music = "|" in stripped or any(c in stripped for c in "abcdefgABCDEFG")
+        return has_abc_header and has_music
+
     def _extract_abc(self, text: str) -> str:
         """Extract ABC notation from agent response text.
 
         Handles markdown code fences (```abc ... ```) or raw ABC content.
-        Also trims trailing rest-only bars.
+        Rejects text that clearly isn't ABC (tool-call syntax, prose, etc.).
         """
         text = text.strip()
         # Guard against raw Content objects leaking into text
         if "Content(type=" in text:
             logger.warning("_extract_abc: received raw Content object, returning empty")
             return ""
+        # Reject text containing tool-call artifacts (DSML, XML tool tags, etc.)
+        tool_markers = ("<|DSML|>", "<function_calls>", "</invoke>", "tool_call", "FunctionCall")
+        if any(m in text for m in tool_markers):
+            logger.warning("_extract_abc: response contains tool-call syntax, returning empty")
+            return ""
         # Try fenced block first
         fence_match = re.search(r"```(?:abc)?\s*\n(.*?)```", text, re.DOTALL)
         if fence_match:
             text = fence_match.group(1).strip()
-        # Fallback: treat entire text as ABC if it looks like ABC
-        elif not (text.startswith("X:") or text.startswith("T:")):
-            pass  # use text as-is
+        # Raw text must look like ABC
+        elif not self._looks_like_abc(text):
+            logger.warning("_extract_abc: text does not look like ABC (first 80 chars: %s...), returning empty",
+                           text[:80])
+            return ""
 
         # Trim trailing rest-only bars
         text = self._trim_trailing_rests(text)
@@ -918,13 +937,19 @@ class ComposeOrchestrator:
     def _extract_json(self, text: str) -> dict:
         """Extract JSON from agent response, handling markdown fencing."""
         text = text.strip()
+        # Reject text containing tool-call artifacts
+        tool_markers = ("<|DSML|>", "<function_calls>", "</invoke>", "tool_call", "FunctionCall")
+        if any(m in text for m in tool_markers):
+            logger.warning("_extract_json: response contains tool-call syntax, returning pass verdict")
+            return {"verdict": "pass"}
         fence_match = re.search(r"```(?:json)?\s*\n(.*?)```", text, re.DOTALL)
         if fence_match:
             text = fence_match.group(1).strip()
         try:
             return json.loads(text)
         except json.JSONDecodeError:
-            return {"raw": text, "verdict": "pass"}
+            logger.warning("_extract_json: failed to parse JSON, returning pass verdict")
+            return {"verdict": "pass"}
 
     # ------------------------------------------------------------------
     # Prompt builders & helpers
@@ -1746,6 +1771,11 @@ class ComposeOrchestrator:
     def _extract_rhythm(self, response: str) -> str:
         """Extract rhythm skeleton from agent response."""
         import re as _re
+        # Reject tool-call artifacts
+        tool_markers = ("<|DSML|>", "<function_calls>", "</invoke>", "tool_call", "FunctionCall")
+        if any(m in response for m in tool_markers):
+            logger.warning("_extract_rhythm: response contains tool-call syntax, returning empty")
+            return ""
         match = _re.search(r"```(?:rhythm)?\s*\n?(.*?)```", response, _re.DOTALL)
         if match:
             return match.group(1).strip()
@@ -1754,7 +1784,9 @@ class ComposeOrchestrator:
         for line in lines:
             if "|" in line and any(c.isdigit() for c in line):
                 return line.strip()
-        return response.strip()
+        # Nothing recognizable found
+        logger.warning("_extract_rhythm: no rhythm pattern found in response")
+        return ""
 
     # ------------------------------------------------------------------
     # Phase 1: Sample (方向小样)

@@ -429,7 +429,18 @@ class TestExtractHelpers:
     def test_extract_abc_fallback(self, orch):
         text = "some raw text without abc header"
         result = orch._extract_abc(text)
-        assert result == text.strip()
+        assert result == ""  # non-ABC text is now rejected
+
+    def test_extract_abc_rejects_dsml(self, orch):
+        text = '<|DSML|function_calls>\n<|DSML|invoke name="write_file">\nX:1\nT:test\n```'
+        result = orch._extract_abc(text)
+        assert result == ""
+
+    def test_extract_abc_raw_header(self, orch):
+        text = 'X:1\nT:test\nM:4/4\nK:C\nV:1\nC D E F |'
+        result = orch._extract_abc(text)
+        assert "X:1" in result
+        assert "C D E F" in result
 
     def test_extract_json_from_fenced(self, orch):
         text = '```json\n{"verdict": "pass", "score": 8}\n```'
@@ -445,8 +456,7 @@ class TestExtractHelpers:
     def test_extract_json_fallback_on_bad_json(self, orch):
         text = "not valid json at all"
         result = orch._extract_json(text)
-        assert "raw" in result
-        assert result["verdict"] == "pass"
+        assert result["verdict"] == "pass"  # bad JSON returns pass verdict (no "raw" key)
 
 
 # ---------------------------------------------------------------------------
