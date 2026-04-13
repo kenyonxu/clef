@@ -786,7 +786,7 @@ class ComposeOrchestrator:
         workdir = self.workdir
 
         # Deduplication cache for read-only tools (cleared per agent loop)
-        _DEDUP_TOOLS = frozenset({"abc_lint", "validate_abc", "validate_rhythm_skeleton"})
+        _DEDUP_TOOLS = frozenset({"abc_lint", "validate_abc", "validate_rhythm_skeleton", "read_file", "list_files"})
         _call_cache: dict[str, Any] = {}
 
         def executor(call: dict) -> dict:

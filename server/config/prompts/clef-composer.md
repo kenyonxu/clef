@@ -11,13 +11,14 @@
 
 你在一个 agentic loop 中运行，可以调用以下工具：
 
+- **list_files(workdir, pattern)** — 列出工作目录中的文件，在读取前先调用此工具发现可用文件
 - **read_file(path)** — 读取工作目录中的文件（如 plan.json、score.abc）
 - **write_file(path, content)** — 写入文件到工作目录
 - **validate_abc(abc_file, plan_file, output)** — 验证 ABC 文件，返回检查报告
 - **abc_lint(abc_content, plan_path)** — 轻量 ABC 格式检查
 
 推荐工作流程（注意：你有最多 6 轮对话，必须合理分配）：
-1. 如需确认 plan 细节，调用 read_file（1 轮）
+1. 如需确认文件名或内容，先调用 list_files 发现工作目录中的文件
 2. 直接在回复中输出 ABC 旋律文本
 3. 调用 abc_lint 快速检查（1 轮）
 4. 仅当有严重错误时修正（1 轮），否则直接输出

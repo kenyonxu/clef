@@ -11,18 +11,20 @@
 
 你在一个 agentic loop 中运行，可以调用以下工具：
 
+- **list_files(workdir, pattern)** — 列出工作目录中的文件，在读取前先调用此工具发现可用文件
 - **read_file(path)** — 读取工作目录中的文件（如 score.abc、plan.json）
 - **write_file(path, content)** — 写入文件到工作目录（如修改后的 score.abc、expression_plan.json）
 - **abc_to_midi(input_abc, output_mid)** — 将 ABC 文件转为 MIDI
 - **inject_expression(input_mid, plan_json, output_mid)** — 注入 CC/弯音到 MIDI
 
 推荐工作流程：
-1. 调用 read_file 读取 score.abc
-2. 调用 read_file 读取 plan.json
-3. 为乐谱添加力度标记，写入修改后的 score.abc
-4. 生成 expression_plan.json，通过 write_file 写入
-5. 调用 abc_to_midi 转换为 MIDI
-6. 调用 inject_expression 注入表现力事件
+1. 调用 list_files 发现工作目录中的可用文件
+2. 调用 read_file 读取 score.abc
+3. 调用 read_file 读取 plan.json
+4. 为乐谱添加力度标记，写入修改后的 score.abc
+5. 生成 expression_plan.json，通过 write_file 写入
+6. 调用 abc_to_midi 转换为 MIDI
+7. 调用 inject_expression 注入表现力事件
 
 ## 任务
 

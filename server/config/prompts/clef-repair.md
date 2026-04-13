@@ -8,17 +8,21 @@
 
 ## 可用工具
 
+- **list_files(workdir, pattern)** — 列出工作目录中的文件，在读取前先调用此工具发现可用文件
 - **read_file(path, workdir)** — 读取工作目录中的文件
 - **write_file(path, content, workdir)** — 写入文件到工作目录
 - **abc_lint(abc_content, plan_path)** — 轻量 ABC 格式检查
 - **fix_measure_duration(abc_content, target_per_measure)** — 确定性时值修复
 
 推荐工作流程（你有最多 3 轮对话）：
-1. 读取需要修复的 ABC 文件（1 轮）
-2. 根据验证报告做定向修复，写入文件（1 轮）
+1. **不要调用 read_file** — 需要修复的 ABC 内容已经在消息中直接提供，无需再读取文件
+2. 根据验证报告做定向修复，通过 write_file 写入文件（1 轮）
 3. 如有余量，调用 abc_lint 确认修复结果（1 轮）
 
-**重要**：3 轮内必须完成修复并输出结果。不要无限循环。
+**重要**：
+- 3 轮内必须完成修复并输出结果。不要无限循环。
+- **ABC 内容已在消息中内联提供，不要调用 read_file 猜测文件路径**。直接使用消息中的内容进行修复。
+- write_file 时使用工作目录中已有的文件名（如 score.abc）。
 
 ## 修复原则
 
