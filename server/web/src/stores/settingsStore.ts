@@ -19,6 +19,7 @@ interface SettingsState {
   isLoading: boolean
   isSaving: boolean
   providerError: string | null
+  agentEdits: Record<string, { model_alias: string; temperature: number }>
 
   loadSettings: () => Promise<void>
   saveSettings: (update: Partial<Settings>) => Promise<void>
@@ -26,6 +27,7 @@ interface SettingsState {
   saveProviders: (update: ProviderUpdate) => Promise<void>
   loadAgents: () => Promise<void>
   saveAgents: (update: AgentUpdate) => Promise<void>
+  updateAgentEdits: (name: string, edits: { model_alias: string; temperature: number }) => void
   profiles: ProfileItem[]
   loadProfiles: () => Promise<void>
   saveProfile: (id: string, display_name: string, agents: Record<string, string>) => Promise<void>
@@ -43,6 +45,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   isSaving: false,
   providerError: null,
   profiles: [],
+  agentEdits: {},
 
   loadSettings: async () => {
     set({ isLoading: true })
@@ -88,7 +91,11 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   loadAgents: async () => {
     try {
       const data = await apiClient.get<AgentList>('/settings/agents')
-      set({ agents: data })
+      const edits: Record<string, { model_alias: string; temperature: number }> = {}
+      for (const a of data.agents) {
+        edits[a.name] = { model_alias: a.model_alias, temperature: a.temperature }
+      }
+      set({ agents: data, agentEdits: edits })
     } catch {
       // Silent fail
     }
@@ -98,10 +105,18 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     set({ isSaving: true })
     try {
       const data = await apiClient.put<AgentList>('/settings/agents', update)
-      set({ agents: data })
+      const edits: Record<string, { model_alias: string; temperature: number }> = {}
+      for (const a of data.agents) {
+        edits[a.name] = { model_alias: a.model_alias, temperature: a.temperature }
+      }
+      set({ agents: data, agentEdits: edits })
     } finally {
       set({ isSaving: false })
     }
+  },
+
+  updateAgentEdits: (name, edits) => {
+    set((s) => ({ agentEdits: { ...s.agentEdits, [name]: edits } }))
   },
 
   loadProfiles: async () => {

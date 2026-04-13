@@ -1,4 +1,3 @@
-import { useState, useEffect } from 'react'
 import { useSettingsStore } from '../../stores/settingsStore'
 import { useUIStore } from '../../stores/uiStore'
 
@@ -7,19 +6,9 @@ export function AgentTable() {
   const providers = useSettingsStore((s) => s.providers)
   const saveAgents = useSettingsStore((s) => s.saveAgents)
   const isSaving = useSettingsStore((s) => s.isSaving)
+  const agentEdits = useSettingsStore((s) => s.agentEdits)
+  const updateAgentEdits = useSettingsStore((s) => s.updateAgentEdits)
   const showToast = useUIStore((s) => s.showToast)
-
-  const [edits, setEdits] = useState<Record<string, { model_alias: string; temperature: number }>>({})
-
-  useEffect(() => {
-    if (agents) {
-      const initial: Record<string, { model_alias: string; temperature: number }> = {}
-      for (const a of agents.agents) {
-        initial[a.name] = { model_alias: a.model_alias, temperature: a.temperature }
-      }
-      setEdits(initial)
-    }
-  }, [agents])
 
   const providerAliases = [
     providers?.anthropic ? 'anthropic' : null,
@@ -29,7 +18,7 @@ export function AgentTable() {
 
   const handleSave = async () => {
     try {
-      await saveAgents({ agents: edits })
+      await saveAgents({ agents: agentEdits })
       showToast('Agent config saved', 'success')
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Save failed', 'error')
@@ -60,12 +49,12 @@ export function AgentTable() {
                 <td className="px-3 py-2 text-xs text-white font-mono">{agent.name}</td>
                 <td className="px-3 py-2">
                   <select
-                    value={edits[agent.name]?.model_alias ?? agent.model_alias}
+                    value={agentEdits[agent.name]?.model_alias ?? agent.model_alias}
                     onChange={(e) =>
-                      setEdits((prev) => ({
-                        ...prev,
-                        [agent.name]: { model_alias: e.target.value, temperature: prev[agent.name]?.temperature ?? 0.7 },
-                      }))
+                      updateAgentEdits(agent.name, {
+                        model_alias: e.target.value,
+                        temperature: agentEdits[agent.name]?.temperature ?? 0.7,
+                      })
                     }
                     className="rounded bg-surface-mid px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-brand"
                   >
@@ -80,17 +69,17 @@ export function AgentTable() {
                     min={0}
                     max={1}
                     step={0.1}
-                    value={edits[agent.name]?.temperature ?? agent.temperature}
+                    value={agentEdits[agent.name]?.temperature ?? agent.temperature}
                     onChange={(e) =>
-                      setEdits((prev) => ({
-                        ...prev,
-                        [agent.name]: { model_alias: prev[agent.name]?.model_alias ?? '', temperature: Number(e.target.value) },
-                      }))
+                      updateAgentEdits(agent.name, {
+                        model_alias: agentEdits[agent.name]?.model_alias ?? '',
+                        temperature: Number(e.target.value),
+                      })
                     }
                     className="w-20 accent-brand"
                   />
                   <span className="ml-1 text-xs font-mono text-muted">
-                    {(edits[agent.name]?.temperature ?? agent.temperature).toFixed(1)}
+                    {(agentEdits[agent.name]?.temperature ?? agent.temperature).toFixed(1)}
                   </span>
                 </td>
                 <td className="px-3 py-2">

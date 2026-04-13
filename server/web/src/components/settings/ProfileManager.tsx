@@ -4,6 +4,7 @@ import { useUIStore } from '../../stores/uiStore'
 
 export function ProfileManager() {
   const agents = useSettingsStore((s) => s.agents)
+  const agentEdits = useSettingsStore((s) => s.agentEdits)
   const profiles = useSettingsStore((s) => s.profiles)
   const isSaving = useSettingsStore((s) => s.isSaving)
   const saveProfile = useSettingsStore((s) => s.saveProfile)
@@ -24,7 +25,7 @@ export function ProfileManager() {
     if (!agents) return
     const agentMap: Record<string, string> = {}
     for (const a of agents.agents) {
-      agentMap[a.name] = a.model_alias
+      agentMap[a.name] = agentEdits[a.name]?.model_alias ?? a.model_alias
     }
     try {
       await saveProfile(id, name, agentMap)
