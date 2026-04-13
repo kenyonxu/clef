@@ -3,6 +3,8 @@ import { useSettingsStore } from '../../stores/settingsStore'
 import { useUIStore } from '../../stores/uiStore'
 import type { ProviderUpdate } from '../../api/types'
 
+type NewProviderType = 'openai_compat' | 'anthropic_compat'
+
 export function ProviderList() {
   const providers = useSettingsStore((s) => s.providers)
   const providerError = useSettingsStore((s) => s.providerError)
@@ -17,6 +19,7 @@ export function ProviderList() {
   const [editBaseUrl, setEditBaseUrl] = useState('')
 
   const [showAdd, setShowAdd] = useState(false)
+  const [newType, setNewType] = useState<NewProviderType>('openai_compat')
   const [newAlias, setNewAlias] = useState('')
   const [newModel, setNewModel] = useState('')
   const [newBaseUrl, setNewBaseUrl] = useState('')
@@ -46,9 +49,15 @@ export function ProviderList() {
     }
   }
 
-  const handleRemove = async (alias: string) => {
+  const handleRemove = async (alias: string, type: 'openai_compat' | 'anthropic_compat') => {
     try {
-      await saveProviders({ remove_openai_compat: [alias] })
+      const update: ProviderUpdate = {}
+      if (type === 'anthropic_compat') {
+        update.remove_anthropic_compat = [alias]
+      } else {
+        update.remove_openai_compat = [alias]
+      }
+      await saveProviders(update)
       showToast(`Removed ${alias}`, 'info')
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Remove failed', 'error')
@@ -58,11 +67,14 @@ export function ProviderList() {
   const handleAdd = async () => {
     if (!newAlias.trim()) return
     try {
-      await saveProviders({
-        openai_compat: {
-          [newAlias.trim()]: { model_id: newModel, base_url: newBaseUrl, api_key: newKey },
-        },
-      })
+      const entry = { model_id: newModel, base_url: newBaseUrl, api_key: newKey }
+      const update: ProviderUpdate = {}
+      if (newType === 'anthropic_compat') {
+        update.anthropic_compat = { [newAlias.trim()]: entry }
+      } else {
+        update.openai_compat = { [newAlias.trim()]: entry }
+      }
+      await saveProviders(update)
       setShowAdd(false)
       setNewAlias('')
       setNewModel('')
@@ -114,7 +126,7 @@ export function ProviderList() {
                 <button onClick={handleSaveEdit} disabled={isSaving}
                   className="rounded-[500px] bg-brand px-4 py-1 text-xs font-bold uppercase tracking-wider text-black hover:opacity-90 disabled:opacity-40">Save</button>
                 <button onClick={() => setEditing(null)}
-                  className="rounded-[500px] border border-border-standard px-4 py-1 text-xs font-bold uppercase tracking-wider text-silver hover:opacity-80">Cancel</button>
+                  className="rounded-[500px] border border-border-standard px-4 py-1. text-xs font-bold uppercase tracking-wider text-silver hover:opacity-80">Cancel</button>
               </div>
             </div>
           ) : (
@@ -139,6 +151,7 @@ export function ProviderList() {
               )}
               <button onClick={() => { setEditing(`ac:${p.alias}`); setEditModel(p.model_id); setEditBaseUrl(p.base_url); setEditKey('') }}
                 className="text-xs text-info hover:underline">Edit</button>
+              <button onClick={() => handleRemove(p.alias, 'anthropic_compat')} className="text-xs text-error hover:underline">Remove</button>
             </div>
           </div>
           <p className="text-xs font-mono text-muted">{p.model_id}</p>
@@ -149,14 +162,14 @@ export function ProviderList() {
               <input type="text" placeholder="API Key" value={editKey} onChange={(e) => setEditKey(e.target.value)}
                 className="w-full rounded-lg bg-surface-mid px-3 py-1.5 text-xs text-white placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-brand" />
               <input type="text" placeholder="Model ID" value={editModel} onChange={(e) => setEditModel(e.target.value)}
-                className="w-full rounded-lg bg-surface-mid px-3 py-1.5 text-xs text-white placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-brand" />
+                className="w-full rounded-lg bg-surface-mid px-2 py-1.5 text-xs text-white placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-brand" />
               <input type="text" placeholder="Base URL" value={editBaseUrl} onChange={(e) => setEditBaseUrl(e.target.value)}
-                className="w-full rounded-lg bg-surface-mid px-3 py-1.5 text-xs text-white placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-brand" />
+                className="w-full rounded-lg bg-surface-mid px-2 py-1.5 text-xs text-white placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-1 focus:ring-brand" />
               <div className="flex gap-2">
                 <button onClick={handleSaveEdit} disabled={isSaving}
                   className="rounded-[500px] bg-brand px-4 py-1 text-xs font-bold uppercase tracking-wider text-black hover:opacity-90 disabled:opacity-40">Save</button>
                 <button onClick={() => setEditing(null)}
-                  className="rounded-[500px] border border-border-standard px-4 py-1 text-xs font-bold uppercase tracking-wider text-silver hover:opacity-80">Cancel</button>
+                  className="rounded-[500px] border border-border-standard px-4 py-1. text-xs font-bold uppercase tracking-wider text-silver hover:opacity-80">Cancel</button>
               </div>
             </div>
           ) : null}
@@ -176,7 +189,7 @@ export function ProviderList() {
               ) : (
                 <span className="text-xs text-error">no key</span>
               )}
-              <button onClick={() => handleRemove(p.alias)} className="text-xs text-error hover:underline">Remove</button>
+              <button onClick={() => handleRemove(p.alias, 'openai_compat')} className="text-xs text-error hover:underline">Remove</button>
             </div>
           </div>
           <p className="text-xs font-mono text-muted">{p.model_id}</p>
@@ -185,16 +198,16 @@ export function ProviderList() {
           {editing === p.alias ? (
             <div className="space-y-2 border-t border-border-subtle pt-2">
               <input type="text" placeholder="API Key" value={editKey} onChange={(e) => setEditKey(e.target.value)}
-                className="w-full rounded-lg bg-surface-mid px-3 py-1.5 text-xs text-white placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-brand" />
+                className="w-full rounded-lg bg-surface-mid px-3 py-1.5 text-xs text-white placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-1 focus:ring-brand" />
               <input type="text" placeholder="Model ID" value={editModel} onChange={(e) => setEditModel(e.target.value)}
-                className="w-full rounded-lg bg-surface-mid px-3 py-1.5 text-xs text-white placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-brand" />
+                className="w-full rounded-lg bg-surface-mid px-3 py-1.5 text-xs text-white placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-1 focus:ring-1 focus:ring-brand" />
               <input type="text" placeholder="Base URL" value={editBaseUrl} onChange={(e) => setEditBaseUrl(e.target.value)}
-                className="w-full rounded-lg bg-surface-mid px-3 py-1.5 text-xs text-white placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-brand" />
+                className="w-full rounded-lg bg-surface-mid px-3 py-1.5 text-xs text-white placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-1 focus:ring-1 focus:ring-1 focus:ring-brand" />
               <div className="flex gap-2">
                 <button onClick={handleSaveEdit} disabled={isSaving}
-                  className="rounded-[500px] bg-brand px-4 py-1 text-xs font-bold uppercase tracking-wider text-black hover:opacity-90 disabled:opacity-40">Save</button>
+                  className="rounded-[500px] bg-brand px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-black hover:opacity-90 disabled:opacity-40">Save</button>
                 <button onClick={() => setEditing(null)}
-                  className="rounded-[500px] border border-border-standard px-4 py-1 text-xs font-bold uppercase tracking-wider text-silver hover:opacity-80">Cancel</button>
+                  className="rounded-[500px] border border-border-standard px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-silver hover:opacity-80">Cancel</button>
               </div>
             </div>
           ) : (
@@ -208,19 +221,30 @@ export function ProviderList() {
         <button onClick={() => setShowAdd(true)} className="text-xs text-info hover:underline">+ Add Provider</button>
       ) : (
         <div className="rounded-lg border border-border-subtle bg-surface p-3 space-y-2">
-          <input type="text" placeholder="Alias (e.g. grok)" value={newAlias} onChange={(e) => setNewAlias(e.target.value)}
-            className="w-full rounded-lg bg-surface-mid px-3 py-1.5 text-xs text-white placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-brand" />
+          <div>
+            <label className="block text-[10px] text-muted mb-1">Type</label>
+            <select
+              value={newType}
+              onChange={(e) => setNewType(e.target.value as NewProviderType)}
+              className="w-full rounded-lg bg-surface-mid px-2 py-1.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-brand"
+            >
+              <option value="openai_compat">OpenAI-Compatible (DeepSeek, SiliconFlow, etc.)</option>
+              <option value="anthropic_compat">Anthropic-Compatible (GLM, MiniMax, etc.)</option>
+            </select>
+          </div>
+          <input type="text" placeholder="Alias (e.g. minimax)" value={newAlias} onChange={(e) => setNewAlias(e.target.value)}
+            className="w-full rounded-lg bg-surface-mid px-3 py-1.5 text-xs text-white placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-1 focus:ring-brand" />
           <input type="text" placeholder="Model ID" value={newModel} onChange={(e) => setNewModel(e.target.value)}
-            className="w-full rounded-lg bg-surface-mid px-3 py-1.5 text-xs text-white placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-brand" />
+            className="w-full rounded-lg bg-surface-mid px-3 py-1.5 text-xs text-white placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-1 focus:ring-1 focus:ring-1 focus:ring-1 focus:ring-1 focus:ring-2" />
           <input type="text" placeholder="Base URL" value={newBaseUrl} onChange={(e) => setNewBaseUrl(e.target.value)}
-            className="w-full rounded-lg bg-surface-mid px-3 py-1.5 text-xs text-white placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-brand" />
+            className="w-full rounded-lg bg-surface-mid px-3 py-1.5 text-xs text-white placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-1 focus:ring-1 focus:ring-2" />
           <input type="text" placeholder="API Key" value={newKey} onChange={(e) => setNewKey(e.target.value)}
-            className="w-full rounded-lg bg-surface-mid px-3 py-1.5 text-xs text-white placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-brand" />
+            className="w-full rounded-lg bg-surface-mid px-3 py-1.5 text-xs text-white placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-1 focus:ring-1 focus:ring-2" />
           <div className="flex gap-2">
             <button onClick={handleAdd} disabled={isSaving || !newAlias.trim()}
-              className="rounded-[500px] bg-brand px-4 py-1 text-xs font-bold uppercase tracking-wider text-black hover:opacity-90 disabled:opacity-40">Add</button>
+              className="rounded-[500px] bg-brand px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-black hover:opacity-90 disabled:opacity-40">Add</button>
             <button onClick={() => setShowAdd(false)}
-              className="rounded-[500px] border border-border-standard px-4 py-1 text-xs font-bold uppercase tracking-wider text-silver hover:opacity-80">Cancel</button>
+              className="rounded-[500px] border border-border-standard px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-silver hover:opacity-80">Cancel</button>
           </div>
         </div>
       )}
