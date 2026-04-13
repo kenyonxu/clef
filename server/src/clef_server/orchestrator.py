@@ -809,8 +809,11 @@ class ComposeOrchestrator:
             if tool_name in _DEDUP_TOOLS:
                 cache_key = json.dumps({"tool": tool_name, "args": args}, sort_keys=True)
                 if cache_key in _call_cache:
-                    logger.info("[DEDUP] %s — returning cached result", tool_name)
-                    return _call_cache[cache_key]
+                    logger.info("[DEDUP] %s — returning cached result (annotated)", tool_name)
+                    cached = _call_cache[cache_key]
+                    if isinstance(cached, dict):
+                        return {**cached, "_dedup": True, "_dedup_note": "You already called this tool with identical arguments. Use the previous result instead of calling again."}
+                    return cached
 
             func = TOOLS_REGISTRY.get(tool_name)
             if func is None:
