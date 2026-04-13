@@ -134,6 +134,11 @@ class ComposeOrchestrator:
     MAX_MELODY_GATE_RETRIES = 3
     MAX_ITERATION_ROUNDS = 3
 
+    # Rate-limit pacing: seconds to sleep between sequential agent calls
+    # to avoid 429 (code 1302) from API providers like Zhipu.
+    INTER_AGENT_DELAY = 2   # between voice generations (sample/create)
+    INTER_ROUND_DELAY = 3   # between best-of-N repair rounds
+
     # Voice label mapping: role -> ABC voice number
     VOICE_MAP = {"melody": "V:1", "harmony": "V:2", "rhythm": "V:3+V:4"}
     _VOICE_TO_AGENT = {"V:1": "clef-composer", "V:2": "clef-harmonist", "V:3": "clef-rhythmist", "V:4": "clef-rhythmist"}
@@ -1557,6 +1562,10 @@ class ComposeOrchestrator:
                 round_idx, fail_count, agent_name,
             )
 
+            # Rate-limit pacing between best-of-N rounds
+            if round_idx < max_rounds - 1:
+                await asyncio.sleep(self.INTER_ROUND_DELAY)
+
             if fail_count == 0:
                 break
 
@@ -1792,6 +1801,9 @@ class ComposeOrchestrator:
             self.session.record_sub_step(voice_display, "done", agent=agent_name)
             logger.info("Sample voice %s: %d FAILs", voice_label, fail_count)
 
+            # Rate-limit pacing between voice generations
+            await asyncio.sleep(self.INTER_AGENT_DELAY)
+
         # Merge all fragments
         self.session.record_sub_step("合并声部", "running")
         merge_result = merge_abc(str(plan_path), fragments, str(score_path))
@@ -1913,6 +1925,9 @@ class ComposeOrchestrator:
 
             self.session.record_sub_step(voice_display, "done", agent=agent_name)
 
+            # Rate-limit pacing between voice generations
+            await asyncio.sleep(self.INTER_AGENT_DELAY)
+
         # Validate per-voice bar counts — truncate if significantly over target
         target_bars = plan.get("total_bars", 0)
         if target_bars > 0:
@@ -2021,6 +2036,9 @@ class ComposeOrchestrator:
             iter_review_path.write_text(json.dumps(review, indent=2, ensure_ascii=False), encoding="utf-8")
             self.session.record_sub_step("完整审查", "done", agent="clef-reviewer")
 
+            # Rate-limit pacing between reviewer and leader
+            await asyncio.sleep(self.INTER_AGENT_DELAY)
+
             # Track review as a tool-like message for microcompact
             self._iteration_history.append({
                 "role": "tool",
@@ -2121,6 +2139,9 @@ class ComposeOrchestrator:
 
                 completed_agents.add(agent_name)
                 self.session.record_sub_step(task_label, "done", agent=agent_name)
+
+                # Rate-limit pacing between sequential agent tasks
+                await asyncio.sleep(self.INTER_AGENT_DELAY)
 
                 # Refresh score for next task in this round
                 current_score = score_path.read_text(encoding="utf-8") if score_path.exists() else ""
