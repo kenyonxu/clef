@@ -172,6 +172,8 @@ async def run_agent_loop(
 
         if has_real_call:
             turns_used += 1
+            # Rate-limit pacing: brief pause between turns to avoid API 429
+            await asyncio.sleep(1)
         else:
             logger.info(
                 "Agent loop: all tool calls were DEDUP hits, not counting as a turn"
