@@ -807,12 +807,16 @@ class ComposeOrchestrator:
 
             # Deduplication: return cached result for identical read-only tool calls
             if tool_name in _DEDUP_TOOLS:
-                # Normalize args for cache key: strip string values to avoid
-                # whitespace-only differences causing cache misses
-                norm_args = {
-                    k: (v.strip() if isinstance(v, str) else v)
-                    for k, v in args.items()
-                }
+                # Normalize args for cache key: strip strings, resolve paths to
+                # absolute to avoid cache misses from plan_path variations
+                norm_args = {}
+                for k, v in args.items():
+                    if isinstance(v, str):
+                        v = v.strip()
+                        # Resolve path-like args (plan_path, file_path) to absolute
+                        if k.endswith("path") and workdir and not v.startswith("/") and not v[1:2] == ":":
+                            v = str((Path(workdir) / v).resolve())
+                    norm_args[k] = v
                 cache_key = json.dumps({"tool": tool_name, "args": norm_args}, sort_keys=True)
                 if cache_key in _call_cache:
                     logger.info("[DEDUP] %s — returning cached result (annotated)", tool_name)
