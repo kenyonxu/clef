@@ -7,7 +7,7 @@ agents:
     - orchestration
     - abc
     temperature: 0.8
-    max_turns: 6
+    max_tool_calls: 10
     tools:
     - read_file
     - write_file
@@ -21,7 +21,7 @@ agents:
     - harmony
     - abc
     temperature: 0.8
-    max_turns: 6
+    max_tool_calls: 10
     tools:
     - read_file
     - write_file
@@ -35,7 +35,7 @@ agents:
     - orchestration
     - abc
     temperature: 0.5
-    max_turns: 4
+    max_tool_calls: 10
     tools:
     - read_file
     - write_file
@@ -49,7 +49,7 @@ agents:
     - orchestration
     - abc
     temperature: 0.3
-    max_turns: 3
+    max_tool_calls: 10
     tools:
     - read_file
     - validate_abc
@@ -60,7 +60,7 @@ agents:
     skills:
     - abc
     temperature: 0.2
-    max_turns: 3
+    max_tool_calls: 6
     tools:
     - read_file
     - write_file
@@ -70,7 +70,7 @@ agents:
     skills:
     - abc
     temperature: 0.2
-    max_turns: 3
+    max_tool_calls: 6
     tools:
     - read_file
     - write_file
@@ -83,7 +83,7 @@ agents:
     - rhythm
     - abc
     temperature: 0.7
-    max_turns: 6
+    max_tool_calls: 10
     tools:
     - read_file
     - write_file

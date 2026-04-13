@@ -62,7 +62,7 @@ async def test_single_turn_no_tools(mock_client):
     assert isinstance(result, AgentLoopResult)
     assert result.text == "Hello, here is your ABC: X:1"
     assert result.tool_calls_count == 0
-    assert result.turns_used == 1
+    assert result.tool_calls_used == 1
 
 
 @pytest.mark.asyncio
@@ -103,12 +103,12 @@ async def test_tool_call_then_final_response(mock_client, echo_tool_executor):
 
     assert "ABC: X:1" in result.text
     assert result.tool_calls_count == 1
-    assert result.turns_used == 2
+    assert result.tool_calls_used == 2
 
 
 @pytest.mark.asyncio
-async def test_max_turns_final_response_filters_function_calls(mock_client, echo_tool_executor):
-    """When max_turns is reached, function_call Content items in the final
+async def test_max_tool_calls_final_response_filters_function_calls(mock_client, echo_tool_executor):
+    """When max_tool_calls is reached, function_call Content items in the final
     response must be filtered out — they should NOT appear in result.text."""
     fc = Content.from_function_call(
         call_id="call_1",
@@ -119,7 +119,7 @@ async def test_max_turns_final_response_filters_function_calls(mock_client, echo
     mock_client.get_response.side_effect = [
         # Turn 1: tool call (consumes turn)
         _make_response(["Writing..."], tool_calls_content=[fc]),
-        # Turn 2: tool call again (consumes turn, max_turns=2 reached)
+        # Turn 2: tool call again (consumes tool call, max_tool_calls=2 reached)
         _make_response(["Writing more..."], tool_calls_content=[fc]),
         # Forced final response: contains BOTH text AND a function_call
         _make_response(
@@ -138,14 +138,14 @@ async def test_max_turns_final_response_filters_function_calls(mock_client, echo
         user_message="Compose.",
         tools=[{"type": "function", "function": {"name": "write_file", "parameters": {"type": "object", "properties": {"path": {"type": "string"}, "content": {"type": "string"}}, "required": ["path", "content"]}}}],
         tool_executor=echo_tool_executor,
-        max_turns=2,
+        max_tool_calls=2,
     )
 
     # Text should contain the actual text response, NOT "Content(type=function_call)"
     assert "Content(type=" not in result.text
     assert "Here is my ABC" in result.text
-    assert result.turns_used == 3  # 2 tool turns + 1 final
-async def test_max_turns_limit(mock_client, echo_tool_executor):
+    assert result.tool_calls_used == 3  # 2 tool calls + 1 final
+async def test_max_tool_calls_limit(mock_client, echo_tool_executor):
     fc = Content.from_function_call(
         call_id="call_1",
         name="read_file",
@@ -175,10 +175,10 @@ async def test_max_turns_limit(mock_client, echo_tool_executor):
             }
         ],
         tool_executor=echo_tool_executor,
-        max_turns=2,
+        max_tool_calls=2,
     )
 
-    assert result.turns_used == 3  # 2 tool turns + 1 final
+    assert result.tool_calls_used == 3  # 2 tool calls + 1 final
     assert result.tool_calls_count == 2
 
 
@@ -234,7 +234,7 @@ async def test_empty_response(mock_client):
     )
 
     assert result.text == ""
-    assert result.turns_used == 1
+    assert result.tool_calls_used == 1
 
 
 @pytest.mark.asyncio
@@ -250,7 +250,7 @@ async def test_cancel_check(mock_client):
     )
 
     assert result.text == ""
-    assert result.turns_used == 1
+    assert result.tool_calls_used == 1
 
 
 @pytest.mark.asyncio
@@ -292,7 +292,7 @@ async def test_multiple_tool_calls_in_one_turn(mock_client, echo_tool_executor):
 
     assert "ABC: X:1" in result.text
     assert result.tool_calls_count == 2
-    assert result.turns_used == 2
+    assert result.tool_calls_used == 2
 
 
 # -- Layer 3: DEDUP turn budget tests --
@@ -302,7 +302,7 @@ async def test_multiple_tool_calls_in_one_turn(mock_client, echo_tool_executor):
 async def test_dedup_tool_calls_dont_count_as_turn(mock_client):
     """All-DEDUP turn should NOT consume turn budget, allowing real calls to proceed.
 
-    With max_turns=1: old code would exhaust the budget on the DEDUP turn and skip
+    With max_tool_calls=1: old code would exhaust the budget on the DEDUP turn and skip
     the real write call. New code skips DEDUP turn, executes real call, then final.
     """
     def dedup_executor(call):
@@ -337,14 +337,14 @@ async def test_dedup_tool_calls_dont_count_as_turn(mock_client):
             {"type": "function", "function": {"name": "write_file", "parameters": {"type": "object", "properties": {"path": {"type": "string"}, "content": {"type": "string"}}, "required": ["path", "content"]}}},
         ],
         tool_executor=dedup_executor,
-        max_turns=1,
+        max_tool_calls=1,
     )
 
-    # Critical: old code would only execute 1 tool call (DEDUP) with max_turns=1.
+    # Critical: old code would only execute 1 tool call (DEDUP) with max_tool_calls=1.
     # New code skips DEDUP turn, executes real write → 2 total tool calls.
     assert result.tool_calls_count == 2  # 1 dedup + 1 real
     assert "Done" in result.text
-    assert result.turns_used == 2  # 1 real turn + 1 final
+    assert result.tool_calls_used == 2  # 1 real tool call + 1 final
 
 
 @pytest.mark.asyncio
@@ -380,10 +380,10 @@ async def test_mixed_dedup_and_real_counts_as_turn(mock_client):
             {"type": "function", "function": {"name": "write_file", "parameters": {"type": "object", "properties": {"path": {"type": "string"}, "content": {"type": "string"}}, "required": ["path", "content"]}}},
         ],
         tool_executor=mixed_executor,
-        max_turns=2,
+        max_tool_calls=2,
     )
 
-    assert result.turns_used == 2  # 1 mixed turn (counted) + 1 final
+    assert result.tool_calls_used == 2  # 1 mixed tool call (counted) + 1 final
 
 
 @pytest.mark.asyncio
@@ -413,7 +413,7 @@ async def test_dedup_flag_stripped_from_llm_message(mock_client):
         user_message="Read file.",
         tools=[{"type": "function", "function": {"name": "read_file", "parameters": {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]}}}],
         tool_executor=capturing_executor,
-        max_turns=3,
+        max_tool_calls=3,
     )
 
     # Verify the tool result message sent to LLM on the 2nd get_response call

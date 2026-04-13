@@ -1,9 +1,13 @@
 """Agentic tool-use loop — ReAct-style LLM + tool execution cycle.
 
-Each turn:
+Each tool call cycle:
   1. Send messages to LLM (including tool schemas if any)
   2. Parse response: if function_call contents present, execute them, append results, repeat
   3. If no function_call contents (finish_reason="stop"), return final text
+
+Terminology:
+  - tool_calls: number of LLM→tool→result cycles executed
+  - max_tool_calls: safety limit to prevent infinite loops
 """
 
 import asyncio
@@ -23,7 +27,7 @@ class AgentLoopResult:
 
     text: str
     tool_calls_count: int = 0
-    turns_used: int = 1
+    tool_calls_used: int = 1
 
 
 def _extract_tool_calls(message: Message) -> list[Content]:
@@ -55,7 +59,7 @@ async def run_agent_loop(
     tool_executor: Any = None,
     *,
     temperature: float = 0.7,
-    max_turns: int = 5,
+    max_tool_calls: int = 10,
     max_tokens: int = 4096,
     turn_timeout: float = 120.0,
     cancel_check: Any = None,
@@ -67,12 +71,12 @@ async def run_agent_loop(
     ]
 
     total_tool_calls = 0
-    turns_used = 0
+    tool_calls_used = 0
 
-    while turns_used < max_turns:
+    while tool_calls_used < max_tool_calls:
         if cancel_check and cancel_check():
-            logger.info("Agent loop cancelled at turn %d", turns_used + 1)
-            return AgentLoopResult(text="", turns_used=turns_used + 1)
+            logger.info("Agent loop cancelled after %d tool calls", tool_calls_used)
+            return AgentLoopResult(text="", tool_calls_used=tool_calls_used + 1)
 
         try:
             response = await asyncio.wait_for(
@@ -86,13 +90,13 @@ async def run_agent_loop(
             )
         except asyncio.TimeoutError:
             logger.warning(
-                "Agent loop turn %d timed out after %.0fs, returning empty result",
-                turns_used + 1, turn_timeout,
+                "Agent loop tool call %d timed out after %.0fs, returning empty result",
+                tool_calls_used + 1, turn_timeout,
             )
-            return AgentLoopResult(text="", turns_used=turns_used + 1, tool_calls_count=total_tool_calls)
+            return AgentLoopResult(text="", tool_calls_used=tool_calls_used + 1, tool_calls_count=total_tool_calls)
 
         if not response.messages:
-            return AgentLoopResult(text="", turns_used=turns_used + 1)
+            return AgentLoopResult(text="", tool_calls_used=tool_calls_used + 1)
 
         assistant_msg = response.messages[0]
         tool_calls = _extract_tool_calls(assistant_msg)
@@ -102,7 +106,7 @@ async def run_agent_loop(
             return AgentLoopResult(
                 text=content,
                 tool_calls_count=total_tool_calls,
-                turns_used=turns_used + 1,
+                tool_calls_used=tool_calls_used + 1,
             )
 
         total_tool_calls += len(tool_calls)
@@ -121,8 +125,8 @@ async def run_agent_loop(
                 args = {}
 
             logger.info(
-                "Agent loop turn %d: calling tool %s with args %s",
-                turns_used + 1,
+                "Agent loop tool call %d: %s with args %s",
+                tool_calls_used + 1,
                 tool_name,
                 json.dumps(args, ensure_ascii=False)[:200],
             )
@@ -171,7 +175,7 @@ async def run_agent_loop(
             messages.append(tool_msg)
 
         if has_real_call:
-            turns_used += 1
+            tool_calls_used += 1
             # Rate-limit pacing: brief pause between turns to avoid API 429
             await asyncio.sleep(1)
         else:
@@ -180,7 +184,7 @@ async def run_agent_loop(
             )
 
     logger.warning(
-        "Agent loop reached max_turns=%d, requesting final response", max_turns
+        "Agent loop reached max_tool_calls=%d, requesting final response", max_tool_calls
     )
     response = await client.get_response(
         messages,
@@ -194,5 +198,5 @@ async def run_agent_loop(
     return AgentLoopResult(
         text=content,
         tool_calls_count=total_tool_calls,
-        turns_used=turns_used + 1,
+        tool_calls_used=tool_calls_used + 1,
     )

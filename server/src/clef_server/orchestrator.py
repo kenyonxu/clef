@@ -179,7 +179,7 @@ class ComposeOrchestrator:
         # Load agent configs from agents.yaml (falls back to hardcoded defaults)
         self._agent_defs = self._load_agent_defs()
 
-        # Apply profile overrides (only model_alias, not temperature/max_turns/etc.)
+        # Apply profile overrides (only model_alias, not temperature/max_tool_calls/etc.)
         if profile_overrides:
             for agent_name, model_alias in profile_overrides.items():
                 if agent_name in self._agent_defs:
@@ -623,38 +623,38 @@ class ComposeOrchestrator:
             "prompt_md": "clef-composer.md",
             "model_alias": "deepseek",
             "skills": ["melody", "orchestration", "abc"],
-            "max_turns": 6,
+            "max_tool_calls": 10,
         },
         "clef-harmonist": {
             "prompt_md": "clef-harmonist.md",
             "model_alias": "deepseek",
             "skills": ["harmony", "abc"],
-            "max_turns": 6,
+            "max_tool_calls": 10,
         },
         "clef-rhythmist": {
             "prompt_md": "clef-rhythmist.md",
             "model_alias": "deepseek",
             "skills": ["rhythm", "abc"],
-            "max_turns": 6,
+            "max_tool_calls": 10,
         },
         "clef-reviewer": {
             "prompt_md": "clef-reviewer.md",
             "model_alias": "deepseek",
             "skills": ["structure", "orchestration", "abc"],
-            "max_turns": 3,
+            "max_tool_calls": 10,
         },
         "clef-orchestrator": {
             "prompt_md": "clef-orchestrator.md",
             "model_alias": "deepseek",
             "skills": ["orchestration", "abc"],
-            "max_turns": 4,
+            "max_tool_calls": 10,
         },
         "clef-repair": {
             "prompt_md": "server/config/prompts/clef-repair.md",
             "model_alias": "anthropic-haiku",
             "skills": ["abc"],
             "temperature": 0.2,
-            "max_turns": 3,
+            "max_tool_calls": 6,
         },
     }
 
@@ -671,7 +671,7 @@ class ComposeOrchestrator:
                     "model_alias": cfg.model_alias,
                     "skills": cfg.skills,
                     "temperature": cfg.temperature,
-                    "max_turns": cfg.max_turns,
+                    "max_tool_calls": cfg.max_tool_calls,
                 }
             logger.info("Loaded agent configs from agents.yaml: %s", list(defs.keys()))
             return defs
@@ -690,7 +690,7 @@ class ComposeOrchestrator:
 
         Builds a 3-layer prompt (instructions / skills / context),
         provides tool schemas, and runs a ReAct loop until the LLM
-        stops calling tools or max_turns is reached.
+        stops calling tools or max_tool_calls is reached.
         """
         agent_def = self._agent_defs.get(agent_name)
         if not agent_def:
@@ -747,12 +747,12 @@ class ComposeOrchestrator:
             system_prompt = instructions.build_system_message()
             user_message = instructions.build_user_message(message)
 
-            max_turns = agent_def.get("max_turns", 5)
+            max_tool_calls = agent_def.get("max_tool_calls", agent_def.get("max_turns", 10))
             temperature = agent_def.get("temperature", 0.7)
 
             logger.info(
-                "Agent %s: starting loop (max_turns=%d, tools=%s, model=%s)",
-                agent_name, max_turns, [s["function"]["name"] for s in tool_schemas], model_alias,
+                "Agent %s: starting loop (max_tool_calls=%d, tools=%s, model=%s)",
+                agent_name, max_tool_calls, [s["function"]["name"] for s in tool_schemas], model_alias,
             )
 
             result = await run_agent_loop(
@@ -762,12 +762,12 @@ class ComposeOrchestrator:
                 tools=tool_schemas,
                 tool_executor=tool_executor,
                 temperature=temperature,
-                max_turns=max_turns,
+                max_tool_calls=max_tool_calls,
             )
 
             logger.info(
-                "Agent %s: loop completed (turns=%d, tool_calls=%d)",
-                agent_name, result.turns_used, result.tool_calls_count,
+                "Agent %s: loop completed (tool_calls_used=%d, tool_calls=%d)",
+                agent_name, result.tool_calls_used, result.tool_calls_count,
             )
 
             return result.text
