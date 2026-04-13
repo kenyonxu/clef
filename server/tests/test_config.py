@@ -9,7 +9,9 @@ import yaml
 from clef_server.config import (
     AgentConfig,
     ProviderConfig,
+    ProfileInfo,
     load_agent_configs,
+    load_profiles,
     load_provider_config,
     load_settings,
     save_settings,
@@ -157,3 +159,40 @@ class TestAgentWriteBack:
         assert loaded["clef-composer"].temperature == 0.9
         assert loaded["clef-composer"].skills == ["melody", "abc"]
         assert loaded["clef-composer"].tools == ["read_file"]
+
+
+class TestLoadProfiles:
+    def test_load_profiles_from_yaml(self, tmp_path):
+        yaml_content = {
+            "profiles": {
+                "test-profile": {
+                    "display_name": "Test",
+                    "agents": {"clef-composer": "deepseek-chat"},
+                },
+            }
+        }
+        path = tmp_path / "profiles.yaml"
+        path.write_text(yaml.dump(yaml_content), encoding="utf-8")
+        profiles = load_profiles(path)
+        assert "test-profile" in profiles
+        assert profiles["test-profile"].display_name == "Test"
+        assert profiles["test-profile"].agents == {"clef-composer": "deepseek-chat"}
+
+    def test_load_profiles_missing_file(self, tmp_path):
+        profiles = load_profiles(tmp_path / "nonexistent.yaml")
+        assert profiles == {}
+
+    def test_load_profiles_partial_agents(self, tmp_path):
+        """Profile that only lists some agents should not affect unlisted ones."""
+        yaml_content = {
+            "profiles": {
+                "sparse": {
+                    "display_name": "Sparse",
+                    "agents": {"clef-reviewer": "deepseek-chat"},
+                },
+            }
+        }
+        path = tmp_path / "profiles.yaml"
+        path.write_text(yaml.dump(yaml_content), encoding="utf-8")
+        profiles = load_profiles(path)
+        assert profiles["sparse"].agents == {"clef-reviewer": "deepseek-chat"}

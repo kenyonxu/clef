@@ -1,0 +1,33 @@
+profiles:
+  default:
+    display_name: "默认 (智谱 GLM)"
+    agents:
+      clef-composer: anthropic-opus
+      clef-harmonist: anthropic-opus
+      clef-rhythmist: anthropic-sonnet
+      clef-orchestrator: anthropic-sonnet
+      clef-reviewer: anthropic-sonnet
+      clef-revision: anthropic-haiku
+      clef-repair: anthropic-haiku
+
+  cost-saving:
+    display_name: "低成本 (全 DeepSeek)"
+    agents:
+      clef-composer: deepseek-chat
+      clef-harmonist: deepseek-chat
+      clef-rhythmist: deepseek-chat
+      clef-orchestrator: deepseek-chat
+      clef-reviewer: deepseek-chat
+      clef-revision: deepseek-chat
+      clef-repair: deepseek-chat
+
+  mixed:
+    display_name: "混合 (主力智谱+审查DeepSeek)"
+    agents:
+      clef-composer: anthropic-opus
+      clef-harmonist: anthropic-opus
+      clef-rhythmist: anthropic-sonnet
+      clef-orchestrator: anthropic-sonnet
+      clef-reviewer: deepseek-chat
+      clef-revision: deepseek-chat
+      clef-repair: deepseek-chat

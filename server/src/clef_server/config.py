@@ -256,6 +256,33 @@ def save_provider_config(path: Path, raw: dict) -> None:
     path.write_text(yaml_str, encoding="utf-8")
 
 
+# === Profile Loading ===
+
+@dataclass
+class ProfileInfo:
+    id: str
+    display_name: str
+    agents: dict[str, str]  # agent_name -> model_alias
+
+
+def load_profiles(path: Path) -> dict[str, ProfileInfo]:
+    """Load provider profiles from YAML. Returns {profile_id: ProfileInfo}."""
+    if not path.exists():
+        return {}
+    with open(path, "r", encoding="utf-8") as f:
+        raw = yaml.safe_load(f)
+    profiles: dict[str, ProfileInfo] = {}
+    for profile_id, cfg in (raw.get("profiles") or {}).items():
+        if not isinstance(cfg, dict):
+            continue
+        profiles[profile_id] = ProfileInfo(
+            id=profile_id,
+            display_name=cfg.get("display_name", profile_id),
+            agents=cfg.get("agents", {}),
+        )
+    return profiles
+
+
 def save_agent_configs(path: Path, configs: dict[str, AgentConfig]) -> None:
     """Save agent configs back to YAML, preserving all fields."""
     raw: dict = {"agents": {}}
