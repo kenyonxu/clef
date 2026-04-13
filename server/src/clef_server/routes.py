@@ -317,7 +317,16 @@ async def confirm_session(session_id: str, req: ConfirmRequest):
             logger.exception(f"Session {session_id}: resume failed")
             sess = _session_manager.get(session_id)
             if sess:
-                sess.set_failed(error=str(e))
+                # Recoverable errors (500/timeout) → return to awaiting_confirm so user can retry
+                from clef_server.orchestrator import RecoverableAgentError
+                if isinstance(e, RecoverableAgentError):
+                    logger.warning(
+                        "Session %s: recoverable error during resume, returning to confirm state",
+                        session_id,
+                    )
+                    sess.set_awaiting_confirm(confirmation_data=saved_confirmation_data)
+                else:
+                    sess.set_failed(error=str(e))
 
     task = asyncio.create_task(_resume_workflow())
     task.add_done_callback(lambda t: t.exception() and logger.error(f"Resume task failed: {t.exception()}"))

@@ -6,6 +6,7 @@ Each turn:
   3. If no function_call contents (finish_reason="stop"), return final text
 """
 
+import asyncio
 import json
 import logging
 from dataclasses import dataclass
@@ -42,6 +43,7 @@ async def run_agent_loop(
     temperature: float = 0.7,
     max_turns: int = 5,
     max_tokens: int = 4096,
+    turn_timeout: float = 120.0,
     cancel_check: Any = None,
 ) -> AgentLoopResult:
     """Run an agentic tool-use loop until the LLM stops calling tools."""
@@ -57,12 +59,22 @@ async def run_agent_loop(
             logger.info("Agent loop cancelled at turn %d", turn + 1)
             return AgentLoopResult(text="", turns_used=turn + 1)
 
-        response = await client.get_response(
-            messages,
-            tools=tools if tools else None,
-            temperature=temperature,
-            max_tokens=max_tokens,
-        )
+        try:
+            response = await asyncio.wait_for(
+                client.get_response(
+                    messages,
+                    tools=tools if tools else None,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                ),
+                timeout=turn_timeout,
+            )
+        except asyncio.TimeoutError:
+            logger.warning(
+                "Agent loop turn %d timed out after %.0fs, returning empty result",
+                turn + 1, turn_timeout,
+            )
+            return AgentLoopResult(text="", turns_used=turn + 1, tool_calls_count=total_tool_calls)
 
         if not response.messages:
             return AgentLoopResult(text="", turns_used=turn + 1)

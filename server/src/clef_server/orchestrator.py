@@ -23,6 +23,13 @@ from clef_server.tools import ToolMeta, ToolSafety
 logger = logging.getLogger(__name__)
 
 
+# === Custom exceptions ===
+
+class RecoverableAgentError(RuntimeError):
+    """Agent failed due to a transient/transiently-recoverable error (500, timeout, etc.)."""
+    pass
+
+
 # --- Plan schema validation ---
 
 class _PlanSection(BaseModel):
@@ -754,6 +761,16 @@ class ComposeOrchestrator:
 
         except Exception as exc:
             logger.error("Agent %s execution failed: %s", agent_name, exc)
+            # Classify as recoverable if the error is a transient API failure
+            exc_str = str(exc).lower()
+            is_recoverable = any(
+                kw in exc_str
+                for kw in ("500", "502", "503", "504", "timeout", "timed out", "connection")
+            )
+            if is_recoverable:
+                raise RecoverableAgentError(
+                    f"Agent {agent_name} failed (recoverable): {exc}"
+                ) from exc
             raise RuntimeError(f"Agent {agent_name} failed: {exc}") from exc
 
     def _make_tool_executor(self, agent_name: str):
@@ -761,11 +778,16 @@ class ComposeOrchestrator:
 
         The executor resolves tool calls by name from TOOLS_REGISTRY,
         injecting ``workdir`` automatically for path-based tools.
+        Includes deduplication cache for read-only validation tools.
         """
         from clef_server.tools import TOOLS_REGISTRY, _AGENT_TOOL_MAP
 
         agent_tool_names = set(_AGENT_TOOL_MAP.get(agent_name, []))
         workdir = self.workdir
+
+        # Deduplication cache for read-only tools (cleared per agent loop)
+        _DEDUP_TOOLS = frozenset({"abc_lint", "validate_abc", "validate_rhythm_skeleton"})
+        _call_cache: dict[str, Any] = {}
 
         def executor(call: dict) -> dict:
             tool_name = call.get("name", "")
@@ -783,6 +805,13 @@ class ComposeOrchestrator:
             if tool_name not in agent_tool_names:
                 return {"error": f"Tool '{tool_name}' not allowed for agent '{agent_name}'"}
 
+            # Deduplication: return cached result for identical read-only tool calls
+            if tool_name in _DEDUP_TOOLS:
+                cache_key = json.dumps({"tool": tool_name, "args": args}, sort_keys=True)
+                if cache_key in _call_cache:
+                    logger.info("[DEDUP] %s — returning cached result", tool_name)
+                    return _call_cache[cache_key]
+
             func = TOOLS_REGISTRY.get(tool_name)
             if func is None:
                 return {"error": f"Tool '{tool_name}' not found in registry"}
@@ -799,7 +828,11 @@ class ComposeOrchestrator:
                 return {"error": f"write_file content exceeds 256KB limit ({len(args.get('content', ''))} bytes)"}
 
             try:
-                return raw_func(**args)
+                result = raw_func(**args)
+                # Cache result for dedup-eligible tools
+                if tool_name in _DEDUP_TOOLS:
+                    _call_cache[cache_key] = result
+                return result
             except Exception as e:
                 return {"error": str(e)}
 
@@ -1433,17 +1466,35 @@ class ComposeOrchestrator:
             abc_text = ""
             if round_idx == 0 and voice_label:
                 bars = plan.get("demo_length_bars", plan.get("total_bars", 8))
-                two_pass_abc = await self._generate_two_pass(
-                    agent_name, plan, plan_path, bars, voice_label,
-                )
-                if two_pass_abc:
-                    abc_text = two_pass_abc
-                    logger.info("Two-pass generation succeeded for %s", voice_label)
+                try:
+                    two_pass_abc = await self._generate_two_pass(
+                        agent_name, plan, plan_path, bars, voice_label,
+                    )
+                    if two_pass_abc:
+                        abc_text = two_pass_abc
+                        logger.info("Two-pass generation succeeded for %s", voice_label)
+                except RecoverableAgentError:
+                    logger.warning(
+                        "[RECOVERABLE] Two-pass generation failed for %s round %d, falling back",
+                        voice_label, round_idx,
+                    )
 
             # Fallback to single-pass generation
             if not abc_text:
-                response = await self._run_agent(agent_name, full_message, plan=plan)
-                abc_text = self._extract_abc(response)
+                try:
+                    response = await self._run_agent(agent_name, full_message, plan=plan)
+                    abc_text = self._extract_abc(response)
+                except RecoverableAgentError:
+                    logger.warning(
+                        "[RECOVERABLE] Agent %s failed in round %d, continuing",
+                        agent_name, round_idx,
+                    )
+                    candidates.append({
+                        "round": round_idx, "abc": "",
+                        "fail_count": 999, "failures": [],
+                    })
+                    await asyncio.sleep(5)
+                    continue
 
             if not abc_text or self._is_placeholder(abc_text):
                 candidates.append({
@@ -1570,8 +1621,10 @@ class ComposeOrchestrator:
         repair_msg = (
             f"修复以下 ABC 内容中的验证错误：\n\n"
             f"## 验证失败项\n{feedback}\n\n"
-            f"## 待修复的 ABC\n```\n{abc_text}\n```\n\n"
-            f"请修复后通过 write_file 输出完整的修正版本。"
+            f"## 待修复的 ABC（已在下方内联提供，请直接修改，不需要先读取任何文件）\n"
+            f"```\n{abc_text}\n```\n\n"
+            f"请直接修复后通过 write_file 输出完整的修正版本到 score.abc。"
+            f"DO NOT call read_file — the content is already provided above."
         )
 
         try:

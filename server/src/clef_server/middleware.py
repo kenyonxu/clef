@@ -110,6 +110,17 @@ class ClefContextMiddleware:
             parts.append("## Current Score (score.abc)\n\n```\n" + score_text + "\n```")
 
         if workdir:
+            workdir_path = Path(workdir)
+            if workdir_path.is_dir():
+                files = sorted(
+                    p.name for p in workdir_path.iterdir()
+                    if p.is_file() and not p.name.startswith("_")
+                )
+                if files:
+                    parts.append(
+                        "## Available files in workdir\n\n"
+                        + "\n".join(f"- {f}" for f in files)
+                    )
             parts.append(f"Working directory: {workdir}")
 
         return "\n\n---\n\n".join(parts)

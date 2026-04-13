@@ -70,7 +70,7 @@ class TestToolsRegistry:
     def test_has_all_ten_tools(self) -> None:
         expected = {
             "read_file", "write_file", "validate_abc",
-            "abc_to_midi", "abc_lint", "merge_abc",
+            "list_files", "abc_to_midi", "abc_lint", "merge_abc",
             "inject_expression", "snapshot", "fix_measure_duration",
             "validate_rhythm_skeleton",
         }
@@ -92,12 +92,12 @@ class TestGetToolsForAgent:
     def test_clef_composer_tools(self) -> None:
         tools = get_tools_for_agent("clef-composer")
         names = {t.name for t in tools}
-        assert names == {"read_file", "write_file", "validate_abc", "abc_lint", "validate_rhythm_skeleton"}
+        assert names == {"list_files", "read_file", "write_file", "validate_abc", "abc_lint", "validate_rhythm_skeleton"}
 
     def test_clef_harmonist_tools(self) -> None:
         tools = get_tools_for_agent("clef-harmonist")
         names = {t.name for t in tools}
-        assert names == {"read_file", "write_file", "validate_abc", "abc_lint", "validate_rhythm_skeleton"}
+        assert names == {"list_files", "read_file", "write_file", "validate_abc", "abc_lint", "validate_rhythm_skeleton"}
 
     def test_clef_reviewer_no_write(self) -> None:
         tools = get_tools_for_agent("clef-reviewer")
@@ -109,7 +109,7 @@ class TestGetToolsForAgent:
     def test_clef_revision_read_write_only(self) -> None:
         tools = get_tools_for_agent("clef-revision")
         names = {t.name for t in tools}
-        assert names == {"read_file", "write_file"}
+        assert names == {"list_files", "read_file", "write_file"}
 
     def test_clef_orchestrator_tools(self) -> None:
         tools = get_tools_for_agent("clef-orchestrator")
@@ -120,7 +120,7 @@ class TestGetToolsForAgent:
     def test_clef_repair_tools(self) -> None:
         tools = get_tools_for_agent("clef-repair")
         names = {t.name for t in tools}
-        assert names == {"read_file", "write_file", "abc_lint", "fix_measure_duration"}
+        assert names == {"list_files", "read_file", "write_file", "abc_lint", "fix_measure_duration"}
 
     def test_unknown_agent_returns_empty(self) -> None:
         tools = get_tools_for_agent("nonexistent-agent")
@@ -319,9 +319,9 @@ class TestSnapshot:
 class TestGetToolSchemas:
     def test_get_tool_schemas_composer(self) -> None:
         schemas = get_tool_schemas("clef-composer")
-        assert len(schemas) == 5
+        assert len(schemas) == 6
         names = {s["function"]["name"] for s in schemas}
-        assert names == {"read_file", "write_file", "validate_abc", "abc_lint", "validate_rhythm_skeleton"}
+        assert names == {"list_files", "read_file", "write_file", "validate_abc", "abc_lint", "validate_rhythm_skeleton"}
 
     def test_get_tool_schemas_structure(self) -> None:
         schemas = get_tool_schemas("clef-composer")

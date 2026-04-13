@@ -49,6 +49,7 @@ class ToolMeta:
 
 
 _TOOL_META: dict[str, ToolMeta] = {
+    "list_files": ToolMeta(ToolSafety.READ_ONLY, 100),
     "read_file": ToolMeta(ToolSafety.READ_ONLY, 1000),
     "write_file": ToolMeta(ToolSafety.EXCLUSIVE_WRITE, 200),
     "validate_abc": ToolMeta(ToolSafety.READ_ONLY, 800),
@@ -266,6 +267,26 @@ def _validate_path(path: str, workdir: str) -> Path:
             f"Path '{path}' is outside workdir '{workdir}' (path traversal blocked)"
         )
     return resolved
+
+
+@tool
+def list_files(
+    workdir: Annotated[str, "Working directory to list files from"],
+    pattern: Annotated[str, "Glob pattern to filter files (default '*')"] = "*",
+) -> str:
+    """List files in the working directory. Use this to discover available files before reading."""
+    try:
+        workdir_path = Path(workdir).resolve()
+        files = sorted(
+            p.relative_to(workdir_path).as_posix()
+            for p in workdir_path.glob(pattern)
+            if p.is_file()
+        )
+        if not files:
+            return "No files found."
+        return "\n".join(files)
+    except Exception as e:
+        return f"Error listing files: {e}"
 
 
 @tool
@@ -571,6 +592,7 @@ def validate_rhythm_skeleton(
 # === Tool Registry ===
 
 TOOLS_REGISTRY: dict[str, object] = {
+    "list_files": list_files,
     "read_file": read_file,
     "write_file": write_file,
     "validate_abc": validate_abc,
@@ -584,13 +606,13 @@ TOOLS_REGISTRY: dict[str, object] = {
 }
 
 _AGENT_TOOL_MAP: dict[str, list[str]] = {
-    "clef-composer": ["read_file", "write_file", "validate_abc", "abc_lint", "validate_rhythm_skeleton"],
-    "clef-harmonist": ["read_file", "write_file", "validate_abc", "abc_lint", "validate_rhythm_skeleton"],
-    "clef-rhythmist": ["read_file", "write_file", "validate_abc", "abc_lint", "validate_rhythm_skeleton"],
-    "clef-reviewer": ["read_file", "validate_abc", "abc_lint"],
-    "clef-revision": ["read_file", "write_file"],
-    "clef-orchestrator": ["read_file", "write_file", "abc_to_midi", "inject_expression"],
-    "clef-repair": ["read_file", "write_file", "abc_lint", "fix_measure_duration"],
+    "clef-composer": ["list_files", "read_file", "write_file", "validate_abc", "abc_lint", "validate_rhythm_skeleton"],
+    "clef-harmonist": ["list_files", "read_file", "write_file", "validate_abc", "abc_lint", "validate_rhythm_skeleton"],
+    "clef-rhythmist": ["list_files", "read_file", "write_file", "validate_abc", "abc_lint", "validate_rhythm_skeleton"],
+    "clef-reviewer": ["list_files", "read_file", "validate_abc", "abc_lint"],
+    "clef-revision": ["list_files", "read_file", "write_file"],
+    "clef-orchestrator": ["list_files", "read_file", "write_file", "abc_to_midi", "inject_expression"],
+    "clef-repair": ["list_files", "read_file", "write_file", "abc_lint", "fix_measure_duration"],
 }
 
 

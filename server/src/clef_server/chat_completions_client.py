@@ -324,12 +324,14 @@ class ChatCompletionsClient:
                     return resp.json()
             except httpx.HTTPStatusError as e:
                 status = e.response.status_code
-                if status in (429, 502, 503) and attempt < max_retries - 1:
+                if status in (429, 500, 502, 503, 504) and attempt < max_retries - 1:
+                    # 500 errors get longer backoff (10s) vs standard exponential
+                    backoff = 10 if status == 500 else 2 ** attempt
                     logger.warning(
-                        "Server error %d on attempt %d/%d, retrying...",
-                        status, attempt + 1, max_retries,
+                        "Server error %d on attempt %d/%d, retrying in %ds...",
+                        status, attempt + 1, max_retries, backoff,
                     )
-                    await asyncio.sleep(2 ** attempt)
+                    await asyncio.sleep(backoff)
                     continue
                 body = e.response.text
                 if status in (401, 403):
