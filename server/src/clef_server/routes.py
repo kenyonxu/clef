@@ -167,6 +167,18 @@ async def _run_workflow(session_id: str, prompt: str, plan: dict | None, workdir
 
 # === Endpoints ===
 
+@router.get("/profiles")
+async def list_profiles():
+    """Return available provider profiles."""
+    from clef_server.config import load_profiles
+    profiles = load_profiles(_get_server_root() / "config" / "profiles.yaml")
+    items = [
+        {"id": p.id, "display_name": p.display_name}
+        for p in profiles.values()
+    ]
+    return {"profiles": items}
+
+
 @router.post("/compose", response_model=ComposeResponse)
 async def create_compose(req: ComposeRequest):
     session_id = f"clef-{uuid.uuid4().hex[:8]}"
