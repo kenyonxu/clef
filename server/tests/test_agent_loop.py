@@ -255,3 +255,136 @@ async def test_multiple_tool_calls_in_one_turn(mock_client, echo_tool_executor):
     assert "ABC: X:1" in result.text
     assert result.tool_calls_count == 2
     assert result.turns_used == 2
+
+
+# -- Layer 3: DEDUP turn budget tests --
+
+
+@pytest.mark.asyncio
+async def test_dedup_tool_calls_dont_count_as_turn(mock_client):
+    """All-DEDUP turn should NOT consume turn budget, allowing real calls to proceed.
+
+    With max_turns=1: old code would exhaust the budget on the DEDUP turn and skip
+    the real write call. New code skips DEDUP turn, executes real call, then final.
+    """
+    def dedup_executor(call):
+        """Returns _dedup=True for read-only tools, real result for writes."""
+        if call["name"] == "write_file":
+            return {"written": call["arguments"]["path"]}
+        return {"_dedup": True, "data": call["arguments"]}
+
+    dedup_fc = Content.from_function_call(
+        call_id="call_1",
+        name="read_file",
+        arguments='{"path": "plan.json"}',
+    )
+    real_fc = Content.from_function_call(
+        call_id="call_2",
+        name="write_file",
+        arguments='{"path": "out.abc", "content": "V:1\\nc2 d2 |"}',
+    )
+
+    mock_client.get_response.side_effect = [
+        _make_response(["Reading..."], tool_calls_content=[dedup_fc]),  # DEDUP turn
+        _make_response(["Writing..."], tool_calls_content=[real_fc]),   # Real turn
+        _make_response(["Done: V:1"]),
+    ]
+
+    result = await run_agent_loop(
+        client=mock_client,
+        system_prompt="You are a composer.",
+        user_message="Compose.",
+        tools=[
+            {"type": "function", "function": {"name": "read_file", "parameters": {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]}}},
+            {"type": "function", "function": {"name": "write_file", "parameters": {"type": "object", "properties": {"path": {"type": "string"}, "content": {"type": "string"}}, "required": ["path", "content"]}}},
+        ],
+        tool_executor=dedup_executor,
+        max_turns=1,
+    )
+
+    # Critical: old code would only execute 1 tool call (DEDUP) with max_turns=1.
+    # New code skips DEDUP turn, executes real write → 2 total tool calls.
+    assert result.tool_calls_count == 2  # 1 dedup + 1 real
+    assert "Done" in result.text
+    assert result.turns_used == 2  # 1 real turn + 1 final
+
+
+@pytest.mark.asyncio
+async def test_mixed_dedup_and_real_counts_as_turn(mock_client):
+    """When a mix of DEDUP and real calls exist in one response, count it as a real turn."""
+    def mixed_executor(call):
+        if call["name"] == "read_file":
+            return {"_dedup": True, "data": call["arguments"]}
+        return {"data": call["arguments"]}
+
+    dedup_fc = Content.from_function_call(
+        call_id="call_1",
+        name="read_file",
+        arguments='{"path": "plan.json"}',
+    )
+    real_fc = Content.from_function_call(
+        call_id="call_2",
+        name="write_file",
+        arguments='{"path": "out.txt", "content": "hello"}',
+    )
+
+    mock_client.get_response.side_effect = [
+        _make_response(["Mixed..."], tool_calls_content=[dedup_fc, real_fc]),  # 1 dedup + 1 real
+        _make_response(["Done"]),
+    ]
+
+    result = await run_agent_loop(
+        client=mock_client,
+        system_prompt="You are a composer.",
+        user_message="Compose.",
+        tools=[
+            {"type": "function", "function": {"name": "read_file", "parameters": {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]}}},
+            {"type": "function", "function": {"name": "write_file", "parameters": {"type": "object", "properties": {"path": {"type": "string"}, "content": {"type": "string"}}, "required": ["path", "content"]}}},
+        ],
+        tool_executor=mixed_executor,
+        max_turns=2,
+    )
+
+    assert result.turns_used == 2  # 1 mixed turn (counted) + 1 final
+
+
+@pytest.mark.asyncio
+async def test_dedup_flag_stripped_from_llm_message(mock_client):
+    """_dedup key must not appear in the tool result string sent to LLM.
+
+    Verifies the internal _dedup flag is stripped before serializing to JSON
+    for the LLM message, while _dedup_note is preserved for the LLM hint.
+    """
+    def capturing_executor(call):
+        return {"_dedup": True, "_dedup_note": "You already called this.", "data": "hello"}
+
+    fc = Content.from_function_call(
+        call_id="call_1",
+        name="read_file",
+        arguments='{"path": "f.txt"}',
+    )
+
+    mock_client.get_response.side_effect = [
+        _make_response(["Reading..."], tool_calls_content=[fc]),
+        _make_response(["Here's my output"]),
+    ]
+
+    await run_agent_loop(
+        client=mock_client,
+        system_prompt="Test.",
+        user_message="Read file.",
+        tools=[{"type": "function", "function": {"name": "read_file", "parameters": {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]}}}],
+        tool_executor=capturing_executor,
+        max_turns=3,
+    )
+
+    # Verify the tool result message sent to LLM on the 2nd get_response call
+    # does NOT contain _dedup key but DOES contain _dedup_note and data.
+    second_call_args = mock_client.get_response.call_args_list[1]
+    messages = second_call_args[0][0]  # First positional arg is messages list
+    # Find the tool message (role="tool")
+    tool_msg = [m for m in messages if m.role == "tool"][0]
+    result_json = tool_msg.contents[0].result  # type: ignore[attr-defined]
+    assert '"_dedup"' not in result_json, f"_dedup leaked to LLM: {result_json}"
+    assert '"_dedup_note"' in result_json, "_dedup_note should be preserved for LLM"
+    assert '"data"' in result_json, "actual data should be preserved"

@@ -53,11 +53,12 @@ async def run_agent_loop(
     ]
 
     total_tool_calls = 0
+    turns_used = 0
 
-    for turn in range(max_turns):
+    while turns_used < max_turns:
         if cancel_check and cancel_check():
-            logger.info("Agent loop cancelled at turn %d", turn + 1)
-            return AgentLoopResult(text="", turns_used=turn + 1)
+            logger.info("Agent loop cancelled at turn %d", turns_used + 1)
+            return AgentLoopResult(text="", turns_used=turns_used + 1)
 
         try:
             response = await asyncio.wait_for(
@@ -72,12 +73,12 @@ async def run_agent_loop(
         except asyncio.TimeoutError:
             logger.warning(
                 "Agent loop turn %d timed out after %.0fs, returning empty result",
-                turn + 1, turn_timeout,
+                turns_used + 1, turn_timeout,
             )
-            return AgentLoopResult(text="", turns_used=turn + 1, tool_calls_count=total_tool_calls)
+            return AgentLoopResult(text="", turns_used=turns_used + 1, tool_calls_count=total_tool_calls)
 
         if not response.messages:
-            return AgentLoopResult(text="", turns_used=turn + 1)
+            return AgentLoopResult(text="", turns_used=turns_used + 1)
 
         assistant_msg = response.messages[0]
         tool_calls = _extract_tool_calls(assistant_msg)
@@ -92,12 +93,13 @@ async def run_agent_loop(
             return AgentLoopResult(
                 text=content,
                 tool_calls_count=total_tool_calls,
-                turns_used=turn + 1,
+                turns_used=turns_used + 1,
             )
 
         total_tool_calls += len(tool_calls)
         messages.append(assistant_msg)
 
+        has_real_call = False
         for tc in tool_calls:
             tool_name = tc.name
             try:
@@ -111,7 +113,7 @@ async def run_agent_loop(
 
             logger.info(
                 "Agent loop turn %d: calling tool %s with args %s",
-                turn + 1,
+                turns_used + 1,
                 tool_name,
                 json.dumps(args, ensure_ascii=False)[:200],
             )
@@ -119,16 +121,38 @@ async def run_agent_loop(
             if tool_executor:
                 try:
                     result = tool_executor({"name": tool_name, "arguments": args})
-                    result_str = (
-                        json.dumps(result, ensure_ascii=False)
-                        if isinstance(result, dict)
-                        else str(result)
-                    )
                 except Exception as e:
                     result_str = json.dumps({"error": str(e)})
                     logger.error("Tool %s execution failed: %s", tool_name, e)
+                    tool_result = Content.from_function_result(
+                        call_id=tc.call_id or "",
+                        result=result_str,
+                    )
+                    tool_msg = Message(role="tool", contents=[tool_result])
+                    messages.append(tool_msg)
+                    has_real_call = True
+                    continue
+
+                # Check for DEDUP cache hit via _dedup flag
+                is_dedup = isinstance(result, dict) and result.get("_dedup", False)
+
+                # Strip internal _dedup flag before sending to LLM,
+                # but keep _dedup_note so the LLM sees the hint.
+                if is_dedup:
+                    result = {k: v for k, v in result.items() if k != "_dedup"}
+
+                result_str = (
+                    json.dumps(result, ensure_ascii=False)
+                    if isinstance(result, dict)
+                    else str(result)
+                )
+
+                if not is_dedup:
+                    has_real_call = True
             else:
                 result_str = json.dumps({"error": "No tool executor configured"})
+                is_dedup = False
+                has_real_call = True
 
             tool_result = Content.from_function_result(
                 call_id=tc.call_id or "",
@@ -136,6 +160,13 @@ async def run_agent_loop(
             )
             tool_msg = Message(role="tool", contents=[tool_result])
             messages.append(tool_msg)
+
+        if has_real_call:
+            turns_used += 1
+        else:
+            logger.info(
+                "Agent loop: all tool calls were DEDUP hits, not counting as a turn"
+            )
 
     logger.warning(
         "Agent loop reached max_turns=%d, requesting final response", max_turns
@@ -155,5 +186,5 @@ async def run_agent_loop(
     return AgentLoopResult(
         text=content,
         tool_calls_count=total_tool_calls,
-        turns_used=max_turns + 1,
+        turns_used=turns_used + 1,
     )
