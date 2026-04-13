@@ -10,6 +10,8 @@ import type {
   ComposeResponse,
   StatusResponse,
   SessionsResponse,
+  ProfileItem,
+  ProfileListResponse,
 } from '../api/types'
 
 interface SessionState {
@@ -22,7 +24,11 @@ interface SessionState {
   currentPhase: string | null
   sampleRound: number
   iterationCount: number
+  profiles: ProfileItem[]
+  selectedProfile: string
 
+  fetchProfiles: () => Promise<void>
+  setSelectedProfile: (profile: string) => void
   submitPrompt: (prompt: string) => Promise<void>
   pollOnce: (sessionId: string) => Promise<void>
   confirmSession: (sessionId: string, action: 'continue' | 'revise' | 'cancel', feedback?: string) => Promise<void>
@@ -51,6 +57,22 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   currentPhase: null,
   sampleRound: 0,
   iterationCount: 0,
+  profiles: [],
+  selectedProfile: localStorage.getItem('clef-last-profile') || '',
+
+  fetchProfiles: async () => {
+    try {
+      const res = await apiClient.get<ProfileListResponse>('/profiles')
+      set({ profiles: res.profiles })
+    } catch {
+      // Silently ignore — profile selector will just not appear
+    }
+  },
+
+  setSelectedProfile: (profile: string) => {
+    localStorage.setItem('clef-last-profile', profile)
+    set({ selectedProfile: profile })
+  },
 
   submitPrompt: async (prompt: string) => {
     set((s) => ({
@@ -65,7 +87,11 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     }))
 
     try {
-      const res = await apiClient.post<ComposeResponse>('/compose', { prompt })
+      const body: Record<string, unknown> = { prompt }
+      if (get().selectedProfile) {
+        body.profile = get().selectedProfile
+      }
+      const res = await apiClient.post<ComposeResponse>('/compose', body)
       set({
         currentSession: {
           session_id: res.session_id,

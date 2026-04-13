@@ -82,11 +82,21 @@ export type SessionStatus = 'created' | 'running' | 'done' | 'failed' | 'cancell
 export interface ComposeRequest {
   prompt: string
   plan?: Record<string, unknown>
+  profile?: string
 }
 
 export interface ComposeResponse {
   session_id: string
   status: string
+}
+
+export interface ProfileItem {
+  id: string
+  display_name: string
+}
+
+export interface ProfileListResponse {
+  profiles: ProfileItem[]
 }
 
 export interface StatusResponse {

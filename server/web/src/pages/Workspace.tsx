@@ -24,6 +24,7 @@ export function Workspace() {
   const submitPrompt = useSessionStore((s) => s.submitPrompt)
   const pollOnce = useSessionStore((s) => s.pollOnce)
   const cancelSession = useSessionStore((s) => s.cancelSession)
+  const fetchProfiles = useSessionStore((s) => s.fetchProfiles)
   const showToast = useUIStore((s) => s.showToast)
 
   // Session recovery from URL
@@ -33,6 +34,9 @@ export function Workspace() {
       pollOnce(sessionIdFromUrl)
     }
   }, [sessionIdFromUrl, currentSession, pollOnce])
+
+  // Fetch profiles on mount
+  useEffect(() => { fetchProfiles() }, [fetchProfiles])
 
   // Auto-scroll chat
   useEffect(() => {
