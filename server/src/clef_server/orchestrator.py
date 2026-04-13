@@ -832,8 +832,8 @@ class ComposeOrchestrator:
             # Unwrap FunctionTool to get the underlying Python function
             raw_func = getattr(func, "func", func)
 
-            # Enforce workdir for path-based tools (agent cannot override)
-            if tool_name in ("read_file", "write_file", "validate_abc", "abc_lint", "list_files"):
+            # Enforce workdir for path-based tools that accept it (agent cannot override)
+            if tool_name in ("read_file", "write_file", "list_files"):
                 args = {**args, "workdir": workdir}
 
             # Security: limit write_file content size (256KB max)

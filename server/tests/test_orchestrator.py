@@ -770,6 +770,96 @@ class TestPhaseExpress:
 
 
 # ---------------------------------------------------------------------------
+# TestDedupCachePathNormalization
+# ---------------------------------------------------------------------------
+
+
+class TestDedupCachePathNormalization:
+    """Verify that plan_path normalization causes DEDUP cache hits across
+    relative and absolute path variations."""
+
+    @pytest.fixture
+    def orch(self, tmp_path, providers):
+        """Create orchestrator with abc_lint mocked to return a deterministic result."""
+        (tmp_path / "plan.json").write_text('{"key":"C"}', encoding="utf-8")
+        orch = ComposeOrchestrator("test-session", providers, str(tmp_path))
+        return orch
+
+    def _mock_abc_lint(self):
+        """Return a mock abc_lint that accepts any kwargs."""
+        def mock_lint(abc_content, plan_path="", **_kw):
+            return {"ok": True, "issues": []}
+        # Wrap as a FunctionTool-like object
+        mock_lint.func = mock_lint
+        return mock_lint
+
+    def test_relative_then_absolute_plan_path_hits_cache(self, orch, tmp_path):
+        """abc_lint with 'plan.json' then '<abs>/plan.json' should DEDUP hit."""
+        mock_lint = self._mock_abc_lint()
+        executor = orch._make_tool_executor("clef-composer")
+        abs_plan = str((tmp_path / "plan.json").resolve())
+
+        abc_content = "X:1\nM:4/4\nK:C\nC D E F|"
+
+        # Call 1: relative plan_path → real execution (mocked)
+        call1 = {"name": "abc_lint", "arguments": json.dumps({
+            "abc_content": abc_content, "plan_path": "plan.json",
+        })}
+        with patch.dict("clef_server.tools.TOOLS_REGISTRY", {"abc_lint": mock_lint}):
+            result1 = executor(call1)
+        assert result1.get("ok") is True
+        assert "_dedup" not in result1
+
+        # Call 2: absolute plan_path → DEDUP cache hit
+        call2 = {"name": "abc_lint", "arguments": json.dumps({
+            "abc_content": abc_content, "plan_path": abs_plan,
+        })}
+        with patch.dict("clef_server.tools.TOOLS_REGISTRY", {"abc_lint": mock_lint}):
+            result2 = executor(call2)
+        assert result2.get("_dedup") is True, (
+            f"Expected DEDUP cache hit for absolute plan_path, got: {result2}"
+        )
+
+    def test_absolute_then_relative_plan_path_hits_cache(self, orch, tmp_path):
+        """Reverse order: absolute first, relative second should also DEDUP hit."""
+        mock_lint = self._mock_abc_lint()
+        executor = orch._make_tool_executor("clef-composer")
+        abs_plan = str((tmp_path / "plan.json").resolve())
+        abc_content = "X:1\nM:4/4\nK:C\nG A B c|"
+
+        call1 = {"name": "abc_lint", "arguments": json.dumps({
+            "abc_content": abc_content, "plan_path": abs_plan,
+        })}
+        with patch.dict("clef_server.tools.TOOLS_REGISTRY", {"abc_lint": mock_lint}):
+            result1 = executor(call1)
+        assert "_dedup" not in result1
+
+        call2 = {"name": "abc_lint", "arguments": json.dumps({
+            "abc_content": abc_content, "plan_path": "plan.json",
+        })}
+        with patch.dict("clef_server.tools.TOOLS_REGISTRY", {"abc_lint": mock_lint}):
+            result2 = executor(call2)
+        assert result2.get("_dedup") is True
+
+    def test_different_content_does_not_hit_cache(self, orch, tmp_path):
+        """Different abc_content should NOT produce a DEDUP cache hit."""
+        mock_lint = self._mock_abc_lint()
+        executor = orch._make_tool_executor("clef-composer")
+
+        call1 = {"name": "abc_lint", "arguments": json.dumps({
+            "abc_content": "X:1\nM:4/4\nK:C\nC D E F|", "plan_path": "plan.json",
+        })}
+        call2 = {"name": "abc_lint", "arguments": json.dumps({
+            "abc_content": "X:1\nM:4/4\nK:G\nG A B c|", "plan_path": "plan.json",
+        })}
+        with patch.dict("clef_server.tools.TOOLS_REGISTRY", {"abc_lint": mock_lint}):
+            result1 = executor(call1)
+            result2 = executor(call2)
+        assert "_dedup" not in result1
+        assert result2.get("_dedup") is not True
+
+
+# ---------------------------------------------------------------------------
 # TestResumeReview
 # ---------------------------------------------------------------------------
 
