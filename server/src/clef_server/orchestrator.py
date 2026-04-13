@@ -1551,6 +1551,20 @@ class ComposeOrchestrator:
                     await asyncio.sleep(5)
                     continue
 
+            # Fallback: agent may have written ABC via write_file tool
+            # even though the final text response was rejected by _extract_abc.
+            if not abc_text and voice_label:
+                safe_label = voice_label.replace(":", "_").replace("+", "_").replace(" ", "_")
+                tmp_path = Path(self.workdir) / f"_tmp_{safe_label}.abc"
+                if tmp_path.exists():
+                    tmp_content = tmp_path.read_text(encoding="utf-8").strip()
+                    if tmp_content and self._looks_like_abc(tmp_content):
+                        abc_text = tmp_content
+                        logger.info(
+                            "Recovered ABC from %s (agent wrote via write_file but final response was rejected)",
+                            tmp_path.name,
+                        )
+
             if not abc_text or self._is_placeholder(abc_text):
                 candidates.append({
                     "round": round_idx, "abc": abc_text or "",
