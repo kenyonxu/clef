@@ -159,6 +159,7 @@ class ComposeOrchestrator:
         providers: dict[str, Any],
         workdir: str,
         settings: dict[str, Any] | None = None,
+        profile_overrides: dict[str, str] | None = None,
     ) -> None:
         self.session_id = session_id
         self.providers = providers
@@ -177,6 +178,13 @@ class ComposeOrchestrator:
 
         # Load agent configs from agents.yaml (falls back to hardcoded defaults)
         self._agent_defs = self._load_agent_defs()
+
+        # Apply profile overrides (only model_alias, not temperature/max_turns/etc.)
+        if profile_overrides:
+            for agent_name, model_alias in profile_overrides.items():
+                if agent_name in self._agent_defs:
+                    self._agent_defs[agent_name]["model_alias"] = model_alias
+                    logger.info("Profile override: %s → %s", agent_name, model_alias)
 
     # ------------------------------------------------------------------
     # Concurrency helpers (改进 1)

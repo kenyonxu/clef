@@ -32,6 +32,7 @@ def create_router() -> APIRouter:
 class ComposeRequest(BaseModel):
     prompt: str = Field(..., description="Music composition description", min_length=1)
     plan: dict | None = Field(None, description="Optional pre-defined plan.json")
+    profile: str | None = Field(None, description="Provider profile name (from /api/profiles)")
 
 
 class ComposeResponse(BaseModel):
@@ -140,7 +141,7 @@ class AgentUpdateRequest(BaseModel):
 
 # === Workflow Execution ===
 
-async def _run_workflow(session_id: str, prompt: str, plan: dict | None, workdir: str) -> None:
+async def _run_workflow(session_id: str, prompt: str, plan: dict | None, workdir: str, profile: str | None = None) -> None:
     """Start the compose workflow via orchestrator."""
     session = _session_manager.get(session_id)
     if not session:
@@ -148,7 +149,7 @@ async def _run_workflow(session_id: str, prompt: str, plan: dict | None, workdir
         return
 
     try:
-        from clef_server.config import load_provider_config, load_settings
+        from clef_server.config import load_provider_config, load_settings, load_profiles
         from clef_server.providers import create_providers
         from clef_server.orchestrator import ComposeOrchestrator
 
@@ -157,7 +158,23 @@ async def _run_workflow(session_id: str, prompt: str, plan: dict | None, workdir
         providers = create_providers(provider_config)
         settings = load_settings(server_root)
 
-        orchestrator = ComposeOrchestrator(session_id=session_id, providers=providers, workdir=workdir, settings=settings)
+        # Load profile overrides (agent_name -> model_alias)
+        profile_overrides: dict[str, str] = {}
+        if profile:
+            profiles = load_profiles(server_root / "config" / "profiles.yaml")
+            if profile in profiles:
+                profile_overrides = profiles[profile].agents
+                logger.info("Applying profile '%s': %s", profile, profile_overrides)
+            else:
+                logger.warning("Profile '%s' not found, using defaults", profile)
+
+        orchestrator = ComposeOrchestrator(
+            session_id=session_id,
+            providers=providers,
+            workdir=workdir,
+            settings=settings,
+            profile_overrides=profile_overrides,
+        )
         await orchestrator.start(prompt)
 
     except Exception as e:
@@ -192,7 +209,7 @@ async def create_compose(req: ComposeRequest):
         plan=req.plan,
         session_id=session_id,
     )
-    task = asyncio.create_task(_run_workflow(session_id, req.prompt, req.plan, workdir))
+    task = asyncio.create_task(_run_workflow(session_id, req.prompt, req.plan, workdir, req.profile))
     task.add_done_callback(lambda t: t.exception() and logger.error(f"Workflow task failed: {t.exception()}"))
     return ComposeResponse(session_id=session.session_id, status=session.status)
 
