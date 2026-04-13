@@ -12,6 +12,7 @@ export function ProfileManager() {
 
   const [newId, setNewId] = useState('')
   const [newName, setNewName] = useState('')
+  const [expandedId, setExpandedId] = useState<string | null>(null)
 
   const handleSave = async () => {
     const id = newId.trim()
@@ -38,11 +39,19 @@ export function ProfileManager() {
   const handleDelete = async (id: string) => {
     try {
       await deleteProfile(id)
+      if (expandedId === id) setExpandedId(null)
       showToast(`Profile "${id}" deleted`, 'success')
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Delete failed', 'error')
     }
   }
+
+  const toggleExpand = (id: string) => {
+    setExpandedId((prev) => (prev === id ? null : id))
+  }
+
+  const agentEntries = (p: typeof profiles[number]) =>
+    Object.entries(p.agents).sort(([a], [b]) => a.localeCompare(b))
 
   return (
     <div className="space-y-4 mt-6 pt-4 border-t border-border-subtle">
@@ -61,18 +70,14 @@ export function ProfileManager() {
             </thead>
             <tbody>
               {profiles.map((p) => (
-                <tr key={p.id} className="border-b border-border-subtle last:border-b-0">
-                  <td className="px-3 py-2 text-xs text-white font-mono">{p.id}</td>
-                  <td className="px-3 py-2 text-xs text-silver">{p.display_name}</td>
-                  <td className="px-3 py-2">
-                    <button
-                      onClick={() => handleDelete(p.id)}
-                      className="text-xs text-error hover:underline"
-                    >
-                      Delete
-                    </button>
-                  </td>
-                </tr>
+                <ProfileRow
+                  key={p.id}
+                  profile={p}
+                  expanded={expandedId === p.id}
+                  onToggle={() => toggleExpand(p.id)}
+                  onDelete={() => handleDelete(p.id)}
+                  agentEntries={agentEntries(p)}
+                />
               ))}
             </tbody>
           </table>
@@ -110,5 +115,57 @@ export function ProfileManager() {
         </button>
       </div>
     </div>
+  )
+}
+
+interface ProfileRowProps {
+  profile: { id: string; display_name: string }
+  expanded: boolean
+  onToggle: () => void
+  onDelete: () => void
+  agentEntries: [string, string][]
+}
+
+function ProfileRow({ profile, expanded, onToggle, onDelete, agentEntries }: ProfileRowProps) {
+  return (
+    <>
+      <tr
+        onClick={onToggle}
+        className="border-b border-border-subtle last:border-b-0 cursor-pointer hover:bg-surface-mid/50 transition-colors"
+      >
+        <td className="px-3 py-2">
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] text-muted select-none">{expanded ? '\u25BC' : '\u25B6'}</span>
+            <span className="text-xs text-white font-mono">{profile.id}</span>
+          </div>
+        </td>
+        <td className="px-3 py-2 text-xs text-silver">{profile.display_name}</td>
+        <td className="px-3 py-2">
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              onDelete()
+            }}
+            className="text-xs text-error hover:underline"
+          >
+            Delete
+          </button>
+        </td>
+      </tr>
+      {expanded && agentEntries.length > 0 && (
+        <tr className="bg-surface-mid/30">
+          <td colSpan={3} className="px-6 py-2">
+            <div className="grid grid-cols-2 gap-x-6 gap-y-0.5">
+              {agentEntries.map(([agent, model]) => (
+                <div key={agent} className="flex items-center gap-2">
+                  <span className="text-[11px] text-muted font-mono min-w-30">{agent}</span>
+                  <span className="text-[11px] text-white font-mono">{model}</span>
+                </div>
+              ))}
+            </div>
+          </td>
+        </tr>
+      )}
+    </>
   )
 }

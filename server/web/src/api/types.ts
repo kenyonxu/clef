@@ -93,6 +93,7 @@ export interface ComposeResponse {
 export interface ProfileItem {
   id: string
   display_name: string
+  agents: Record<string, string>
 }
 
 export interface ProfileListResponse {

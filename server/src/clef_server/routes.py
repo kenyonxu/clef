@@ -192,11 +192,11 @@ class ProfileSaveRequest(BaseModel):
 
 @router.get("/profiles")
 async def list_profiles():
-    """Return available provider profiles."""
+    """Return available provider profiles including agent mappings."""
     from clef_server.config import load_profiles
     profiles = load_profiles(_get_server_root() / "config" / "profiles.yaml")
     items = [
-        {"id": p.id, "display_name": p.display_name}
+        {"id": p.id, "display_name": p.display_name, "agents": p.agents}
         for p in profiles.values()
     ]
     return {"profiles": items}
