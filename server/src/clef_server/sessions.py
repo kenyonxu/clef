@@ -60,6 +60,7 @@ class ComposeSession:
     user_prompt: str = ""
     status: str = "created"
     plan: dict | None = None
+    profile: str | None = None
     output_files: list[str] = field(default_factory=list)
     error: str | None = None
     current_phase: str = "parse"
@@ -234,7 +235,7 @@ class SessionManager:
         self._sessions: dict[str, ComposeSession] = {}
         self._ttl_seconds = ttl_seconds
 
-    def create(self, user_prompt: str, workdir: str, plan: dict | None = None, session_id: str | None = None) -> ComposeSession:
+    def create(self, user_prompt: str, workdir: str, plan: dict | None = None, session_id: str | None = None, profile: str | None = None) -> ComposeSession:
         if session_id is None:
             session_id = f"clef-{uuid.uuid4().hex[:8]}"
         session = ComposeSession(
@@ -242,6 +243,7 @@ class SessionManager:
             workdir=workdir,
             user_prompt=user_prompt,
             plan=plan,
+            profile=profile,
         )
         self._sessions[session_id] = session
         return session

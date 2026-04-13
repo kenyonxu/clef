@@ -232,6 +232,7 @@ async def create_compose(req: ComposeRequest):
         workdir=workdir,
         plan=req.plan,
         session_id=session_id,
+        profile=req.profile,
     )
     task = asyncio.create_task(_run_workflow(session_id, req.prompt, req.plan, workdir, req.profile))
     task.add_done_callback(lambda t: t.exception() and logger.error(f"Workflow task failed: {t.exception()}"))
@@ -355,7 +356,7 @@ async def confirm_session(session_id: str, req: ConfirmRequest):
 
     async def _resume_workflow() -> None:
         try:
-            from clef_server.config import load_provider_config, load_settings
+            from clef_server.config import load_provider_config, load_settings, load_profiles
             from clef_server.providers import create_providers
             from clef_server.orchestrator import ComposeOrchestrator
 
@@ -364,7 +365,21 @@ async def confirm_session(session_id: str, req: ConfirmRequest):
             providers = create_providers(provider_config)
             settings = load_settings(server_root)
 
-            orchestrator = ComposeOrchestrator(session_id=session_id, providers=providers, workdir=workdir, settings=settings)
+            # Restore profile overrides from session
+            profile_overrides: dict[str, str] = {}
+            if workdir and session.profile:
+                profiles = load_profiles(server_root / "config" / "profiles.yaml")
+                if session.profile in profiles:
+                    profile_overrides = profiles[session.profile].agents
+                    logger.info("Resume: restoring profile '%s': %s", session.profile, profile_overrides)
+
+            orchestrator = ComposeOrchestrator(
+                session_id=session_id,
+                providers=providers,
+                workdir=workdir,
+                settings=settings,
+                profile_overrides=profile_overrides,
+            )
             await orchestrator.resume(user_feedback=feedback, action=action, saved_confirmation_data=saved_confirmation_data)
         except Exception as e:
             logger.exception(f"Session {session_id}: resume failed")
