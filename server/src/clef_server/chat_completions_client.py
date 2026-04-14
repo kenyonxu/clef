@@ -324,7 +324,7 @@ class ChatCompletionsClient:
                     return resp.json()
             except httpx.HTTPStatusError as e:
                 status = e.response.status_code
-                if status in (429, 500, 502, 503, 504) and attempt < max_retries - 1:
+                if status in (429, 500, 502, 503, 504, 529) and attempt < max_retries - 1:
                     # Respect Retry-After header if provided
                     retry_after = e.response.headers.get("Retry-After")
                     if retry_after:
