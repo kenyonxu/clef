@@ -107,16 +107,20 @@ def generate_header(plan: dict) -> str:
 def sanitize_content(content: str) -> str:
     """Sanitize an ABC fragment before merging.
 
-    1. Remove ABC header fields (X:, T:, M:, L:, K:, Q:, etc.) — merge
+    1. Remove ABC header fields (X:, T:, M:, K:, Q:, etc.) — merge
        generates its own header via generate_header().
-    2. Keep %%MIDI directives (channel, program, transpose) — they are
+    2. Preserve L: (unit length) if it differs from the merged score's
+       L:1/8 — agents may output fragments with L:1/4 etc., and stripping
+       it would cause note durations to be misinterpreted.
+    3. Keep %%MIDI directives (channel, program, transpose) — they are
        not ABC headers and carry voice-specific configuration.
-    3. Replace || double barlines with | in music content lines.
-    4. Replace %% V:X comments (not %%MIDI) with % V:X to prevent
+    4. Replace || double barlines with | in music content lines.
+    5. Replace %% V:X comments (not %%MIDI) with % V:X to prevent
        phantom voice declarations.
     """
     lines = content.splitlines()
     fixed = []
+    preserved_L = None
     for line in lines:
         stripped = line.strip()
         # Remove ABC header fields (single letter + colon), but keep
@@ -124,6 +128,9 @@ def sanitize_content(content: str) -> str:
         is_header = bool(re.match(r'^[A-Za-z]\s*:', stripped))
         is_comment = stripped.startswith('%') or stripped.startswith('%%')
         if is_header and not is_comment:
+            # Preserve L: directive if it's not L:1/8 (the merged score default)
+            if stripped.startswith('L:') and stripped != 'L:1/8':
+                preserved_L = stripped
             continue  # Skip header line entirely
         if not is_header and not is_comment:
             line = line.replace('||', '|')
@@ -131,6 +138,10 @@ def sanitize_content(content: str) -> str:
         if stripped.startswith('%%') and re.search(r'V:\d+', stripped) and '%%MIDI' not in stripped:
             line = line.replace('%%', '%', 1)
         fixed.append(line)
+    # If we captured a non-default L:, prepend it so the voice block
+    # uses the correct unit length instead of the global L:1/8.
+    if preserved_L:
+        fixed.insert(0, preserved_L)
     return '\n'.join(fixed)
 
 

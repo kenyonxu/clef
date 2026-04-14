@@ -56,7 +56,7 @@ class _PlanSchema(BaseModel):
     total_bars: int = Field(gt=0, default=32)
     sections: list[_PlanSection] = Field(min_length=1)
     orchestration: _PlanOrchestration
-    generation_order: list[str] = Field(default_factory=lambda: ["harmony", "melody"])
+    generation_order: list[str] = Field(default_factory=lambda: ["harmony", "melody", "rhythm"])
 
     @model_validator(mode="after")
     def sync_total_bars(self) -> "_PlanSchema":
@@ -577,7 +577,7 @@ class ComposeOrchestrator:
             "Each section MUST have a 'measures' field specifying the number of bars.\n"
             "- orchestration: object with melody/harmony/bass/drums sub-objects, "
             "each having name, channel, instrument, range, register, midi_program (GM program number 0-127)\n"
-            "- generation_order: array like ['harmony', 'melody']\n\n"
+            "- generation_order: array like ['harmony', 'melody', 'rhythm']\n\n"
             "VALIDATION: Verify that sum(sections[].measures) == total_bars. If not, adjust.\n\n"
             "Respond ONLY with valid JSON. No markdown, no explanation."
         )
@@ -1925,7 +1925,7 @@ class ComposeOrchestrator:
         plan = json.loads(plan_path.read_text(encoding="utf-8"))
         score_path = Path(self.workdir) / "score.abc"
 
-        generation_order = plan.get("generation_order", ["harmony", "melody"])
+        generation_order = plan.get("generation_order", ["harmony", "melody", "rhythm"])
         fragments: dict[str, str] = {}
         abc_parts: list[str] = []
 
@@ -2065,7 +2065,7 @@ class ComposeOrchestrator:
         # --- Leader pre-planning: structured execution plan ---
         leader_tasks = None
         try:
-            generation_order = plan.get("generation_order", ["harmony", "melody"])
+            generation_order = plan.get("generation_order", ["harmony", "melody", "rhythm"])
             # List only creative agents (not repair/review/revision)
             creative_agents = [a for a in self._agent_defs if a in (
                 "clef-composer", "clef-harmonist", "clef-rhythmist",
