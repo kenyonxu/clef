@@ -456,7 +456,7 @@ class TestExtractHelpers:
     def test_extract_json_fallback_on_bad_json(self, orch):
         text = "not valid json at all"
         result = orch._extract_json(text)
-        assert result["verdict"] == "pass"  # bad JSON returns pass verdict (no "raw" key)
+        assert result["verdict"] == "revise"  # bad JSON returns revise verdict (conservative)
 
 
 # ---------------------------------------------------------------------------
@@ -947,3 +947,64 @@ class TestResolveAgentName:
         assert orch._resolve_agent_name("composer") == "clef-composer"
         assert orch._resolve_agent_name("harmonist") == "clef-harmonist"
         assert orch._resolve_agent_name("rhythmist") == "clef-rhythmist"
+
+
+# ---------------------------------------------------------------------------
+# TestExtractJsonConservativeFallback
+# ---------------------------------------------------------------------------
+
+class TestExtractJsonConservativeFallback:
+    """_extract_json should return 'revise' verdict on parse failure, not 'pass'."""
+
+    @pytest.fixture
+    def orch(self):
+        providers = {"test": MagicMock()}
+        return ComposeOrchestrator(
+            session_id="test-json", providers=providers, workdir="/tmp/test",
+        )
+
+    def test_invalid_json_returns_revise(self, orch):
+        result = orch._extract_json("this is not json at all")
+        assert result["verdict"] == "revise"
+
+    def test_valid_json_pass_verdict_preserved(self, orch):
+        result = orch._extract_json('{"verdict": "pass", "overall_score": 8}')
+        assert result["verdict"] == "pass"
+        assert result["overall_score"] == 8
+
+    def test_valid_json_revise_verdict_preserved(self, orch):
+        result = orch._extract_json('{"verdict": "revise", "overall_score": 4}')
+        assert result["verdict"] == "revise"
+
+
+# ---------------------------------------------------------------------------
+# TestStripToolMarkers
+# ---------------------------------------------------------------------------
+
+class TestStripToolMarkers:
+    """Test DSML marker stripping for content recovery."""
+
+    @pytest.fixture
+    def orch(self):
+        providers = {"test": MagicMock()}
+        return ComposeOrchestrator(
+            session_id="test-strip", providers=providers, workdir="/tmp/test",
+        )
+
+    def test_no_markers_leaves_text_intact(self, orch):
+        text = 'V:1\nC D E F | G A B c |'
+        assert orch._strip_tool_markers(text) == text
+
+    def test_removes_dsml_markers(self, orch):
+        text = 'V:1\nC D E F | <function_calls>some tool stuff</function_calls>'
+        stripped = orch._strip_tool_markers(text)
+        assert "<function_calls>" not in stripped
+        assert "V:1" in stripped
+        assert "C D E F" in stripped
+
+    def test_removes_invoke_tags(self, orch):
+        text = 'Result:\nV:1\nC D E |\n<invoke name="write_file">\nsome params\n</invoke>'
+        stripped = orch._strip_tool_markers(text)
+        assert "<invoke" not in stripped
+        assert "V:1" in stripped
+        assert "C D E" in stripped

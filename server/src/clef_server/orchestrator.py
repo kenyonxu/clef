@@ -964,8 +964,11 @@ class ComposeOrchestrator:
         # Reject text containing tool-call artifacts (DSML, XML tool tags, etc.)
         tool_markers = ("<|DSML|>", "<function_calls>", "</invoke>", "tool_call", "FunctionCall")
         if any(m in text for m in tool_markers):
-            logger.warning("_extract_abc: response contains tool-call syntax, returning empty")
-            return ""
+            logger.warning("_extract_abc: response contains tool-call syntax, attempting strip")
+            text = self._strip_tool_markers(text)
+            if not self._looks_like_abc(text):
+                logger.warning("_extract_abc: stripped text still not ABC, returning empty")
+                return ""
         # Try fenced block first
         fence_match = re.search(r"```(?:abc)?\s*\n(.*?)```", text, re.DOTALL)
         if fence_match:
@@ -989,6 +992,31 @@ class ComposeOrchestrator:
             or len(lower) < 10
             or not any(c in lower for c in "|abcdefg'")
         )
+
+    @staticmethod
+    def _strip_tool_markers(text: str) -> str:
+        """Remove known tool-call marker patterns from text.
+
+        Strips DSML blocks, function_calls tags, and other tool-call artifacts.
+        Preserves surrounding content.
+        """
+        # Remove complete DSML blocks: <|DSML|>...content...<|DSML|>
+        text = re.sub(r'<\|DSML\|>.*?<\|DSML\|>', '', text, flags=re.DOTALL)
+        # Remove individual DSML markers
+        text = text.replace('<|DSML|>', '')
+        # Remove function_calls blocks
+        text = re.sub(r'<function_calls>.*?</function_calls>', '', text, flags=re.DOTALL)
+        # Remove individual tags and their content on the same line
+        for tag in ('<function_calls>', '</function_calls>', '</invoke>'):
+            text = re.sub(rf'^\s*{re.escape(tag)}.*$', '', text, flags=re.MULTILINE)
+        # Remove <invoke ...> lines
+        text = re.sub(rf'^\s*<invoke\b.*$', '', text, flags=re.MULTILINE)
+        # Remove lines that are just tool markers
+        for marker in ('tool_call', 'FunctionCall'):
+            text = re.sub(rf'^\s*{re.escape(marker)}.*$', '', text, flags=re.MULTILINE)
+        # Clean up excessive blank lines
+        text = re.sub(r'\n{3,}', '\n\n', text)
+        return text.strip()
 
     def _quick_lint_check(self, abc_text: str, plan_path: Path) -> str | bool:
         """Run abc_lint on extracted ABC. Returns True if clean, or error string for feedback."""
@@ -1014,16 +1042,16 @@ class ComposeOrchestrator:
         # Reject text containing tool-call artifacts
         tool_markers = ("<|DSML|>", "<function_calls>", "</invoke>", "tool_call", "FunctionCall")
         if any(m in text for m in tool_markers):
-            logger.warning("_extract_json: response contains tool-call syntax, returning pass verdict")
-            return {"verdict": "pass"}
+            logger.warning("_extract_json: response contains tool-call syntax, attempting strip")
+            text = self._strip_tool_markers(text)
         fence_match = re.search(r"```(?:json)?\s*\n(.*?)```", text, re.DOTALL)
         if fence_match:
             text = fence_match.group(1).strip()
         try:
             return json.loads(text)
         except json.JSONDecodeError:
-            logger.warning("_extract_json: failed to parse JSON, returning pass verdict")
-            return {"verdict": "pass"}
+            logger.warning("_extract_json: failed to parse JSON, returning revise verdict")
+            return {"verdict": "revise"}
 
     # ------------------------------------------------------------------
     # Prompt builders & helpers
@@ -1870,8 +1898,8 @@ class ComposeOrchestrator:
         # Reject tool-call artifacts
         tool_markers = ("<|DSML|>", "<function_calls>", "</invoke>", "tool_call", "FunctionCall")
         if any(m in response for m in tool_markers):
-            logger.warning("_extract_rhythm: response contains tool-call syntax, returning empty")
-            return ""
+            logger.warning("_extract_rhythm: response contains tool-call syntax, attempting strip")
+            response = self._strip_tool_markers(response)
         match = _re.search(r"```(?:rhythm)?\s*\n?(.*?)```", response, _re.DOTALL)
         if match:
             return match.group(1).strip()
