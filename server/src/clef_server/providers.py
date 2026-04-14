@@ -46,20 +46,26 @@ def create_providers(config: ProviderConfig) -> dict:
     for alias, cfg in config.openai_compat.items():
         if not cfg.api_key:
             continue
-        providers[alias] = ChatCompletionsClient(
+        client = ChatCompletionsClient(
             model=cfg.model_id,
             base_url=cfg.base_url,
             api_key=cfg.api_key,
         )
+        client.rpm = cfg.rpm
+        client.burst = cfg.burst
+        providers[alias] = client
 
     # Anthropic-compatible providers (GLM via Anthropic proxy, etc.)
     for alias, cfg in config.anthropic_compat.items():
         if not cfg.api_key:
             continue
-        providers[alias] = ChatCompletionsClient(
+        client = ChatCompletionsClient(
             model=cfg.model_id,
             base_url=cfg.base_url,
             api_key=cfg.api_key,
         )
+        client.rpm = cfg.rpm
+        client.burst = cfg.burst
+        providers[alias] = client
 
     return providers

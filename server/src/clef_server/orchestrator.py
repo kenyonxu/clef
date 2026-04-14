@@ -188,7 +188,12 @@ class ComposeOrchestrator:
 
         # Per-provider rate limiting (token bucket, keyed by model_alias)
         from clef_server.concurrency import ProviderRateLimiter
-        self._rate_limiter = ProviderRateLimiter()
+        provider_configs = {}
+        for alias, client in self.providers.items():
+            rpm = getattr(client, "rpm", None) or 60
+            burst = getattr(client, "burst", None) or 10
+            provider_configs[alias] = {"rpm": rpm, "burst": burst}
+        self._rate_limiter = ProviderRateLimiter(provider_configs)
 
     # ------------------------------------------------------------------
     # Concurrency helpers (改进 1)
