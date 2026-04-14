@@ -325,10 +325,20 @@ class ChatCompletionsClient:
             except httpx.HTTPStatusError as e:
                 status = e.response.status_code
                 if status in (429, 500, 502, 503, 504) and attempt < max_retries - 1:
+                    # Respect Retry-After header if provided
+                    retry_after = e.response.headers.get("Retry-After")
+                    if retry_after:
+                        try:
+                            retry_after_sec = float(retry_after)
+                        except ValueError:
+                            retry_after_sec = None
+                    else:
+                        retry_after_sec = None
                     # 500 errors get longer backoff (10s) vs standard exponential
-                    backoff = 10 if status == 500 else 2 ** attempt
+                    base_backoff = 10 if status == 500 else 2 ** attempt
+                    backoff = max(base_backoff, retry_after_sec) if retry_after_sec else base_backoff
                     logger.warning(
-                        "Server error %d on attempt %d/%d, retrying in %ds...",
+                        "Server error %d on attempt %d/%d, retrying in %.1fs...",
                         status, attempt + 1, max_retries, backoff,
                     )
                     await asyncio.sleep(backoff)

@@ -186,6 +186,10 @@ class ComposeOrchestrator:
                     self._agent_defs[agent_name]["model_alias"] = model_alias
                     logger.info("Profile override: %s → %s", agent_name, model_alias)
 
+        # Per-provider rate limiting (token bucket, keyed by model_alias)
+        from clef_server.concurrency import ProviderRateLimiter
+        self._rate_limiter = ProviderRateLimiter()
+
     # ------------------------------------------------------------------
     # Concurrency helpers (改进 1)
     # ------------------------------------------------------------------
@@ -755,15 +759,17 @@ class ComposeOrchestrator:
                 agent_name, max_tool_calls, [s["function"]["name"] for s in tool_schemas], model_alias,
             )
 
-            result = await run_agent_loop(
-                client=client,
-                system_prompt=system_prompt,
-                user_message=user_message,
-                tools=tool_schemas,
-                tool_executor=tool_executor,
-                temperature=temperature,
-                max_tool_calls=max_tool_calls,
-            )
+            # Acquire rate limiter token before API calls (uses model_alias as key)
+            async with self._rate_limiter.acquire(model_alias):
+                result = await run_agent_loop(
+                    client=client,
+                    system_prompt=system_prompt,
+                    user_message=user_message,
+                    tools=tool_schemas,
+                    tool_executor=tool_executor,
+                    temperature=temperature,
+                    max_tool_calls=max_tool_calls,
+                )
 
             logger.info(
                 "Agent %s: loop completed (tool_calls_used=%d, tool_calls=%d)",
