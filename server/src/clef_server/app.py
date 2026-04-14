@@ -1,5 +1,8 @@
 """FastAPI application factory."""
 
+import logging
+from contextlib import asynccontextmanager
+from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -8,6 +11,46 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
 from clef_server.routes import create_router
+
+_SERVER_ROOT = Path(__file__).resolve().parent.parent.parent
+_LOG_DIR = _SERVER_ROOT / "logs"
+_LOG_DIR.mkdir(exist_ok=True)
+
+
+@asynccontextmanager
+async def _lifespan(app: FastAPI):
+    """Add file handler to clef_server and agent_framework loggers.
+
+    Uvicorn --reload on Windows does not forward worker stdout to the
+    parent cmd window, so console-only logging is invisible.  We attach
+    a RotatingFileHandler during lifespan startup so it runs after
+    uvicorn's own dictConfig has finished configuring loggers.
+    """
+    handler = RotatingFileHandler(
+        _LOG_DIR / "clef-server.log",
+        maxBytes=5 * 1024 * 1024,
+        backupCount=3,
+        encoding="utf-8",
+    )
+    handler.setFormatter(logging.Formatter(
+        "%(asctime)s %(levelname)-8s %(name)s | %(message)s",
+        datefmt="%H:%M:%S",
+    ))
+    for logger_name in ("clef_server", "agent_framework"):
+        logger = logging.getLogger(logger_name)
+        logger.addHandler(handler)
+        logger.propagate = False
+
+    # Configure session persistence and restore incomplete sessions
+    from clef_server.orchestrator import get_session_manager
+    persist_dir = _SERVER_ROOT / "data" / "sessions"
+    mgr = get_session_manager()
+    mgr._persist_dir = persist_dir
+    restored = mgr.restore_all_incomplete()
+    if restored:
+        logger.info("Restored %d incomplete session(s) from %s", len(restored), persist_dir)
+
+    yield
 
 _HOME_HTML = """\
 <!DOCTYPE html>
@@ -53,6 +96,7 @@ def create_app() -> FastAPI:
         title="Clef Server",
         description="Multi-agent music composition microservice",
         version="0.1.0",
+        lifespan=_lifespan,
     )
 
     app.add_middleware(

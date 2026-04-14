@@ -383,6 +383,7 @@ class ComposeOrchestrator:
         # Graceful cancel: check at phase boundary
         if self.session.cancel_requested:
             self.session.set_cancelled()
+            get_session_manager().save(self.session)
             logger.info("Session %s cancelled after phase %s", self.session_id, from_phase)
             return
 
@@ -390,6 +391,7 @@ class ComposeOrchestrator:
         if next_id is None:
             # Workflow complete
             self.session.set_done(output_files=self._collect_outputs())
+            get_session_manager().save(self.session)
             logger.info("Session %s: workflow complete", self.session_id)
             return
 
@@ -400,6 +402,7 @@ class ComposeOrchestrator:
         if config.get("confirm", False):
             data = confirmation_data or {"phase": next_id}
             self.session.set_awaiting_confirm(confirmation_data=data)
+            get_session_manager().save(self.session)
             logger.info(
                 "Session %s: awaiting confirm for phase %s",
                 self.session_id,
@@ -412,6 +415,8 @@ class ComposeOrchestrator:
         phase_method = getattr(self, f"_phase_{next_id}", None)
         if phase_method is not None:
             await phase_method()
+            # Persist session state after each phase completes
+            get_session_manager().save(self.session)
         else:
             logger.warning("No implementation for phase %r, skipping", next_id)
             await self._advance_phase(next_id)
