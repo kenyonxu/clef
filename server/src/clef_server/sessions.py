@@ -276,6 +276,14 @@ class ComposeSession:
         )
 
 
+def _validate_session_id(session_id: str) -> str:
+    """Sanitize session_id to prevent path traversal in file operations."""
+    import re
+    if not re.match(r'^[a-zA-Z0-9_-]+$', session_id):
+        raise ValueError(f"Invalid session_id: {session_id!r}")
+    return session_id
+
+
 class SessionManager:
     """In-memory session store with optional TTL and disk persistence."""
 
@@ -315,6 +323,7 @@ class SessionManager:
         """Save session state to disk."""
         if not self._persist_dir:
             return
+        _validate_session_id(session.session_id)
         self._persist_dir.mkdir(parents=True, exist_ok=True)
         path = self._persist_dir / f"{session.session_id}.json"
         path.write_text(json.dumps(session.to_persist_dict(), ensure_ascii=False, indent=2), encoding="utf-8")
@@ -323,6 +332,7 @@ class SessionManager:
         """Load session from disk."""
         if not self._persist_dir:
             return None
+        _validate_session_id(session_id)
         path = self._persist_dir / f"{session_id}.json"
         if not path.exists():
             return None
@@ -331,7 +341,7 @@ class SessionManager:
             session = ComposeSession.from_dict(data)
             self._sessions[session_id] = session
             return session
-        except (json.JSONDecodeError, KeyError) as e:
+        except (json.JSONDecodeError, KeyError, OSError) as e:
             import logging
             logging.getLogger(__name__).warning("Failed to restore session %s: %s", session_id, e)
             return None
@@ -348,7 +358,7 @@ class SessionManager:
                 if not session.is_terminal:
                     self._sessions[session.session_id] = session
                     results.append(session)
-            except (json.JSONDecodeError, KeyError) as e:
+            except (json.JSONDecodeError, KeyError, OSError) as e:
                 import logging
                 logging.getLogger(__name__).warning("Failed to restore session from %s: %s", path, e)
         return results
@@ -357,13 +367,19 @@ class SessionManager:
         """Persist session if persistence is enabled. Alias for persist()."""
         self.persist(session)
 
+    def configure_persistence(self, persist_dir: str) -> None:
+        """Configure or update the persistence directory."""
+        self._persist_dir = Path(persist_dir)
+
     def remove(self, session_id: str) -> bool:
         was_in_memory = session_id in self._sessions
         if was_in_memory:
             del self._sessions[session_id]
+        removed_disk = False
         if self._persist_dir:
+            _validate_session_id(session_id)
             path = self._persist_dir / f"{session_id}.json"
             if path.exists():
                 path.unlink()
-                return True
-        return was_in_memory
+                removed_disk = True
+        return was_in_memory or removed_disk

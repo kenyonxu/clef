@@ -45,7 +45,7 @@ async def _lifespan(app: FastAPI):
     from clef_server.orchestrator import get_session_manager
     persist_dir = _SERVER_ROOT / "data" / "sessions"
     mgr = get_session_manager()
-    mgr._persist_dir = persist_dir
+    mgr.configure_persistence(str(persist_dir))
     restored = mgr.restore_all_incomplete()
     if restored:
         logger.info("Restored %d incomplete session(s) from %s", len(restored), persist_dir)

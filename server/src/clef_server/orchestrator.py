@@ -1995,6 +1995,44 @@ class ComposeOrchestrator:
         if leader_tasks:
             # Execute tasks in dependency order
             completed_agents: set[str] = set()
+            # Build task map for cycle detection
+            task_map: dict[str, dict] = {}
+            for t in leader_tasks:
+                name = t.get("agent", "")
+                if not name.startswith("clef-"):
+                    name = f"clef-{name}"
+                task_map[name] = t
+            # Detect circular dependencies
+            visited: set[str] = set()
+            in_stack: set[str] = set()
+            def has_cycle(agent: str) -> bool:
+                if agent in in_stack:
+                    return True
+                if agent in visited:
+                    return False
+                visited.add(agent)
+                in_stack.add(agent)
+                t = task_map.get(agent, {})
+                raw_dep = t.get("depends_on")
+                if isinstance(raw_dep, list):
+                    dep_names = [f"clef-{d}" if not d.startswith("clef-") else d for d in raw_dep if d]
+                elif raw_dep:
+                    dep_names = [f"clef-{raw_dep}"]
+                else:
+                    dep_names = []
+                for dep in dep_names:
+                    if dep in task_map and has_cycle(dep):
+                        return True
+                in_stack.discard(agent)
+                return False
+            circular_agents: set[str] = set()
+            for agent in task_map:
+                visited.clear()
+                in_stack.clear()
+                if has_cycle(agent):
+                    logger.error("Circular dependency detected involving agent %s, skipping", agent)
+                    circular_agents.add(agent)
+
             # Sort: tasks with no dependency first, then by dependency chain
             tasks_sorted = sorted(leader_tasks, key=lambda t: str(t.get("depends_on") or ""))
             for task in tasks_sorted:
@@ -2003,6 +2041,9 @@ class ComposeOrchestrator:
                     agent_name = f"clef-{agent_name}"
                 if agent_name not in self._agent_defs:
                     logger.warning("Leader task skipped: unknown agent %s", agent_name)
+                    continue
+                if agent_name in circular_agents:
+                    logger.warning("Leader task skipped: circular dependency for %s", agent_name)
                     continue
 
                 # Check dependency
