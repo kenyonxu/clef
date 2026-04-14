@@ -172,6 +172,9 @@ class ComposeOrchestrator:
         self.max_melody_gate_retries = self.MAX_MELODY_GATE_RETRIES  # not configurable via settings
         self.review_threshold = self._settings.get("review_threshold", 7)
         self.skip_review = self._settings.get("skip_review", False)
+        # Rate-limit pacing (configurable via settings, shadow class constants)
+        self.inter_agent_delay = self._settings.get("inter_agent_delay", self.INTER_AGENT_DELAY)
+        self.inter_round_delay = self._settings.get("inter_round_delay", self.INTER_ROUND_DELAY)
         self._validation_failures: list[dict] = []
         self._file_cache = _FileCache()
         self._iteration_history: list[dict] = []
@@ -1622,7 +1625,7 @@ class ComposeOrchestrator:
 
             # Rate-limit pacing between best-of-N rounds
             if round_idx < max_rounds - 1:
-                await asyncio.sleep(self.INTER_ROUND_DELAY)
+                await asyncio.sleep(self.inter_round_delay)
 
             if fail_count == 0:
                 break
@@ -1867,7 +1870,7 @@ class ComposeOrchestrator:
             logger.info("Sample voice %s: %d FAILs", voice_label, fail_count)
 
             # Rate-limit pacing between voice generations
-            await asyncio.sleep(self.INTER_AGENT_DELAY)
+            await asyncio.sleep(self.inter_agent_delay)
 
         # Merge all fragments
         self.session.record_sub_step("合并声部", "running")
@@ -1991,7 +1994,7 @@ class ComposeOrchestrator:
             self.session.record_sub_step(voice_display, "done", agent=agent_name)
 
             # Rate-limit pacing between voice generations
-            await asyncio.sleep(self.INTER_AGENT_DELAY)
+            await asyncio.sleep(self.inter_agent_delay)
 
         # Validate per-voice bar counts — truncate if significantly over target
         target_bars = plan.get("total_bars", 0)
@@ -2102,7 +2105,7 @@ class ComposeOrchestrator:
             self.session.record_sub_step("完整审查", "done", agent="clef-reviewer")
 
             # Rate-limit pacing between reviewer and leader
-            await asyncio.sleep(self.INTER_AGENT_DELAY)
+            await asyncio.sleep(self.inter_agent_delay)
 
             # Track review as a tool-like message for microcompact
             self._iteration_history.append({
@@ -2206,7 +2209,7 @@ class ComposeOrchestrator:
                 self.session.record_sub_step(task_label, "done", agent=agent_name)
 
                 # Rate-limit pacing between sequential agent tasks
-                await asyncio.sleep(self.INTER_AGENT_DELAY)
+                await asyncio.sleep(self.inter_agent_delay)
 
                 # Refresh score for next task in this round
                 current_score = score_path.read_text(encoding="utf-8") if score_path.exists() else ""
