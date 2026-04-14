@@ -56,9 +56,11 @@ class OpenAICompatConfig:
     model_id: str
     base_url: str
     api_key: str
+    rpm: int = 60
+    burst: int = 10
 
 
-AnthropicCompatConfig = OpenAICompatConfig  # Same shape: model_id, base_url, api_key
+AnthropicCompatConfig = OpenAICompatConfig  # Same shape: model_id, base_url, api_key, rpm, burst
 
 
 @dataclass
@@ -92,6 +94,8 @@ def load_provider_config(path: Path) -> ProviderConfig:
             model_id=cfg["model_id"],
             base_url=cfg["base_url"],
             api_key=cfg["api_key"],
+            rpm=cfg.get("rpm", 60),
+            burst=cfg.get("burst", 10),
         )
     for alias, cfg in expanded.get("anthropic_compat", {}).items():
         if not isinstance(cfg, dict):
@@ -100,6 +104,8 @@ def load_provider_config(path: Path) -> ProviderConfig:
             model_id=cfg["model_id"],
             base_url=cfg["base_url"],
             api_key=cfg["api_key"],
+            rpm=cfg.get("rpm", 60),
+            burst=cfg.get("burst", 10),
         )
     return config
 
