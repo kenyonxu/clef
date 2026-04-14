@@ -900,3 +900,50 @@ class TestResumeReview:
         with patch.object(orch, "_phase_express", new_callable=AsyncMock) as mock_expr:
             await orch.resume(saved_confirmation_data=confirm_data)
             mock_expr.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# TestResolveAgentName
+# ---------------------------------------------------------------------------
+
+class TestResolveAgentName:
+    """Test three-layer agent name resolution."""
+
+    @pytest.fixture
+    def orch(self):
+        providers = {"test": MagicMock()}
+        return ComposeOrchestrator(
+            session_id="test-resolve",
+            providers=providers,
+            workdir="/tmp/test",
+        )
+
+    def test_exact_match(self, orch):
+        assert orch._resolve_agent_name("clef-composer") == "clef-composer"
+
+    def test_case_insensitive(self, orch):
+        assert orch._resolve_agent_name("clef-Composer") == "clef-composer"
+        assert orch._resolve_agent_name("CLEF-COMPOSER") == "clef-composer"
+
+    def test_alias_melodist(self, orch):
+        assert orch._resolve_agent_name("clef-melodist") == "clef-composer"
+        assert orch._resolve_agent_name("melodist") == "clef-composer"
+
+    def test_alias_bassist(self, orch):
+        assert orch._resolve_agent_name("clef-bassist") == "clef-rhythmist"
+        assert orch._resolve_agent_name("drummer") == "clef-rhythmist"
+        assert orch._resolve_agent_name("percussionist") == "clef-rhythmist"
+
+    def test_voice_routing(self, orch):
+        assert orch._resolve_agent_name("clef-melody-writer", voice="melody") == "clef-composer"
+        assert orch._resolve_agent_name("totally-wrong-name", voice="harmony") == "clef-harmonist"
+        assert orch._resolve_agent_name("unknown", voice="rhythm") == "clef-rhythmist"
+
+    def test_no_match_returns_none(self, orch):
+        assert orch._resolve_agent_name("totally-wrong-name") is None
+        assert orch._resolve_agent_name("totally-wrong", voice="unknown_voice") is None
+
+    def test_bare_name_without_prefix(self, orch):
+        assert orch._resolve_agent_name("composer") == "clef-composer"
+        assert orch._resolve_agent_name("harmonist") == "clef-harmonist"
+        assert orch._resolve_agent_name("rhythmist") == "clef-rhythmist"

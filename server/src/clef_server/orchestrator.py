@@ -146,6 +146,30 @@ class ComposeOrchestrator:
     # Agent config key -> agent factory name in agents.yaml
     VOICE_AGENT_MAP = {"melody": "clef-composer", "harmony": "clef-harmonist", "rhythm": "clef-rhythmist"}
 
+    # Agent name aliases: common LLM synonyms → canonical agent name
+    _AGENT_ALIASES: dict[str, str] = {
+        "melodist": "clef-composer",
+        "melody": "clef-composer",
+        "melodic-writer": "clef-composer",
+        "tune-writer": "clef-composer",
+        "bassist": "clef-rhythmist",
+        "bass": "clef-rhythmist",
+        "drummer": "clef-rhythmist",
+        "drums": "clef-rhythmist",
+        "percussionist": "clef-rhythmist",
+        "percussion": "clef-rhythmist",
+        "rhythm-writer": "clef-rhythmist",
+        "harmonizer": "clef-harmonist",
+        "chord-writer": "clef-harmonist",
+        "harmony-writer": "clef-harmonist",
+        "reviewer": "clef-reviewer",
+        "leader": "clef-orchestrator",
+        "orchestrator": "clef-orchestrator",
+        "repair": "clef-repair",
+        "revision": "clef-revision",
+        "reviser": "clef-revision",
+    }
+
     # Display names for sub-step progress (Chinese)
     _VOICE_DISPLAY_NAMES = {
         "melody": "生成旋律",
@@ -695,6 +719,37 @@ class ComposeOrchestrator:
         except Exception as exc:
             logger.warning("Failed to load agents.yaml, using defaults: %s", exc)
             return dict(self._AGENT_DEFS)
+
+    def _resolve_agent_name(self, name: str, voice: str | None = None) -> str | None:
+        """Resolve an LLM-returned agent name to a canonical agent name.
+
+        Three-layer resolution:
+          1. Direct case-insensitive match against _agent_defs
+          2. Alias mapping for common synonyms
+          3. Voice-based routing via VOICE_AGENT_MAP (last resort)
+
+        Returns canonical agent name or None if unresolvable.
+        """
+        # Normalize: ensure clef- prefix, lowercase
+        normalized = name.strip().lower()
+        if not normalized.startswith("clef-"):
+            normalized = f"clef-{normalized}"
+
+        # Layer 1: Direct match (case-insensitive)
+        for valid_name in self._agent_defs:
+            if valid_name.lower() == normalized:
+                return valid_name
+
+        # Layer 2: Alias mapping (strip clef- prefix for alias lookup)
+        alias_key = normalized.removeprefix("clef-")
+        if alias_key in self._AGENT_ALIASES:
+            return self._AGENT_ALIASES[alias_key]
+
+        # Layer 3: Voice-based routing
+        if voice and voice in self.VOICE_AGENT_MAP:
+            return self.VOICE_AGENT_MAP[voice]
+
+        return None
 
     async def _run_agent(
         self,
