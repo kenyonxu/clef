@@ -210,6 +210,7 @@ class ComposeSession:
         return phases
 
     def to_dict(self) -> dict:
+        """Serialize for API responses (includes derived fields)."""
         return {
             "session_id": self.session_id,
             "status": self.status,
@@ -227,13 +228,61 @@ class ComposeSession:
             "updated_at": self.updated_at,
         }
 
+    def to_persist_dict(self) -> dict:
+        """Serialize session for disk persistence (excludes runtime state)."""
+        return {
+            "session_id": self.session_id,
+            "status": self.status,
+            "user_prompt": self.user_prompt,
+            "workdir": self.workdir,
+            "plan": self.plan,
+            "profile": self.profile,
+            "output_files": self.output_files,
+            "error": self.error,
+            "current_phase": self.current_phase,
+            "confirmation_data": self.confirmation_data,
+            "phase_history": self.phase_history,
+            "sub_steps": self.sub_steps,
+            "sample_round": self.sample_round,
+            "iteration_count": self.iteration_count,
+            "step_status": self.step_status,
+            "current_step": self.current_step,
+            "created_at": self.created_at,
+            "updated_at": self.updated_at,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "ComposeSession":
+        """Reconstruct a session from serialized dict (excludes runtime state)."""
+        return cls(
+            session_id=data["session_id"],
+            workdir=data.get("workdir", ""),
+            user_prompt=data.get("user_prompt", ""),
+            status=data.get("status", "created"),
+            plan=data.get("plan"),
+            profile=data.get("profile"),
+            output_files=data.get("output_files", []),
+            error=data.get("error"),
+            current_phase=data.get("current_phase", "parse"),
+            confirmation_data=data.get("confirmation_data"),
+            phase_history=data.get("phase_history", []),
+            sub_steps=data.get("sub_steps", []),
+            iteration_count=data.get("iteration_count", 0),
+            sample_round=data.get("sample_round", 0),
+            step_status=data.get("step_status", {0: "pending", 1: "pending", 2: "pending", 3: "pending"}),
+            current_step=data.get("current_step", 0),
+            created_at=data.get("created_at", time.time()),
+            updated_at=data.get("updated_at", time.time()),
+        )
+
 
 class SessionManager:
-    """In-memory session store with optional TTL."""
+    """In-memory session store with optional TTL and disk persistence."""
 
-    def __init__(self, ttl_seconds: float | None = None):
+    def __init__(self, ttl_seconds: float | None = None, persist_dir: str | None = None) -> None:
         self._sessions: dict[str, ComposeSession] = {}
         self._ttl_seconds = ttl_seconds
+        self._persist_dir: Path | None = Path(persist_dir) if persist_dir else None
 
     def create(self, user_prompt: str, workdir: str, plan: dict | None = None, session_id: str | None = None, profile: str | None = None) -> ComposeSession:
         if session_id is None:
@@ -262,8 +311,59 @@ class SessionManager:
     def list_sessions(self) -> list[ComposeSession]:
         return list(self._sessions.values())
 
+    def persist(self, session: ComposeSession) -> None:
+        """Save session state to disk."""
+        if not self._persist_dir:
+            return
+        self._persist_dir.mkdir(parents=True, exist_ok=True)
+        path = self._persist_dir / f"{session.session_id}.json"
+        path.write_text(json.dumps(session.to_persist_dict(), ensure_ascii=False, indent=2), encoding="utf-8")
+
+    def restore(self, session_id: str) -> ComposeSession | None:
+        """Load session from disk."""
+        if not self._persist_dir:
+            return None
+        path = self._persist_dir / f"{session_id}.json"
+        if not path.exists():
+            return None
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+            session = ComposeSession.from_dict(data)
+            self._sessions[session_id] = session
+            return session
+        except (json.JSONDecodeError, KeyError) as e:
+            import logging
+            logging.getLogger(__name__).warning("Failed to restore session %s: %s", session_id, e)
+            return None
+
+    def restore_all_incomplete(self) -> list[ComposeSession]:
+        """Restore all non-terminal sessions from disk."""
+        if not self._persist_dir:
+            return []
+        results = []
+        for path in self._persist_dir.glob("clef-*.json"):
+            try:
+                data = json.loads(path.read_text(encoding="utf-8"))
+                session = ComposeSession.from_dict(data)
+                if not session.is_terminal:
+                    self._sessions[session.session_id] = session
+                    results.append(session)
+            except (json.JSONDecodeError, KeyError) as e:
+                import logging
+                logging.getLogger(__name__).warning("Failed to restore session from %s: %s", path, e)
+        return results
+
+    def save(self, session: ComposeSession) -> None:
+        """Persist session if persistence is enabled. Alias for persist()."""
+        self.persist(session)
+
     def remove(self, session_id: str) -> bool:
-        if session_id in self._sessions:
+        was_in_memory = session_id in self._sessions
+        if was_in_memory:
             del self._sessions[session_id]
-            return True
-        return False
+        if self._persist_dir:
+            path = self._persist_dir / f"{session_id}.json"
+            if path.exists():
+                path.unlink()
+                return True
+        return was_in_memory

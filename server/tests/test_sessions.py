@@ -120,3 +120,97 @@ class TestSessionManager:
     def test_remove_nonexistent(self):
         mgr = SessionManager()
         assert mgr.remove("nope") is False
+
+
+class TestSessionSerialization:
+    def test_roundtrip_basic(self, tmp_path):
+        mgr = SessionManager()
+        s = mgr.create("test prompt", str(tmp_path))
+        s.set_running()
+        s.record_phase("parse", "done")
+        s.set_awaiting_confirm({"phase": "parse", "plan": {"title": "test"}})
+
+        data = s.to_persist_dict()
+        restored = ComposeSession.from_dict(data)
+
+        assert restored.session_id == s.session_id
+        assert restored.status == s.status
+        assert restored.current_phase == s.current_phase
+        assert restored.confirmation_data == s.confirmation_data
+        assert len(restored.phase_history) == len(s.phase_history)
+
+    def test_roundtrip_preserves_iteration_count(self, tmp_path):
+        mgr = SessionManager()
+        s = mgr.create("test", str(tmp_path))
+        s.iteration_count = 2
+        data = s.to_persist_dict()
+        restored = ComposeSession.from_dict(data)
+        assert restored.iteration_count == 2
+
+    def test_from_dict_omits_event_queues(self, tmp_path):
+        """Event queues are runtime-only, not serialized."""
+        mgr = SessionManager()
+        s = mgr.create("test", str(tmp_path))
+        data = s.to_persist_dict()
+        restored = ComposeSession.from_dict(data)
+        assert len(restored._event_queues) == 0
+
+
+class TestSessionPersistence:
+    def test_save_and_restore(self, tmp_path):
+        persist_dir = tmp_path / "persist"
+        mgr = SessionManager(persist_dir=str(persist_dir))
+        s = mgr.create("test prompt", str(tmp_path / "work"))
+        s.set_running()
+        s.record_phase("parse", "done")
+
+        mgr.persist(s)
+
+        mgr2 = SessionManager(persist_dir=str(persist_dir))
+        restored = mgr2.restore(s.session_id)
+        assert restored is not None
+        assert restored.session_id == s.session_id
+        assert restored.status == "running"
+
+    def test_restore_nonexistent_returns_none(self, tmp_path):
+        persist_dir = tmp_path / "persist"
+        mgr = SessionManager(persist_dir=str(persist_dir))
+        assert mgr.restore("no-such-id") is None
+
+    def test_remove_deletes_file(self, tmp_path):
+        persist_dir = tmp_path / "persist"
+        mgr = SessionManager(persist_dir=str(persist_dir))
+        s = mgr.create("test", str(tmp_path))
+        mgr.persist(s)
+        mgr.remove(s.session_id)
+        assert mgr.restore(s.session_id) is None
+
+    def test_restore_all_incomplete_skips_terminal(self, tmp_path):
+        persist_dir = tmp_path / "persist"
+        mgr = SessionManager(persist_dir=str(persist_dir))
+        s1 = mgr.create("running session", str(tmp_path))
+        s1.set_running()
+        s2 = mgr.create("done session", str(tmp_path))
+        s2.set_running()
+        s2.set_done()
+        mgr.persist(s1)
+        mgr.persist(s2)
+
+        mgr2 = SessionManager(persist_dir=str(persist_dir))
+        restored = mgr2.restore_all_incomplete()
+        assert len(restored) == 1
+        assert restored[0].session_id == s1.session_id
+
+    def test_corrupted_json_returns_none(self, tmp_path):
+        persist_dir = tmp_path / "persist"
+        persist_dir.mkdir()
+        mgr = SessionManager(persist_dir=str(persist_dir))
+        (persist_dir / "clef-bad123.json").write_text("{invalid json", encoding="utf-8")
+        assert mgr.restore("clef-bad123") is None
+
+    def test_no_persist_dir_is_noop(self, tmp_path):
+        mgr = SessionManager()
+        s = mgr.create("test", str(tmp_path))
+        mgr.persist(s)  # Should not raise
+        assert mgr.restore(s.session_id) is None
+        assert mgr.restore_all_incomplete() == []
