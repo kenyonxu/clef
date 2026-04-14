@@ -1966,35 +1966,94 @@ class ComposeOrchestrator:
 
         fragments: dict[str, str] = {}
 
-        # Generate all 3 voices: harmony, melody, rhythm
-        for voice in ["harmony", "melody", "rhythm"]:
-            agent_name = self.VOICE_AGENT_MAP.get(voice)
-            if not agent_name:
-                continue
-            voice_label = self.VOICE_MAP.get(voice, f"V:{voice}")
-
-            voice_display = self._VOICE_DISPLAY_NAMES.get(voice, f"生成 {voice}")
-            self.session.record_sub_step(voice_display, "running", agent=agent_name)
-
-            message = self._build_create_message(voice, plan)
-
-            # Best-of-N generation with validation + repair
-            best_abc, fail_count = await self._generate_with_best_of_n(
-                agent_name=agent_name,
-                message=message,
-                plan=plan,
-                plan_path=plan_path,
-                max_rounds=2,
-                voice_label=voice_label,
+        # --- Leader pre-planning: structured execution plan ---
+        leader_tasks = None
+        try:
+            generation_order = plan.get("generation_order", ["harmony", "melody"])
+            leader_prompt = (
+                f"Create an execution plan for full composition.\n"
+                f"Plan: {json.dumps(plan, indent=2, ensure_ascii=False)}\n"
+                f"generation_order: {generation_order}\n\n"
+                f"Respond with JSON:\n"
+                f'- "tasks": array of {{"agent", "voice", "depends_on", "instruction"}}\n'
+                f'- Each task specifies exactly which agent creates which voice part\n'
+                f'- depends_on: null for parallel tasks, agent name for sequential\n'
             )
-            abc_text = best_abc
+            leader_response = await self._run_agent(
+                "clef-orchestrator", leader_prompt, plan=plan
+            )
+            leader_result = self._extract_json(leader_response)
+            leader_tasks = leader_result.get("tasks")
+        except Exception as e:
+            logger.warning("Leader pre-planning failed, falling back to generation_order: %s", e)
 
-            self._store_fragment(fragments, None, voice_label, abc_text)
+        if leader_tasks:
+            # Execute tasks in dependency order
+            completed_agents: set[str] = set()
+            # Sort: tasks with no dependency first, then by dependency chain
+            tasks_sorted = sorted(leader_tasks, key=lambda t: str(t.get("depends_on") or ""))
+            for task in tasks_sorted:
+                agent_name = task.get("agent", "")
+                if not agent_name.startswith("clef-"):
+                    agent_name = f"clef-{agent_name}"
+                if agent_name not in self._agent_defs:
+                    logger.warning("Leader task skipped: unknown agent %s", agent_name)
+                    continue
 
-            self.session.record_sub_step(voice_display, "done", agent=agent_name)
+                # Check dependency
+                raw_dep = task.get("depends_on")
+                if isinstance(raw_dep, list):
+                    deps = [f"clef-{d}" if not d.startswith("clef-") else d for d in raw_dep if d]
+                else:
+                    deps = [f"clef-{raw_dep}"] if raw_dep else []
+                if any(d not in completed_agents for d in deps):
+                    logger.warning("Task dependency not met: %s needs %s, skipping", agent_name, deps)
+                    continue
 
-            # Rate-limit pacing between voice generations
-            await asyncio.sleep(self.inter_agent_delay)
+                voice = task.get("voice", "melody")
+                voice_label = self.VOICE_MAP.get(voice, f"V:{voice}")
+                instruction = task.get("instruction", f"Generate {voice} part")
+                voice_display = self._VOICE_DISPLAY_NAMES.get(voice, f"生成 {voice}")
+                self.session.record_sub_step(voice_display, "running", agent=agent_name)
+
+                best_abc, fail_count = await self._generate_with_best_of_n(
+                    agent_name=agent_name,
+                    message=instruction,
+                    plan=plan,
+                    plan_path=plan_path,
+                    max_rounds=2,
+                    voice_label=voice_label,
+                )
+                self._store_fragment(fragments, None, voice_label, best_abc)
+                self.session.record_sub_step(voice_display, "done", agent=agent_name)
+                completed_agents.add(agent_name)
+                await asyncio.sleep(self.inter_agent_delay)
+        else:
+            # Fallback: original hardcoded generation_order loop
+            for voice in ["harmony", "melody", "rhythm"]:
+                agent_name = self.VOICE_AGENT_MAP.get(voice)
+                if not agent_name:
+                    continue
+                voice_label = self.VOICE_MAP.get(voice, f"V:{voice}")
+
+                voice_display = self._VOICE_DISPLAY_NAMES.get(voice, f"生成 {voice}")
+                self.session.record_sub_step(voice_display, "running", agent=agent_name)
+
+                message = self._build_create_message(voice, plan)
+
+                best_abc, fail_count = await self._generate_with_best_of_n(
+                    agent_name=agent_name,
+                    message=message,
+                    plan=plan,
+                    plan_path=plan_path,
+                    max_rounds=2,
+                    voice_label=voice_label,
+                )
+                abc_text = best_abc
+
+                self._store_fragment(fragments, None, voice_label, abc_text)
+                self.session.record_sub_step(voice_display, "done", agent=agent_name)
+                await asyncio.sleep(self.inter_agent_delay)
 
         # Validate per-voice bar counts — truncate if significantly over target
         target_bars = plan.get("total_bars", 0)
