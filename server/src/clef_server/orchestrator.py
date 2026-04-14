@@ -1513,6 +1513,14 @@ class ComposeOrchestrator:
             f'- "iteration_complete": true if no more work needed\n'
             f'- "tasks": array of {{agent, voice, depends_on, instruction}}\n'
         )
+        message += (
+            f"\n\nIMPORTANT: Use ONLY these agent names: "
+            + ", ".join(
+                f'"{a}"' for a in self._agent_defs
+                if a in ("clef-composer", "clef-harmonist", "clef-rhythmist")
+            )
+            + f". Available voices: melody, harmony, rhythm."
+        )
         if extra_feedback:
             message += f"\nUser feedback: {extra_feedback}\n"
 
@@ -2030,14 +2038,20 @@ class ComposeOrchestrator:
         leader_tasks = None
         try:
             generation_order = plan.get("generation_order", ["harmony", "melody"])
+            # List only creative agents (not repair/review/revision)
+            creative_agents = [a for a in self._agent_defs if a in (
+                "clef-composer", "clef-harmonist", "clef-rhythmist",
+            )]
             leader_prompt = (
                 f"Create an execution plan for full composition.\n"
                 f"Plan: {json.dumps(plan, indent=2, ensure_ascii=False)}\n"
                 f"generation_order: {generation_order}\n\n"
                 f"Respond with JSON:\n"
                 f'- "tasks": array of {{"agent", "voice", "depends_on", "instruction"}}\n'
-                f'- Each task specifies exactly which agent creates which voice part\n'
-                f'- depends_on: null for parallel tasks, agent name for sequential\n'
+                f"- Each task specifies exactly which agent creates which voice part\n"
+                f"- depends_on: null for parallel tasks, agent name for sequential\n\n"
+                f"VALID AGENTS (use EXACTLY these names): {creative_agents}\n"
+                f"Available voices: melody, harmony, rhythm\n"
             )
             leader_response = await self._run_agent(
                 "clef-orchestrator", leader_prompt, plan=plan
@@ -2053,10 +2067,13 @@ class ComposeOrchestrator:
             # Build task map for cycle detection
             task_map: dict[str, dict] = {}
             for t in leader_tasks:
-                name = t.get("agent", "")
-                if not name.startswith("clef-"):
-                    name = f"clef-{name}"
-                task_map[name] = t
+                voice = t.get("voice", "")
+                raw_name = t.get("agent", "")
+                resolved = self._resolve_agent_name(raw_name, voice=voice)
+                if resolved:
+                    task_map[resolved] = t
+                else:
+                    logger.warning("Leader task: cannot resolve agent %r (voice=%s), skipping", raw_name, voice)
             # Detect circular dependencies
             visited: set[str] = set()
             in_stack: set[str] = set()
@@ -2070,9 +2087,10 @@ class ComposeOrchestrator:
                 t = task_map.get(agent, {})
                 raw_dep = t.get("depends_on")
                 if isinstance(raw_dep, list):
-                    dep_names = [f"clef-{d}" if not d.startswith("clef-") else d for d in raw_dep if d]
+                    dep_names = [self._resolve_agent_name(str(d), voice=None) or str(d) for d in raw_dep if d]
                 elif raw_dep:
-                    dep_names = [f"clef-{raw_dep}"]
+                    resolved = self._resolve_agent_name(str(raw_dep), voice=None)
+                    dep_names = [resolved] if resolved else []
                 else:
                     dep_names = []
                 for dep in dep_names:
@@ -2091,9 +2109,9 @@ class ComposeOrchestrator:
             # Sort: tasks with no dependency first, then by dependency chain
             tasks_sorted = sorted(leader_tasks, key=lambda t: str(t.get("depends_on") or ""))
             for task in tasks_sorted:
-                agent_name = task.get("agent", "")
-                if not agent_name.startswith("clef-"):
-                    agent_name = f"clef-{agent_name}"
+                voice = task.get("voice", "")
+                raw_agent = task.get("agent", "")
+                agent_name = self._resolve_agent_name(raw_agent, voice=voice) or raw_agent
                 if agent_name not in self._agent_defs:
                     logger.warning("Leader task skipped: unknown agent %s", agent_name)
                     continue
@@ -2104,9 +2122,12 @@ class ComposeOrchestrator:
                 # Check dependency
                 raw_dep = task.get("depends_on")
                 if isinstance(raw_dep, list):
-                    deps = [f"clef-{d}" if not d.startswith("clef-") else d for d in raw_dep if d]
+                    deps = [self._resolve_agent_name(str(d)) or str(d) for d in raw_dep if d]
+                elif raw_dep:
+                    resolved = self._resolve_agent_name(str(raw_dep))
+                    deps = [resolved] if resolved else []
                 else:
-                    deps = [f"clef-{raw_dep}"] if raw_dep else []
+                    deps = []
                 if any(d not in completed_agents for d in deps):
                     logger.warning("Task dependency not met: %s needs %s, skipping", agent_name, deps)
                     continue
@@ -2129,7 +2150,17 @@ class ComposeOrchestrator:
                 self.session.record_sub_step(voice_display, "done", agent=agent_name)
                 completed_agents.add(agent_name)
                 await asyncio.sleep(self.inter_agent_delay)
-        else:
+
+            # Detect: all Leader tasks were skipped → fallback to hardcoded loop
+            if not completed_agents:
+                logger.warning(
+                    "Session %s: All Leader tasks skipped (no valid agents resolved), "
+                    "falling back to hardcoded generation_order",
+                    self.session_id,
+                )
+                leader_tasks = None  # Trigger fallback below
+
+        if not leader_tasks:
             # Fallback: original hardcoded generation_order loop
             for voice in ["harmony", "melody", "rhythm"]:
                 agent_name = self.VOICE_AGENT_MAP.get(voice)
@@ -2298,14 +2329,13 @@ class ComposeOrchestrator:
                 else:
                     deps = [str(raw_dep)] if raw_dep else []
                 # Normalize dep names (e.g. "composer" → "clef-composer")
-                deps = [d if d.startswith("clef-") else f"clef-{d}" for d in deps]
+                deps = [self._resolve_agent_name(d) or d for d in deps]
                 if any(d not in completed_agents for d in deps):
                     continue  # skip if dependency not yet completed
 
-                agent_name = task.get("agent", "clef-composer")
-                # Normalize: LLM may return "composer" instead of "clef-composer"
-                if not agent_name.startswith("clef-"):
-                    agent_name = f"clef-{agent_name}"
+                voice = task.get("voice", "")
+                raw_agent = task.get("agent", "clef-composer")
+                agent_name = self._resolve_agent_name(raw_agent, voice=voice) or raw_agent
                 if agent_name not in self._agent_defs:
                     logger.warning("Unknown agent %r from leader, skipping task", agent_name)
                     continue
