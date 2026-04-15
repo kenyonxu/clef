@@ -200,6 +200,8 @@ class ComposeOrchestrator:
         self.inter_agent_delay = self._settings.get("inter_agent_delay", self.INTER_AGENT_DELAY)
         self.inter_round_delay = self._settings.get("inter_round_delay", self.INTER_ROUND_DELAY)
         self._validation_failures: list[dict] = []
+        self._stagnation_count = 0
+        self._prev_iteration_fail_count: int | None = None
         self._file_cache = _FileCache()
         self._iteration_history: list[dict] = []
 
@@ -1205,6 +1207,81 @@ class ComposeOrchestrator:
                 break
         return "\n".join(result_parts)
 
+    @staticmethod
+    def _truncate_score_per_voice(abc_text: str, target_bars: int) -> str:
+        """Truncate each voice independently to target_bars measures.
+
+        Unlike _truncate_to_bars which linearly cuts across all lines,
+        this method parses voice blocks (V:1, V:2, ...) and truncates
+        each one independently, preserving the multi-voice structure.
+        """
+        lines = abc_text.strip().split("\n")
+        header_lines: list[str] = []
+        voice_blocks: dict[str, list[str]] = {}
+        current_voice: str | None = None
+
+        for line in lines:
+            stripped = line.strip()
+            if not stripped or stripped.startswith("%"):
+                if current_voice is not None:
+                    voice_blocks.setdefault(current_voice, []).append(line)
+                else:
+                    header_lines.append(line)
+                continue
+
+            # Detect voice directive (same regex as _parse_voice_blocks)
+            voice_match = re.match(r'^(V:\d[\+\d]*)', stripped)
+            if voice_match:
+                current_voice = voice_match.group(1)
+                voice_blocks.setdefault(current_voice, []).append(line)
+                continue
+
+            # Header lines (before any V: directive)
+            if current_voice is None:
+                header_lines.append(line)
+            else:
+                voice_blocks.setdefault(current_voice, []).append(line)
+
+        # Truncate each voice block independently
+        truncated_blocks: dict[str, list[str]] = {}
+        for voice_label, voice_lines in voice_blocks.items():
+            truncated_blocks[voice_label] = ComposeOrchestrator._truncate_voice_lines(
+                voice_lines, target_bars
+            )
+
+        # Reassemble: header + each voice block
+        result_parts = list(header_lines)
+        for voice_label, voice_lines in truncated_blocks.items():
+            result_parts.extend(voice_lines)
+
+        return "\n".join(result_parts)
+
+    @staticmethod
+    def _truncate_voice_lines(lines: list[str], target_bars: int) -> list[str]:
+        """Truncate a single voice's lines to target_bars measures."""
+        bars_found = 0
+        result: list[str] = []
+        for line in lines:
+            stripped = line.strip()
+            if not stripped or stripped.startswith("%") or stripped.startswith("V:"):
+                result.append(line)
+                continue
+            bar_positions = [m.start() for m in ComposeOrchestrator._BAR_RE.finditer(line)]
+            if not bar_positions:
+                result.append(line)
+                continue
+            new_bars = bars_found + len(bar_positions)
+            if new_bars <= target_bars:
+                result.append(line)
+                bars_found = new_bars
+            else:
+                remaining = target_bars - bars_found
+                if remaining > 0 and bar_positions:
+                    end_pos = bar_positions[remaining - 1] + 1
+                    result.append(line[:end_pos])
+                break
+        return result
+
     def _store_fragment(
         self,
         fragments: dict[str, str],
@@ -1401,6 +1478,7 @@ class ComposeOrchestrator:
         melody_only: bool = False,
         is_sample: bool = False,
         extra_context: str = "",
+        validation_failures: list | None = None,
     ) -> dict:
         """Run the reviewer agent and return a review dict.
 
@@ -1452,9 +1530,24 @@ class ComposeOrchestrator:
             "```\n"
             "IMPORTANT: Every dimension MUST have a score (0-10). If you find issues, include them "
             "in the issues array with bar, severity (WARN/FAIL), description, and suggestion.\n"
+            "SCORING RULES:\n"
+            "- If the VALIDATION REPORT section contains FAIL-level issues, the corresponding "
+            "dimension score MUST be reduced by at least 2 points per FAIL.\n"
+            "- A score above 7 with any FAIL issue is INVALID. Do not give scores above 7 "
+            "if there are unresolved FAIL issues.\n"
+            "- If overall_score > 7 but there are 3+ FAIL issues, you MUST set verdict to 'revise'.\n"
         )
         if extra_context:
             message += f"\nAdditional context: {extra_context}\n"
+
+        if validation_failures:
+            fail_summary = self._format_validation_feedback(validation_failures)
+            message += f"\n\nVALIDATION REPORT (automated checks):\n{fail_summary}\n"
+            message += (
+                "The above validation failures indicate TECHNICAL problems in the score. "
+                "You MUST factor these into your scoring: each FAIL-level issue should "
+                "reduce the relevant dimension score by at least 2 points.\n"
+            )
 
         response_text = await self._run_agent("clef-reviewer", message, plan=plan, score_abc=score_text)
         raw = self._extract_json(response_text)
@@ -2300,6 +2393,8 @@ class ComposeOrchestrator:
     async def _phase_iterate(self, extra_feedback: str | None = None) -> None:
         """Phase 3: Review-driven iteration (up to N rounds)."""
         self.session.record_phase("iterate", "running")
+        self._stagnation_count = 0
+        self._prev_iteration_fail_count = None
 
         from clef_server.tools import merge_abc
 
@@ -2318,7 +2413,7 @@ class ComposeOrchestrator:
 
             # Full review
             self.session.record_sub_step("完整审查", "running", agent="clef-reviewer")
-            review = await self._call_reviewer(plan, melody_only=False)
+            review = await self._call_reviewer(plan, melody_only=False, validation_failures=self._validation_failures)
             iter_review_path = Path(self.workdir) / f"review_iter_r{round_num}.json"
             iter_review_path.write_text(json.dumps(review, indent=2, ensure_ascii=False), encoding="utf-8")
             self.session.record_sub_step("完整审查", "done", agent="clef-reviewer")
@@ -2410,17 +2505,22 @@ class ComposeOrchestrator:
                     logger.error("merge_abc (iteration) failed: %s", merge_result["error"])
                     raise RuntimeError(f"merge_abc (iteration) failed: {merge_result['error']}")
 
-                # Enforce bar count — truncate if agent added extra bars
+                # Enforce bar count — truncate per-voice if agent added extra bars
                 target_bars = plan.get("total_bars", 0)
                 if target_bars > 0:
                     current_score = score_path.read_text(encoding="utf-8")
-                    actual = self._count_bars(current_score)
-                    if actual > target_bars + 1:
-                        logger.warning(
-                            "Session %s: After %s revision, score has %d bars (target %d), truncating",
-                            self.session_id, agent_name, actual, target_bars,
-                        )
-                        truncated = self._truncate_to_bars(current_score, target_bars)
+                    voice_blocks = self._parse_voice_blocks(current_score)
+                    needs_truncate = False
+                    for vl in voice_blocks:
+                        voice_bars = self._count_bars(voice_blocks[vl])
+                        if voice_bars > target_bars + 1:
+                            needs_truncate = True
+                            logger.warning(
+                                "Session %s: After %s revision, %s has %d bars (target %d)",
+                                self.session_id, agent_name, vl, voice_bars, target_bars,
+                            )
+                    if needs_truncate:
+                        truncated = self._truncate_score_per_voice(current_score, target_bars)
                         score_path.write_text(truncated, encoding="utf-8")
 
                 completed_agents.add(agent_name)
@@ -2437,6 +2537,22 @@ class ComposeOrchestrator:
             report_path = Path(self.workdir) / f"validation_report_iter{round_num}.json"
             failures = self._run_validation(score_path, plan_path, report_path)
             self._validation_failures = failures
+
+            # Early stop: if fail_count hasn't improved for 2 rounds, stop iterating
+            current_fail_count = len(failures) if failures else 0
+            prev_fails = self._prev_iteration_fail_count
+            if prev_fails is not None and current_fail_count >= prev_fails:
+                self._stagnation_count += 1
+            else:
+                self._stagnation_count = 0
+            self._prev_iteration_fail_count = current_fail_count
+
+            if self._stagnation_count >= 2:
+                logger.info(
+                    "Session %s: fail_count stagnant at %d for 2+ rounds, stopping iteration",
+                    self.session_id, current_fail_count,
+                )
+                break
 
             # Export versioned MIDI for this iteration round
             iter_mid = Path(self.workdir) / f"base_r{round_num + 1}.mid"
@@ -2461,7 +2577,7 @@ class ComposeOrchestrator:
             logger.info("Session %s: skip_review=True, skipping review phase", self.session_id)
             await self._phase_express()
         else:
-            final_review = await self._call_reviewer(plan, melody_only=False)
+            final_review = await self._call_reviewer(plan, melody_only=False, validation_failures=self._validation_failures)
             final_review_path = Path(self.workdir) / f"review_final_r{self.session.iteration_count}.json"
             final_review_path.write_text(json.dumps(final_review, indent=2, ensure_ascii=False), encoding="utf-8")
             confirmation_data = {
@@ -2513,6 +2629,21 @@ class ComposeOrchestrator:
         expression_plan = self._extract_json(response)
 
         self.session.record_sub_step("生成表现力方案", "done", agent="clef-orchestrator")
+
+        # Validate expression plan format before saving
+        valid_keys = {"tracks", "channels", "sections", "cc7_volume", "cc10_pan",
+                      "cc91_reverb", "pitch_bend", "vibrato"}
+        has_valid_key = any(k in expression_plan for k in valid_keys)
+
+        if not has_valid_key:
+            logger.warning(
+                "Session %s: expression_plan has no valid top-level keys (%s), skipping injection",
+                self.session_id,
+                list(expression_plan.keys()),
+            )
+            self.session.record_phase("express", "done", error="invalid expression plan format")
+            self.session.set_done()
+            return
 
         # Save expression plan
         expr_plan_path = Path(self.workdir) / "expression_plan.json"

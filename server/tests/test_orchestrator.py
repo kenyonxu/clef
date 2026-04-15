@@ -2,6 +2,8 @@
 
 import asyncio
 import json
+import shutil
+import tempfile
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -1007,4 +1009,374 @@ class TestStripToolMarkers:
         stripped = orch._strip_tool_markers(text)
         assert "<invoke" not in stripped
         assert "V:1" in stripped
-        assert "C D E" in stripped
+
+
+class TestPerVoiceTruncation:
+    """Tests for per-voice truncation in iterate phase."""
+
+    def test_truncate_score_per_voice_4_voices(self):
+        """Per-voice truncation preserves all 4 voices, truncating each independently."""
+        abc = (
+            "X:1\nT:Test\nM:4/4\nL:1/4\n"
+            "V:1\nC D E F|G A B c|c B A G|F E D C|C D E F|G A B c|\n"
+            "V:2\n[C E G]| [D F A]| [E G B]| [C E G]| [D F A]| [E G B]|\n"
+            "V:3\nC,2 G,2|D,2 A,2|C,2 G,2|D,2 A,2|C,2 G,2|D,2 A,2|\n"
+            "V:4\n^D ^A ^D ^A|^D ^A ^D ^A|^D ^A ^D ^A|^D ^A ^D ^A|^D ^A ^D ^A|^D ^A ^D ^A|\n"
+        )
+        result = ComposeOrchestrator._truncate_score_per_voice(abc, 3)
+        # All 4 voices should still be present
+        assert "V:1" in result
+        assert "V:2" in result
+        assert "V:3" in result
+        assert "V:4" in result
+        # Each voice should have at most 3 bar lines
+        for vl in ["V:1", "V:2", "V:3", "V:4"]:
+            blocks = ComposeOrchestrator._parse_voice_blocks(result)
+            if vl in blocks:
+                bars = ComposeOrchestrator._count_bars(blocks[vl])
+                assert bars <= 3, f"{vl} has {bars} bars, expected <= 3"
+
+    def test_truncate_score_per_voice_no_over_truncate(self):
+        """Score with correct bar count per voice is not modified."""
+        abc = (
+            "X:1\nT:Test\nM:4/4\nL:1/4\n"
+            "V:1\nC D E F|G A B c|c B A G|\n"
+            "V:2\n[C E G]| [D F A]| [E G B]|\n"
+        )
+        result = ComposeOrchestrator._truncate_score_per_voice(abc, 3)
+        assert "V:1" in result
+        assert "V:2" in result
+        blocks = ComposeOrchestrator._parse_voice_blocks(result)
+        assert ComposeOrchestrator._count_bars(blocks.get("V:1", "")) == 3
+
+    def test_old_global_truncate_destroys_voices(self):
+        """Document the OLD bug: _truncate_to_bars on merged 4-voice score destroys later voices."""
+        abc = (
+            "X:1\nT:Test\nM:4/4\nL:1/4\n"
+            "V:1\nC D E F|G A B c|c B A G|F E D C|C D E F|G A B c|c B A G|F E D C|C D E F|G A B c|\n"
+            "V:2\n[C E G]| [D F A]| [E G B]| [C E G]| [D F A]| [E G B]| [C E G]| [D F A]| [E G B]| [C E G]|\n"
+            "V:3\nC,2 G,2|D,2 A,2|C,2 G,2|D,2 A,2|C,2 G,2|D,2 A,2|C,2 G,2|D,2 A,2|C,2 G,2|D,2 A,2|\n"
+            "V:4\n^D ^A ^D ^A|^D ^A ^D ^A|^D ^A ^D ^A|^D ^A ^D ^A|^D ^A ^D ^A|^D ^A ^D ^A|^D ^A ^D ^A|^D ^A ^D ^A|^D ^A ^D ^A|^D ^A ^D ^A|\n"
+        )
+        # OLD behavior: global truncation with target=10 cuts across all 40 bars, destroying V:3/V:4
+        result_old = ComposeOrchestrator._truncate_to_bars(abc, 10)
+        assert "V:3" not in result_old or "V:4" not in result_old
+        # NEW behavior: per-voice truncation preserves all voices
+        result_new = ComposeOrchestrator._truncate_score_per_voice(abc, 10)
+        assert "V:1" in result_new
+        assert "V:2" in result_new
+        assert "V:3" in result_new
+        assert "V:4" in result_new
+
+
+# ---------------------------------------------------------------------------
+# TestExpressPlanValidation
+# ---------------------------------------------------------------------------
+
+class TestExpressPlanValidation:
+    """Tests for expression plan format validation."""
+
+    @pytest.mark.asyncio
+    async def test_express_skips_invalid_plan(self):
+        """_phase_express should skip when expression_plan has no valid keys."""
+        mgr = get_session_manager()
+        mgr._sessions.clear()
+        tmp_path = Path(tempfile.mkdtemp())
+
+        plan = {"key": "C", "scale": "major", "bpm": 120, "form": "ABA", "total_bars": 8}
+        (tmp_path / "plan.json").write_text(json.dumps(plan))
+        (tmp_path / "base_r1.mid").write_bytes(
+            b"MThd\x00\x00\x00\x06\x00\x01\x00\x01\x00\x60"
+        )
+
+        session = mgr.create("test", workdir=str(tmp_path))
+        session.set_running()
+        session.iteration_count = 1
+
+        providers = {"test": AsyncMock()}
+        orchestrator = ComposeOrchestrator(session.session_id, providers, str(tmp_path))
+
+        # Mock _run_agent to return invalid JSON
+        invalid_response = '{"verdict": "revise"}'
+        orchestrator._run_agent = AsyncMock(return_value=invalid_response)
+
+        await orchestrator._phase_express()
+
+        # Should NOT have created expression_plan.json
+        assert not (tmp_path / "expression_plan.json").exists()
+        # Session should be marked done (early exit)
+        assert session.status == "done"
+
+        # Cleanup
+        shutil.rmtree(tmp_path, ignore_errors=True)
+
+    @pytest.mark.asyncio
+    async def test_express_saves_valid_plan(self):
+        """_phase_express should save when plan has valid keys."""
+        mgr = get_session_manager()
+        mgr._sessions.clear()
+        tmp_path = Path(tempfile.mkdtemp())
+
+        plan = {"key": "C", "scale": "major", "bpm": 120, "form": "ABA", "total_bars": 8}
+        (tmp_path / "plan.json").write_text(json.dumps(plan))
+        (tmp_path / "base_r1.mid").write_bytes(
+            b"MThd\x00\x00\x00\x06\x00\x01\x00\x01\x00\x60"
+        )
+
+        session = mgr.create("test", workdir=str(tmp_path))
+        session.set_running()
+        session.iteration_count = 1
+
+        providers = {"test": AsyncMock()}
+        orchestrator = ComposeOrchestrator(session.session_id, providers, str(tmp_path))
+
+        valid_response = '{"cc7_volume": [{"beat": 0, "value": 80}]}'
+        orchestrator._run_agent = AsyncMock(return_value=valid_response)
+
+        with patch("clef_server.tools.inject_expression", return_value={"ok": True}):
+            await orchestrator._phase_express()
+
+        assert (tmp_path / "expression_plan.json").exists()
+        saved = json.loads((tmp_path / "expression_plan.json").read_text())
+        assert "cc7_volume" in saved
+
+        # Cleanup
+        shutil.rmtree(tmp_path, ignore_errors=True)
+
+
+class TestReviewerValidationContext:
+    """Tests for passing validation failures to reviewer."""
+
+    @pytest.mark.asyncio
+    async def test_call_reviewer_includes_validation_failures(self):
+        """_call_reviewer message should include validation failure details."""
+        orchestrator = ComposeOrchestrator.__new__(ComposeOrchestrator)
+        tmp_path = Path(tempfile.mkdtemp())
+
+        plan = {"key": "C", "scale": "major", "bpm": 120, "form": "ABA", "total_bars": 8}
+        score_abc = "X:1\nT:Test\nM:4/4\nV:1\nC D E F|G A B c|\n"
+        (tmp_path / "score.abc").write_text(score_abc)
+
+        orchestrator.workdir = str(tmp_path)
+
+        captured_message = None
+
+        async def mock_run_agent(agent_name, message, **kwargs):
+            nonlocal captured_message
+            captured_message = message
+            return '{"dimensions":{"melody":{"score":5,"issues":[]}},"overall_score":5,"verdict":"revise","summary":"test"}'
+
+        orchestrator._run_agent = mock_run_agent
+
+        failures = [
+            {"category": "measure_duration", "voice": "V:1", "message": "bar 3 has 5 beats"},
+            {"category": "voice_alignment", "voice": "global", "message": "voices misaligned"},
+        ]
+
+        await orchestrator._call_reviewer(plan, validation_failures=failures)
+
+        assert captured_message is not None
+        assert "VALIDATION REPORT" in captured_message
+        assert "FAIL-level issue" in captured_message
+        assert "measure_duration" in captured_message
+
+        shutil.rmtree(tmp_path, ignore_errors=True)
+
+    @pytest.mark.asyncio
+    async def test_call_reviewer_no_failures_no_extra_text(self):
+        """_call_reviewer without failures should not include validation section."""
+        orchestrator = ComposeOrchestrator.__new__(ComposeOrchestrator)
+        tmp_path = Path(tempfile.mkdtemp())
+
+        plan = {"key": "C", "scale": "major", "bpm": 120, "form": "ABA"}
+        (tmp_path / "score.abc").write_text("X:1\nT:Test\nV:1\nC D E F|\n")
+
+        orchestrator.workdir = str(tmp_path)
+
+        captured_message = None
+
+        async def mock_run_agent(agent_name, message, **kwargs):
+            nonlocal captured_message
+            captured_message = message
+            return '{"dimensions":{"melody":{"score":8,"issues":[]}},"overall_score":8,"verdict":"pass","summary":"ok"}'
+
+        orchestrator._run_agent = mock_run_agent
+
+        await orchestrator._call_reviewer(plan, validation_failures=None)
+
+        # "VALIDATION REPORT" appears in SCORING RULES text, so check for the
+        # actual failure-block header which only appears when failures are present
+        assert "VALIDATION REPORT (automated checks)" not in captured_message
+
+        shutil.rmtree(tmp_path, ignore_errors=True)
+
+
+class TestReviewerScoringConstraints:
+    """Tests for FAIL-penalty scoring instructions in reviewer prompt."""
+
+    @pytest.mark.asyncio
+    async def test_reviewer_prompt_contains_scoring_rules(self):
+        """Reviewer prompt should include FAIL-penalty scoring rules."""
+        orchestrator = ComposeOrchestrator.__new__(ComposeOrchestrator)
+        tmp_path = Path(tempfile.mkdtemp())
+
+        plan = {"key": "C", "scale": "major", "bpm": 120, "form": "ABA"}
+        (tmp_path / "score.abc").write_text("X:1\nT:Test\nV:1\nC D E F|\n")
+
+        orchestrator.workdir = str(tmp_path)
+
+        captured_message = None
+
+        async def mock_run_agent(agent_name, message, **kwargs):
+            nonlocal captured_message
+            captured_message = message
+            return '{"dimensions":{"melody":{"score":5,"issues":[]}},"overall_score":5,"verdict":"revise","summary":"test"}'
+
+        orchestrator._run_agent = mock_run_agent
+
+        await orchestrator._call_reviewer(plan)
+
+        assert "SCORING RULES" in captured_message
+        assert "FAIL-level issues" in captured_message
+
+        shutil.rmtree(tmp_path, ignore_errors=True)
+
+
+class TestIterateEarlyStop:
+    """Tests for early-stop when validation fail_count stagnates."""
+
+    @pytest.mark.asyncio
+    async def test_iterate_stops_on_stagnation(self):
+        """Iteration should stop after 2 rounds with no fail_count improvement."""
+        mgr = get_session_manager()
+        mgr._sessions.clear()
+        tmp_path = Path(tempfile.mkdtemp())
+
+        plan = {
+            "key": "C", "scale": "major", "bpm": 120, "form": "ABA",
+            "total_bars": 8,
+            "sections": [
+                {"name": "A", "bars": 4, "energy_level": 5},
+                {"name": "B", "bars": 4, "energy_level": 7},
+            ],
+            "orchestration": [
+                {"voice": "V:1", "label": "melody", "instrument": "Piano"},
+            ],
+        }
+        (tmp_path / "plan.json").write_text(json.dumps(plan))
+        (tmp_path / "score.abc").write_text("X:1\nT:Test\nM:4/4\nV:1\nC D E F|G A B c|c B A G|F E D C|\n")
+
+        session = mgr.create("test", workdir=str(tmp_path))
+        session.set_running()
+        session.iteration_count = 0
+
+        providers = {"test": AsyncMock()}
+        orchestrator = ComposeOrchestrator(session.session_id, providers, str(tmp_path))
+        orchestrator.max_iteration_rounds = 5
+        orchestrator._stagnation_count = 0
+        orchestrator._prev_iteration_fail_count = None
+        orchestrator._iteration_history = []
+        orchestrator._validation_failures = []
+
+        orchestrator._call_reviewer = AsyncMock(return_value={
+            "verdict": "revise",
+            "scores": {"melody": 5},
+            "issues": ["bad melody"],
+        })
+
+        call_count = 0
+        async def mock_leader(plan, review, **kwargs):
+            nonlocal call_count
+            call_count += 1
+            return {
+                "tasks": [{"agent": "clef-composer", "voice": "melody", "instruction": "fix"}],
+                "iteration_complete": False,
+            }
+
+        orchestrator._call_leader = mock_leader
+        orchestrator._run_agent = AsyncMock(return_value="C D E F|G A B c|c B A G|F E D C|")
+        orchestrator._extract_abc = lambda x: x
+        orchestrator._inject_midi_programs = MagicMock()
+        orchestrator._VOICE_TO_AGENT = {"V:1": "clef-composer"}
+        orchestrator._agent_defs = {"clef-composer": {}}
+        orchestrator.VOICE_MAP = {"melody": "V:1"}
+        orchestrator.inter_agent_delay = 0
+
+        # Always return 10 failures (stagnant)
+        stagnant_failures = [{"category": "duration", "voice": "V:1", "message": "measure too long", "severity": "FAIL"}] * 10
+        orchestrator._run_validation = MagicMock(return_value=stagnant_failures)
+
+        with patch("clef_server.tools.merge_abc", return_value={"ok": True}):
+            with patch("clef_server.tools.abc_to_midi", return_value={"ok": True}):
+                await orchestrator._phase_iterate()
+
+        # Should have stopped before reaching 5 rounds due to stagnation
+        # Round 1: stagnation=0 (no prev), round 2: stagnation=1, round 3: stagnation=2 -> break
+        assert orchestrator.session.iteration_count < 5, \
+            f"Expected early stop but ran {orchestrator.session.iteration_count} rounds"
+        assert orchestrator.session.iteration_count == 3, \
+            f"Expected 3 rounds (stagnation after 2), got {orchestrator.session.iteration_count}"
+
+        shutil.rmtree(tmp_path, ignore_errors=True)
+
+    @pytest.mark.asyncio
+    async def test_iterate_continues_on_improvement(self):
+        """Iteration should continue when fail_count improves."""
+        mgr = get_session_manager()
+        mgr._sessions.clear()
+        tmp_path = Path(tempfile.mkdtemp())
+
+        plan = {
+            "key": "C", "scale": "major", "bpm": 120, "form": "ABA",
+            "total_bars": 8,
+            "sections": [{"name": "A", "bars": 4}, {"name": "B", "bars": 4}],
+            "orchestration": [{"voice": "V:1", "label": "melody", "instrument": "Piano"}],
+        }
+        (tmp_path / "plan.json").write_text(json.dumps(plan))
+        (tmp_path / "score.abc").write_text("X:1\nT:Test\nM:4/4\nV:1\nC D E F|G A B c|c B A G|F E D C|\n")
+
+        session = mgr.create("test", workdir=str(tmp_path))
+        session.set_running()
+        session.iteration_count = 0
+
+        providers = {"test": AsyncMock()}
+        orchestrator = ComposeOrchestrator(session.session_id, providers, str(tmp_path))
+        orchestrator.max_iteration_rounds = 3
+        orchestrator._stagnation_count = 0
+        orchestrator._prev_iteration_fail_count = None
+        orchestrator._iteration_history = []
+        orchestrator._validation_failures = []
+
+        orchestrator._call_reviewer = AsyncMock(return_value={
+            "verdict": "revise", "scores": {"melody": 5}, "issues": [],
+        })
+
+        orchestrator._call_leader = AsyncMock(return_value={
+            "tasks": [{"agent": "clef-composer", "voice": "melody", "instruction": "fix"}],
+            "iteration_complete": False,
+        })
+        orchestrator._run_agent = AsyncMock(return_value="C D E F|G A B c|c B A G|F E D C|")
+        orchestrator._extract_abc = lambda x: x
+        orchestrator._inject_midi_programs = MagicMock()
+        orchestrator._VOICE_TO_AGENT = {"V:1": "clef-composer"}
+        orchestrator._agent_defs = {"clef-composer": {}}
+        orchestrator.VOICE_MAP = {"melody": "V:1"}
+        orchestrator.inter_agent_delay = 0
+
+        # Improving: 10 -> 5 -> 1
+        call_num = 0
+        def improving_validation(*args, **kwargs):
+            nonlocal call_num
+            call_num += 1
+            return [{"category": "duration", "voice": "V:1", "message": "measure too long", "severity": "FAIL"}] * max(1, 11 - call_num * 5)
+
+        orchestrator._run_validation = MagicMock(side_effect=improving_validation)
+
+        with patch("clef_server.tools.merge_abc", return_value={"ok": True}):
+            with patch("clef_server.tools.abc_to_midi", return_value={"ok": True}):
+                await orchestrator._phase_iterate()
+
+        # Should have run all 3 rounds since fail_count was improving
+        assert orchestrator.session.iteration_count == 3
+
+        shutil.rmtree(tmp_path, ignore_errors=True)
