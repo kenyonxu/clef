@@ -1,0 +1,14 @@
+[remap]
+
+importer="clef"
+type="MidiResource"
+uid="uid://brt0m0m42usxn"
+path="res://.godot/imported/base_r3.mid-a3053cbe538358235d5f5eecbe50a6a8.tres"
+
+[deps]
+
+source_file="res://addons/clef/output/Village Serenity_193630/base_r3.mid"
+dest_files=["res://.godot/imported/base_r3.mid-a3053cbe538358235d5f5eecbe50a6a8.tres"]
+
+[params]
+

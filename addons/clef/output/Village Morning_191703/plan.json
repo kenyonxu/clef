@@ -1,43 +1,73 @@
 {
-  "title": "洛尔达的清晨",
-  "key": "D",
+  "title": "Village Morning",
+  "key": "G",
   "scale": "major",
-  "bpm": 80,
-  "time_signature": "4/4",
+  "bpm": 100,
+  "time_signature": "3/4",
   "form": "ABA",
-  "total_bars": 15,
+  "total_bars": 17,
   "sections": [
     {
-      "id": "intro",
-      "name": "黎明微光",
-      "measures": 5
-    },
-    {
-      "id": "main",
-      "name": "晨光渐醒",
+      "id": "A",
+      "name": "Verse",
       "measures": 8
     },
     {
-      "id": "outro",
-      "name": "循环过渡",
-      "measures": 2
+      "id": "B",
+      "name": "Bridge",
+      "measures": 4
+    },
+    {
+      "id": "A",
+      "name": "Verse",
+      "measures": 5
     }
   ],
   "orchestration": {
     "melody": {
-      "name": "主旋律",
+      "name": "main melody",
       "channel": 1,
-      "instrument": "哨笛",
-      "range": "C-1-D#8",
-      "register": "D#3-D5",
-      "midi_program": 75,
+      "instrument": "flute",
+      "range": "C-1-D#9",
+      "register": "C#3-C5",
+      "midi_program": 73,
       "sf2": {
-        "name": "Pan Flute",
-        "gm_name": "pan_flute",
+        "name": "Flute",
+        "gm_name": "flute",
         "is_drum": false,
         "key_range": [
           0,
-          111
+          123
+        ],
+        "vel_range": [
+          0,
+          127
+        ],
+        "sweet_spot": [
+          49,
+          72
+        ],
+        "vel_layers": 1,
+        "avg_attack": -1.0,
+        "avg_release": -1.0,
+        "quality": "high",
+        "characteristics": []
+      }
+    },
+    "harmony": {
+      "name": "chordal accompaniment",
+      "channel": 2,
+      "instrument": "harp",
+      "range": "C-1-G#8",
+      "register": "D#3-D5",
+      "midi_program": 46,
+      "sf2": {
+        "name": "Orchestral Harp",
+        "gm_name": "orchestral_harp",
+        "is_drum": false,
+        "key_range": [
+          0,
+          116
         ],
         "vel_range": [
           0,
@@ -48,38 +78,6 @@
           74
         ],
         "vel_layers": 1,
-        "avg_attack": 0.008,
-        "avg_release": -1.0,
-        "quality": "medium",
-        "characteristics": [
-          "percussive"
-        ]
-      }
-    },
-    "harmony": {
-      "name": "和声铺垫",
-      "channel": 2,
-      "instrument": "菲德尔琴",
-      "range": "C-1-G9",
-      "register": "G#2-G4",
-      "midi_program": 110,
-      "sf2": {
-        "name": "Fiddle",
-        "gm_name": "gm_110",
-        "is_drum": false,
-        "key_range": [
-          0,
-          127
-        ],
-        "vel_range": [
-          0,
-          127
-        ],
-        "sweet_spot": [
-          44,
-          67
-        ],
-        "vel_layers": 1,
         "avg_attack": -1.0,
         "avg_release": -1.0,
         "quality": "high",
@@ -87,15 +85,15 @@
       }
     },
     "bass": {
-      "name": "低音支撑",
+      "name": "bass line",
       "channel": 3,
-      "instrument": "民谣吉他（低音弦）",
+      "instrument": "cello",
       "range": "C-1-C8",
       "register": "F#2-F4",
-      "midi_program": 25,
+      "midi_program": 42,
       "sf2": {
-        "name": "Steel Guitar",
-        "gm_name": "steel_guitar",
+        "name": "Cello",
+        "gm_name": "cello",
         "is_drum": false,
         "key_range": [
           0,
@@ -110,16 +108,20 @@
           65
         ],
         "vel_layers": 1,
-        "avg_attack": -1.0,
+        "avg_attack": 0.006,
         "avg_release": -1.0,
         "quality": "high",
-        "characteristics": []
+        "characteristics": [
+          "percussive"
+        ]
       }
     }
   },
   "generation_order": [
     "harmony",
-    "melody"
+    "bass",
+    "melody",
+    "drums"
   ],
   "demo_length_bars": 8
 }

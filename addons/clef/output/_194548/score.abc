@@ -1,0 +1,19 @@
+%%abc-version 2.1
+X:1
+T:晨光中的洛尔达
+M:4/4
+L:1/8
+Q:1/4=80
+K:D
+%%MIDI channel 1
+V:1
+%%MIDI program 74
+% ClefMeta: {"agent": "clef-composer", "voice": "V:1", "round": 0, "timestamp": 1776081004.0051205}
+!mf!(f2 e d f2 a2 | e4 c2 d2 | d2 f a b2 a2 | f6 e d |
+!f!(g2 a b a2 g2 | !ff!a2 ^f2 d2 f2 | e2 c2 d2 e2 | !mf!d8) |
+%%MIDI channel 2
+V:2
+%%MIDI program 25
+% ClefMeta: {"agent": "clef-harmonist", "voice": "V:2", "round": 0, "timestamp": 1776080835.011058}
+"D" [DFA]4 [DFA]4 | "A" [AcE]4 [AcE]4 | "Bm" [BDF]4 [BDF]4 | "F#m" [FAc]4 [FAc]4 |
+"G" [GBd]4 [GBd]4 | "D" [DF^A]4 [DF^A]4 | "A" [AcE]4 [AcE]4 | "D" [DFA]8 |

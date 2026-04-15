@@ -1,0 +1,21 @@
+{
+  "verdict": "revise",
+  "scores": {
+    "melody": 0,
+    "harmony": 0,
+    "rhythm": 0,
+    "structure": 0,
+    "style": 0,
+    "orchestration": 0
+  },
+  "issues": [
+    "无法读取 score.abc 文件内容，无法评估旋律质量",
+    "无法读取 score.abc 文件内容，无法评估和声质量",
+    "无法读取 score.abc 文件内容，无法评估节奏质量",
+    "无法读取 score.abc 文件内容，无法评估结构质量",
+    "无法读取 score.abc 文件内容，无法评估风格一致性",
+    "无法读取 score.abc 文件内容，无法评估配器平衡"
+  ],
+  "summary": "评审失败：无法读取 score.abc 文件内容。请确认文件已正确生成且路径有效。",
+  "overall_score": 0
+}

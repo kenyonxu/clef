@@ -1,0 +1,135 @@
+{
+  "title": "Cheerful Morning Town",
+  "key": "C",
+  "scale": "major",
+  "bpm": 90,
+  "time_signature": "4/4",
+  "form": "ABACA",
+  "total_bars": 11,
+  "sections": [
+    {
+      "id": "A1",
+      "name": "Intro",
+      "measures": 2
+    },
+    {
+      "id": "B",
+      "name": "Verse",
+      "measures": 3
+    },
+    {
+      "id": "A2",
+      "name": "Chorus",
+      "measures": 3
+    },
+    {
+      "id": "C",
+      "name": "Bridge",
+      "measures": 2
+    },
+    {
+      "id": "A3",
+      "name": "Outro",
+      "measures": 2
+    }
+  ],
+  "orchestration": {
+    "melody": {
+      "name": "main melody",
+      "channel": 1,
+      "instrument": "flute",
+      "range": "C-1-D#9",
+      "register": "C#3-C5",
+      "midi_program": 73,
+      "sf2": {
+        "name": "Flute",
+        "gm_name": "flute",
+        "is_drum": false,
+        "key_range": [
+          0,
+          123
+        ],
+        "vel_range": [
+          0,
+          127
+        ],
+        "sweet_spot": [
+          49,
+          72
+        ],
+        "vel_layers": 1,
+        "avg_attack": -1.0,
+        "avg_release": -1.0,
+        "quality": "high",
+        "characteristics": []
+      }
+    },
+    "harmony": {
+      "name": "accompaniment",
+      "channel": 2,
+      "instrument": "acoustic guitar",
+      "range": "C-1-C8",
+      "register": "F#2-F4",
+      "midi_program": 25,
+      "sf2": {
+        "name": "Steel Guitar",
+        "gm_name": "steel_guitar",
+        "is_drum": false,
+        "key_range": [
+          0,
+          108
+        ],
+        "vel_range": [
+          0,
+          127
+        ],
+        "sweet_spot": [
+          42,
+          65
+        ],
+        "vel_layers": 1,
+        "avg_attack": -1.0,
+        "avg_release": -1.0,
+        "quality": "high",
+        "characteristics": []
+      }
+    },
+    "bass": {
+      "name": "bass line",
+      "channel": 3,
+      "instrument": "upright bass",
+      "range": "C-1-C8",
+      "register": "D#3-D5",
+      "midi_program": 32,
+      "sf2": {
+        "name": "Acoustic Bass",
+        "gm_name": "acoustic_bass",
+        "is_drum": false,
+        "key_range": [
+          0,
+          108
+        ],
+        "vel_range": [
+          0,
+          127
+        ],
+        "sweet_spot": [
+          51,
+          74
+        ],
+        "vel_layers": 1,
+        "avg_attack": 0.002,
+        "avg_release": -1.0,
+        "quality": "high",
+        "characteristics": [
+          "percussive"
+        ]
+      }
+    }
+  },
+  "generation_order": [
+    "harmony",
+    "melody"
+  ],
+  "demo_length_bars": 8
+}

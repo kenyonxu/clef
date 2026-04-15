@@ -1,0 +1,14 @@
+[remap]
+
+importer="clef"
+type="MidiResource"
+uid="uid://dupwvxuiwvlu7"
+path="res://.godot/imported/base_r2.mid-9fe7ed7b86d0a56036f68ca91abcbede.tres"
+
+[deps]
+
+source_file="res://addons/clef/output/Cheerful Morning Tow_155400/base_r2.mid"
+dest_files=["res://.godot/imported/base_r2.mid-9fe7ed7b86d0a56036f68ca91abcbede.tres"]
+
+[params]
+

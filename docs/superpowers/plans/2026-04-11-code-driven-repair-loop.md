@@ -1230,7 +1230,7 @@ No cross-phase themes — each phase's concerns were distinct.
 
 **执行方式**: Subagent-Driven Development（每 Task 派发独立 implementer + spec reviewer + quality reviewer）
 **分支**: `feature/clef-server-v2`
-**Base SHA**: `286011f` → **Head SHA**: `7112542`
+**Base SHA**: `286011f` → **Head SHA**: `8e7e418`
 
 ### Task 完成状态
 
@@ -1251,6 +1251,9 @@ b1959e7 feat(server): add clef-repair agent for validation-driven ABC fixes
 1a19ab8 feat(server): code-driven best-of-N validate-repair loop with repair agent
 58a191c feat(server): two-pass generation (rhythm skeleton first, pitch fill second)
 7112542 fix(server): fix stripped scope bug, update tool counts, sync agents.yaml tools
+baec555 feat(server): integrate two-pass generation into best-of-N first round
+e14b754 docs: add execution record to repair-loop plan
+8e7e418 fix(server): handle PARSE_ERROR measures in two-pass rhythm feedback
 ```
 
 ### 与计划的出入
@@ -1271,7 +1274,7 @@ b1959e7 feat(server): add clef-repair agent for validation-driven ABC fixes
 |------|----------|----------|------|
 | A | Task 1 使用 `_count_measure_units` 函数 | 改为 `_count_measure_units_clean`，原函数有 bug | 初始实现遗留死代码，Spec review 后删除 |
 | B | `_phase_sample` 保留原有生成循环 + 新增 best-of-N 验证 | 替换为统一的 best-of-N 循环（生成+验证一体） | 避免双重生成（先生成再验证 = 浪费 token） |
-| C | `_generate_with_best_of_n` 中集成 `_generate_two_pass` | 仅添加方法，未在 best-of-N 中自动调用 | 两阶段生成作为可选工具方法，由 orchestrator 按需调用 |
+| C | `_generate_with_best_of_n` 中集成 `_generate_two_pass` | ✅ 已集成：首轮自动尝试 two-pass，失败回退单次生成 | 后续 commit `baec555` + `8e7e418` |
 | D | Task 3 的 `_VOICE_TO_AGENT` 验证修复循环 | 改为 `_attempt_repair`（对合并后整曲修复） | 更高效：修复 agent 处理全曲上下文，而非逐声部重生成 |
 | E | agents.yaml 在 Task 2 添加 clef-repair | 同步完成 | 无偏差 |
 | F | test_api_ttl.py 工具计数 | 从 8 → 9 → 10（Task 2 修到 9，Task 4 修到 10） | 工具数增量更新 |
@@ -1295,7 +1298,46 @@ b1959e7 feat(server): add clef-repair agent for validation-driven ABC fixes
 |------|------|------|
 | orchestrator tests（`_generate_with_best_of_n` 等） | ❌ 未完成 | Eng Review Decision #11：integration tests harder，deferred |
 | M:C / M:none 拍号支持 | ❌ 未完成 | Decision #13：当前只用 4/4，rare case |
-| 两阶段生成与 best-of-N 集成 | ❌ 未完成 | `_generate_two_pass` 方法已添加但未在 best-of-N 循环中自动调用 |
+| 两阶段生成与 best-of-N 集成 | ✅ 已完成 | `baec555` 集成 + `8e7e418` 修复 PARSE_ERROR bug |
 | `(2` 二连音支持 | ⚠️ 已知限制 | `tuplet_factor` 公式对 `(2` 不正确（应为 1.5，实际 0.5） |
 | `_duration_to_str` 三连音修正后精度 | ⚠️ 已知限制 | `2/3` 单位无法表示为标准 ABC 时值后缀 |
-| E2E 验证 | ❌ 未完成 | 需要 `clef-compose` 完整工作流测试 |
+| E2E 验证 | ✅ 已完成 | 完整 6 阶段工作流通过，见下方 E2E 记录 |
+
+---
+
+## E2E 验证记录（2026-04-12）
+
+**Session**: `clef-788135f2`
+**Prompt**: "RPG village theme, C major, 4/4, 80BPM, ABA form, ~45s"
+**Plan**: 15 bars, key=C, bpm=80, ABA (4+7+4)
+**Model**: DeepSeek (deepseek-chat)
+
+### 阶段时间线
+
+| 阶段 | 耗时 | 状态 |
+|------|------|------|
+| parse | ~6s | ✅ awaiting_confirm → auto-continue |
+| sample | ~345s | ✅ awaiting_confirm → auto-continue |
+| create | ~240s | ✅ 2 FAIL (V:1 + V:2 measure_duration) → repair 处理 |
+| iterate | ~1 round | ✅ 1 轮迭代 |
+| review | - | ✅ awaiting_confirm → auto-continue |
+| express | ~30s | ✅ done |
+
+**总耗时**: ~10 分钟
+**输出**: `final_r1.mid`
+
+### 验证结果
+
+| 指标 | 结果 |
+|------|------|
+| Agent 轮次耗尽 | ✅ 无无限循环（15 次 max_turns 触发均为正常退出） |
+| 验证越修越差 | ✅ 未发生（create 后仅 2 个 FAIL） |
+| API 400 崩溃 | ✅ 未发生 |
+| measure_duration 处理 | ✅ 2 个 FAIL 被 repair 流程处理 |
+| 最终输出 | ✅ valid MIDI 文件生成 |
+
+### E2E 中发现并修复的 Bug
+
+| Bug | 根因 | 修复 Commit |
+|-----|------|------------|
+| `KeyError: 'sum'` in `_generate_two_pass` | `validate_rhythm_skeleton` 对 PARSE_ERROR 返回 `{error, text}` 而非 `{sum, target}`，重试反馈构建时假设所有 measure 都有 `sum` 键 | `8e7e418` |

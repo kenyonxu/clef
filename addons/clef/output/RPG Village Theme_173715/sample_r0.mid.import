@@ -1,0 +1,14 @@
+[remap]
+
+importer="clef"
+type="MidiResource"
+uid="uid://cvqqvm47lstvh"
+path="res://.godot/imported/sample_r0.mid-0f3b4b2fec591b4061a042d89f534b4f.tres"
+
+[deps]
+
+source_file="res://addons/clef/output/RPG Village Theme_173715/sample_r0.mid"
+dest_files=["res://.godot/imported/sample_r0.mid-0f3b4b2fec591b4061a042d89f534b4f.tres"]
+
+[params]
+

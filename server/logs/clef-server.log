@@ -1,0 +1,61 @@
+INFO:     Started server process [30980]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     127.0.0.1:21566 - "GET /profiles HTTP/1.1" 200 OK
+INFO:     127.0.0.1:7939 - "POST /compose HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41556 - "GET /status/clef-1516f808 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:6013 - "POST /confirm/clef-1516f808 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43359 - "GET /status/clef-1516f808 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60750 - "GET /status/clef-1516f808 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41816 - "GET /status/clef-1516f808 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:24209 - "GET /status/clef-1516f808 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:7897 - "GET /status/clef-1516f808 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:1906 - "GET /status/clef-1516f808 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33786 - "GET /status/clef-1516f808 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43171 - "GET /status/clef-1516f808 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44072 - "GET /status/clef-1516f808 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40061 - "GET /status/clef-1516f808 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48732 - "GET /status/clef-1516f808 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52803 - "POST /confirm/clef-1516f808 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:8985 - "GET /status/clef-1516f808 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38218 - "GET /status/clef-1516f808 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:8857 - "GET /status/clef-1516f808 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60785 - "GET /status/clef-1516f808 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49758 - "GET /status/clef-1516f808 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56030 - "GET /status/clef-1516f808 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:3017 - "GET /status/clef-1516f808 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48827 - "POST /confirm/clef-1516f808 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:31120 - "GET /status/clef-1516f808 HTTP/1.1" 200 OK
+Error: expression_plan.json has unrecognized format. Expected top-level key 'tracks', 'channels', or 'sections', but found: ['verdict']. No events injected.
+INFO:     127.0.0.1:8430 - "GET /status/clef-1516f808 HTTP/1.1" 200 OK
+ max_tool_calls=10, requesting final response
+20:47:24 WARNING  clef_server.agent_loop | Agent loop reached max_tool_calls=6, requesting final response
+20:47:51 WARNING  clef_server.orchestrator | Task dependency not met: clef-rhythmist needs ['clef-composer'], skipping
+20:50:06 WARNING  clef_server.agent_loop | Agent loop reached max_tool_calls=10, requesting final response
+20:50:15 WARNING  clef_server.orchestrator | _extract_abc: text does not look like ABC (first 80 chars: 现在让我调用abc_lint来检查生成的ABC内容：
+
+<｜DSML｜function_calls>
+<｜DSML｜invoke name="abc_lint"...), returning empty
+20:52:34 WARNING  clef_server.agent_loop | Agent loop reached max_tool_calls=10, requesting final response
+20:53:58 WARNING  clef_server.agent_loop | Agent loop reached max_tool_calls=6, requesting final response
+20:54:08 WARNING  clef_server.orchestrator | _extract_abc: text does not look like ABC (first 80 chars: 我看到score.abc已经存在。让我直接写入修复后的内容：
+
+<｜DSML｜function_calls>
+<｜DSML｜invoke name="write...), returning empty
+20:54:10 WARNING  clef_server.orchestrator | Session clef-1516f808: 26 validation FAIL(s): V:1:measure_duration; V:1:measure_duration; V:1:measure_duration; V:1:measure_duration; V:1:measure_duration; V:1:measure_duration; V:1:measure_duration; V:1:measure_duration; V:1:measure_duration; V:1:measure_duration; V:1:measure_duration; V:1:measure_duration; V:1:measure_duration; V:1:measure_duration; V:1:measure_duration; V:1:measure_duration; V:1:measure_duration; V:2:measure_duration; V:2:measure_duration; V:2:measure_duration; V:2:measure_duration; V:2:measure_duration; V:2:measure_duration; V:2:measure_duration; V:2:measure_duration; global:voice_alignment
+20:56:08 WARNING  clef_server.agent_loop | Agent loop reached max_tool_calls=6, requesting final response
+20:56:27 WARNING  clef_server.orchestrator | _extract_abc: text does not look like ABC (first 80 chars: 让我检查一下工作目录是否正确。根据消息，工作目录是：`E:\GitHub\clef-dev\addons\clef\output\Village Serenit...), returning empty
+21:01:04 WARNING  clef_server.orchestrator | Session clef-1516f808: After clef-harmonist revision, score has 34 bars (target 17), truncating
+21:01:06 WARNING  clef_server.orchestrator | Session clef-1516f808: 18 validation FAIL(s): V:1:measure_duration; V:1:measure_duration; V:1:measure_duration; V:1:measure_duration; V:1:measure_duration; V:1:measure_duration; V:1:measure_duration; V:1:measure_duration; V:1:measure_duration; V:1:measure_duration; V:1:measure_duration; V:1:measure_duration; V:1:measure_duration; V:1:measure_duration; V:1:measure_duration; V:1:measure_duration; V:1:measure_duration; global:voice_alignment
+21:05:05 WARNING  clef_server.agent_loop | Agent loop reached max_tool_calls=10, requesting final response
+21:05:11 WARNING  clef_server.orchestrator | _extract_abc: text does not look like ABC (first 80 chars: abc_lint仍然检测为4/4拍。我需要提供plan.json路径给lint工具。让我尝试使用validate_abc工具：
+
+<｜DSML｜function...), returning empty
+21:05:11 WARNING  clef_server.orchestrator | Session clef-1516f808: After clef-harmonist revision, score has 34 bars (target 17), truncating
+21:05:13 WARNING  clef_server.orchestrator | Session clef-1516f808: 18 validation FAIL(s): V:1:measure_duration; V:1:measure_duration; V:1:measure_duration; V:1:measure_duration; V:1:measure_duration; V:1:measure_duration; V:1:measure_duration; V:1:measure_duration; V:1:measure_duration; V:1:measure_duration; V:1:measure_duration; V:1:measure_duration; V:1:measure_duration; V:1:measure_duration; V:1:measure_duration; V:1:measure_duration; V:1:measure_duration; global:voice_alignment
+21:07:22 WARNING  clef_server.agent_loop | Agent loop reached max_tool_calls=10, requesting final response
+21:07:27 WARNING  clef_server.orchestrator | _extract_json: failed to parse JSON, returning revise verdict
+21:08:54 WARNING  clef_server.orchestrator | _extract_json: failed to parse JSON, returning revise verdict
+21:13:09 WARNING  clef_server.agent_loop | Agent loop reached max_tool_calls=10, requesting final response
+21:13:50 WARNING  clef_server.orchestrator | _extract_json: failed to parse JSON, returning revise verdict

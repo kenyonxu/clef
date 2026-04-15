@@ -1,0 +1,21 @@
+X:1
+T:RPG Village Theme
+M:4/4
+L:1/8
+Q:1/4=80
+K:C
+V:1 name="Flute" clef=treble
+V:2 name="Strings" clef=treble
+V:3 name="Cello" clef=bass
+% Section A1 - Introduction (4 bars)
+[V:1] !mp! E4 G4 | C4 D4 | E4 G4 | G2 F2 E2 D2 |
+[V:2] !p! [CE]4 [GE]4 | [CE]4 [DF,]4 | [CE]4 [GE]4 | [BD,]4 [AG,]4 |
+[V:3] !mp! C,8 | G,8 | C,8 | D,8 |
+% Section B - Development (7 bars)
+[V:1] !mf! A4 B4 | c4 B4 | A4 G4 | E4 G4 | !f! A4 c4 | B4 A4 | G4 F4 |
+[V:2] !mp! [CE]4 [DF,]4 | [EG,]4 [DF,]4 | [CE]4 [BD,]4 | [CE]4 [GE]4 | [DF,]4 [EG,]4 | [CE]4 [DF,]4 | [BD,]4 [AG,]4 |
+[V:3] !mf! E,8 | D,8 | G,8 | C,8 | F,8 | E,8 | D,8 |
+% Section A2 - Recapitulation (4 bars)
+[V:1] !mp! E4 G4 | C4 D4 | E4 G4 | !pp! G2 F2 E2 C2 |
+[V:2] !p! [CE]4 [GE]4 | [CE]4 [DF,]4 | [CE]4 [GE]4 | !pp! [BD,]4 [CE]4 |
+[V:3] !mp! C,8 | G,8 | C,8 | C,2 G,2 C,4 |
