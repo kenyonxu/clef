@@ -8,6 +8,7 @@ import shutil
 import subprocess
 import sys
 import threading
+from pathlib import Path
 
 logger = logging.getLogger("clef_tools")
 
@@ -222,6 +223,44 @@ def cmd_archive(args):
 
 def cmd_midi_to_audio(args):
     """用 FluidSynth 将 MIDI 转为音频文件（WAV/OGG）。"""
+
+
+def cmd_fix_measure_duration(args):
+    """Deterministic fix for ABC measure duration errors (off by ≤2 units)."""
+    from fix_measure_duration import fix_abc_content
+
+    input_path = Path(args.input)
+    if not input_path.exists():
+        print(f"Error: file not found: {input_path}", file=sys.stderr)
+        return 1
+
+    abc_content = input_path.read_text(encoding="utf-8")
+    result = fix_abc_content(abc_content, args.max_deviation)
+
+    output_path = Path(args.output) if args.output else input_path
+    output_path.write_text(result["abc"], encoding="utf-8")
+
+    if args.json:
+        print(json.dumps(result, indent=2, ensure_ascii=False))
+    else:
+        fixes = result["fixes"]
+        measures_checked = result["measures_checked"]
+        if not fixes:
+            print(f"All {measures_checked} measures OK, no fixes needed.")
+        else:
+            fixed_count = sum(1 for f in fixes if not f.get("skipped"))
+            skipped_count = sum(1 for f in fixes if f.get("skipped"))
+            print(f"Checked {measures_checked} measures: {fixed_count} fixed, {skipped_count} skipped")
+            for f in fixes:
+                if f.get("skipped"):
+                    print(f"  Measure {f['measure']}: SKIPPED (off by {abs(f['actual_units'] - f['target_units']):.1f} units)")
+                else:
+                    print(f"  Measure {f['measure']}: {f['action']} {f['target']} {f['from']} -> {f['to']}")
+        if result["passed"]:
+            print("PASS")
+        else:
+            print("FAIL: some measures need Revision agent")
+    return 0
 
 
 def cmd_midi_to_abc(args):
@@ -491,6 +530,13 @@ def main():
     p.add_argument('--note', default='', help='补充说明')
     p.add_argument('--workdir', default='.clef-work', help='工作目录')
 
+    # fix-measure-duration
+    p = sub.add_parser('fix-measure-duration', help='确定性修复小节时值偏差（偏离 ≤2 单位）')
+    p.add_argument('input', help='输入 ABC 文件')
+    p.add_argument('--output', '-o', default=None, help='输出 ABC 文件（默认覆盖输入）')
+    p.add_argument('--max-deviation', type=float, default=2.0, help='最大修复偏差（默认 2.0）')
+    p.add_argument('--json', action='store_true', help='JSON 格式输出')
+
     # archive
     p = sub.add_parser('archive', help='归档最终产出到 output/{title}/ 目录')
     p.add_argument('--workdir', default='.clef-work', help='工作目录')
@@ -527,6 +573,7 @@ def main():
         'archive': cmd_archive,
         'midi-to-audio': cmd_midi_to_audio,
         'midi-to-abc': cmd_midi_to_abc,
+        'fix-measure-duration': cmd_fix_measure_duration,
     }
 
     func = commands.get(args.command)

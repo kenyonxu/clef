@@ -40,7 +40,7 @@ python .claude/skills/clef-compose/scripts/extract_solo.py <mid> <start_sec> <en
 # 备份 score.abc + 步骤日志
 python .claude/skills/clef-compose/scripts/snapshot.py --step <N> --output <file> --note <desc>
 
-# 统一入口（支持 check-deps / abc-to-midi / validate / merge / inject / extract-solo / snapshot）
+# 统一入口（支持 check-deps / abc-to-midi / validate / merge / inject / extract-solo / snapshot / fix-measure-duration）
 python .claude/skills/clef-compose/scripts/clef_tools.py <subcommand>
 
 # 依赖检查
