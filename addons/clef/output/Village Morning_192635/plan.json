@@ -1,0 +1,124 @@
+{
+  "title": "Village Morning",
+  "key": "C",
+  "scale": "major",
+  "bpm": 80,
+  "time_signature": "4/4",
+  "form": "AB",
+  "total_bars": 10,
+  "sections": [
+    {
+      "id": "A",
+      "name": "Introduction",
+      "measures": 5
+    },
+    {
+      "id": "B",
+      "name": "Development",
+      "measures": 5
+    }
+  ],
+  "orchestration": {
+    "melody": {
+      "name": "Piano Melody",
+      "channel": 1,
+      "instrument": "Acoustic Grand Piano",
+      "range": "C-1-G9",
+      "register": "D#3-D5",
+      "midi_program": 0,
+      "sf2": {
+        "name": "Grand Piano",
+        "gm_name": "piano",
+        "is_drum": false,
+        "key_range": [
+          0,
+          127
+        ],
+        "vel_range": [
+          0,
+          127
+        ],
+        "sweet_spot": [
+          51,
+          74
+        ],
+        "vel_layers": 1,
+        "avg_attack": 0.008,
+        "avg_release": 3.6609,
+        "quality": "high",
+        "characteristics": [
+          "percussive",
+          "long_release"
+        ]
+      }
+    },
+    "harmony": {
+      "name": "String Pad",
+      "channel": 2,
+      "instrument": "String Ensemble 1",
+      "range": "C-1-D8",
+      "register": "G2-F#4",
+      "midi_program": 48,
+      "sf2": {
+        "name": "Fast Strings",
+        "gm_name": "strings",
+        "is_drum": false,
+        "key_range": [
+          0,
+          110
+        ],
+        "vel_range": [
+          0,
+          127
+        ],
+        "sweet_spot": [
+          43,
+          66
+        ],
+        "vel_layers": 1,
+        "avg_attack": -1.0,
+        "avg_release": -1.0,
+        "quality": "high",
+        "characteristics": []
+      }
+    },
+    "bass": {
+      "name": "Bass Foundation",
+      "channel": 3,
+      "instrument": "Acoustic Bass",
+      "range": "C-1-C8",
+      "register": "D#3-D5",
+      "midi_program": 32,
+      "sf2": {
+        "name": "Acoustic Bass",
+        "gm_name": "acoustic_bass",
+        "is_drum": false,
+        "key_range": [
+          0,
+          108
+        ],
+        "vel_range": [
+          0,
+          127
+        ],
+        "sweet_spot": [
+          51,
+          74
+        ],
+        "vel_layers": 1,
+        "avg_attack": 0.002,
+        "avg_release": -1.0,
+        "quality": "high",
+        "characteristics": [
+          "percussive"
+        ]
+      }
+    }
+  },
+  "generation_order": [
+    "harmony",
+    "melody",
+    "rhythm"
+  ],
+  "demo_length_bars": 8
+}

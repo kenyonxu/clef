@@ -1,0 +1,14 @@
+[remap]
+
+importer="clef"
+type="MidiResource"
+uid="uid://c6hucvqaku3u8"
+path="res://.godot/imported/base_r1.mid-4b2d06dbbcf799c29c896728603436e9.tres"
+
+[deps]
+
+source_file="res://addons/clef/output/Village Morning_192635/base_r1.mid"
+dest_files=["res://.godot/imported/base_r1.mid-4b2d06dbbcf799c29c896728603436e9.tres"]
+
+[params]
+
