@@ -834,3 +834,74 @@ python scripts/acestep_prototype.py \
 - lyrics: `[Verse - gentle]\n[Verse - moderately]`
 - steps: 20
 - 结果: 45.7s 全程有声音，fade out 结尾，游戏 BGM 可接受
+
+### Cover 模式试验
+
+#### 发现 1: API 参数名修正
+
+- `src_audio_path` 参数被 API 拒绝（`"absolute audio file paths are not allowed"`）
+- 正确参数名为 `src_audio`（JSON 模式），但 JSON 模式传文件路径也会出问题
+- **正确做法**: 使用 **multipart form 上传**音频文件，通过 `src_audio` 字段传递文件内容
+
+#### 发现 2: 文件路径方式 vs Multipart 上传
+
+| 方式 | 结果 |
+|------|------|
+| JSON `src_audio_path` + 绝对路径 | 400 错误 |
+| JSON `src_audio` + 绝对路径 | 200 但输出全是莎莎声（噪声） |
+| Multipart `src_audio` + 文件上传 | 200 输出正常 |
+| Multipart `ctx_audio` + 文件上传 | 200 输出正常 |
+
+**结论**: cover 模式必须用 multipart 上传音频文件，不能用 JSON 传路径。
+
+#### Cover 测试记录
+
+**参考音频**: clef candidate_3.wav (30.9s, 2ch, 44100Hz, clef 多 Agent ABC 管线产出)
+
+| # | 上传方式 | strength | prompt | 结果 |
+|---|---------|----------|--------|------|
+| 1 | multipart src_audio | 0.7 | pastoral folk prompt | 成功，45.7s |
+| 2 | multipart ctx_audio | 0.5 | pastoral folk prompt | 成功，45.7s |
+| 3 | multipart src_audio (mp3) | 0.7 | pastoral folk prompt | 成功，45.7s |
+
+**参考音频**: SpaceBattle_8bit.wav (37.8s, fluidsynth 渲染 MIDI)
+
+| # | strength | prompt | 结果 |
+|---|----------|--------|------|
+| 4 | 0.7 | 无 | 成功但原曲风格完全丢失 |
+| 5 | 1.0 | 无 | 同上，风格丢失 |
+| 6 | 0.9 | chiptune 8-bit battle | 同上 |
+| 7 | 1.0 | chiptune 8-bit battle | 同上 |
+
+**Cover 模式评估**: cover 模式对纯器乐的**结构保持能力有限**。原曲风格在 cover 后基本丢失，即使 strength=1.0 也无法保住原曲的旋律和风格特征。与 MiniMax cover 的失败原因不同（MiniMax 是 DTW 报错直接失败），ACE-Step cover 能生成音频但不保结构。
+
+### Text2music 风格探索 (SpaceBattle 8-bit)
+
+用 SpaceBattle_8bit 作为目标风格，测试不同 prompt 对 text2music 风格控制的影响。
+
+#### Mood 测试 (BPM 130, C minor)
+
+| # | Prompt 关键词 | 情绪方向 | 评价 |
+|---|--------------|---------|------|
+| 1 | chiptune, 8-bit, retro game, energetic, battle | 欢快战斗 | 效果还行，但太欢脱 |
+| 2 | 8-bit, dark, serious, tense, dramatic, heavy bass | 严肃紧张 | 情绪对，8-bit 风格不太对 |
+| 3 | 8-bit, epic space battle, ominous, intense | 史诗太空 | 情绪对，8-bit 风格不太对 |
+| 4 | chiptune, dark sci-fi, menacing, tension, aggressive | 黑暗科幻 | 情绪对，8-bit 风格不太对 |
+
+#### 8-bit 音色细化测试 (BPM 130, C minor)
+
+| # | Prompt 关键词 | 8-bit 方向 | 评价 |
+|---|--------------|-----------|------|
+| 5 | NES, Famicom, pulse wave, triangle wave | 红白机 | 都还行 |
+| 6 | Game Boy, 4-channel, square wave | 掌机 | 都还行 |
+| 7 | FM synthesis, Sega Genesis | MD FM | 都还行 |
+| 8 | VGM, PSG synth | 通用 PSG | 都还行 |
+
+**综合评价**: 旋律层面原曲（clef 多 Agent 编曲）更好，ACE-Step 的音色效果更好。四种 8-bit 描述方式风格差异不大，ACE-Step 对 chiptune/8-bit 的区分度有限。
+
+### 文件清单
+
+- `scripts/acestep_prototype.py` — 原型脚本（text2music + cover multipart 上传）
+- `scripts/test_acestep_prototype.py` — 参数映射单元测试（6/6 pass）
+- `docs/superpowers/plans/2026-04-16-acestep-prototype.md` — 本文档
+- `.tmp_acestep/` — 所有测试产出（未跟踪）

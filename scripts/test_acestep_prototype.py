@@ -69,7 +69,7 @@ def test_cover_mode_with_reference():
     plan = _sample_plan()
     params = build_acestep_params(plan, "cover", "/tmp/reference.wav")
     assert params["task_type"] == "cover"
-    assert params["src_audio_path"] == "/tmp/reference.wav"
+    assert params["src_audio"] == "/tmp/reference.wav"
 
 
 def test_time_signature_parsing():

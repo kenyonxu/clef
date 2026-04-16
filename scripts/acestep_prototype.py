@@ -61,9 +61,14 @@ def main():
         print(f"Saved: {audio_path}")
 
     if args.mode in ("cover", "both"):
+        if not args.reference:
+            print("ERROR: cover mode requires --reference audio file path")
+            sys.exit(1)
         print("[Mode: cover] Submitting task...")
         cover_params = build_acestep_params(plan, "cover", args.reference)
-        audio_path = call_acestep_generate(cover_params, args.api_url, args.api_key, output_dir, "acestep_cover")
+        audio_path = call_acestep_generate(
+            cover_params, args.api_url, args.api_key, output_dir, "acestep_cover",
+            cover_audio_path=args.reference)
         print(f"Saved: {audio_path}")
 
 
@@ -162,12 +167,33 @@ def _get_auth_headers(api_key: str | None) -> dict:
     return {}
 
 
-def submit_task(params: dict, api_url: str, api_key: str | None = None) -> str:
-    """Submit a generation task to ACE-Step API. Returns task_id."""
-    headers = {"Content-Type": "application/json"}
-    headers.update(_get_auth_headers(api_key))
+def submit_task(params: dict, api_url: str, api_key: str | None = None,
+                cover_audio_path: str | None = None) -> str:
+    """Submit a generation task to ACE-Step API. Returns task_id.
 
-    resp = requests.post(f"{api_url}/release_task", json=params, headers=headers, timeout=30)
+    For cover mode, pass cover_audio_path to upload audio via multipart.
+    The API rejects absolute file paths in JSON, so multipart upload is required.
+    """
+    headers = _get_auth_headers(api_key)
+
+    if cover_audio_path and params.get("task_type") == "cover":
+        # Cover mode: multipart upload with audio file
+        audio_path = Path(cover_audio_path)
+        audio_bytes = audio_path.read_bytes()
+        mime = "audio/wav" if audio_path.suffix == ".wav" else "audio/mpeg"
+
+        # Extract non-file params as form data (values must be strings)
+        form_data = {k: str(v) for k, v in params.items()}
+        files = {"src_audio": (audio_path.name, audio_bytes, mime)}
+
+        resp = requests.post(f"{api_url}/release_task",
+                             data=form_data, files=files, headers=headers, timeout=60)
+    else:
+        # Text2music: JSON body
+        headers["Content-Type"] = "application/json"
+        resp = requests.post(f"{api_url}/release_task",
+                             json=params, headers=headers, timeout=30)
+
     resp.raise_for_status()
     data = resp.json()
 
@@ -240,9 +266,10 @@ def download_audio(result: dict, api_url: str, output_dir: Path, prefix: str) ->
 
 
 def call_acestep_generate(params: dict, api_url: str, api_key: str | None,
-                          output_dir: Path, prefix: str) -> Path:
+                          output_dir: Path, prefix: str,
+                          cover_audio_path: str | None = None) -> Path:
     """Full workflow: submit task → poll → download audio."""
-    task_id = submit_task(params, api_url, api_key)
+    task_id = submit_task(params, api_url, api_key, cover_audio_path=cover_audio_path)
     result = poll_result(task_id, api_url, api_key)
     return download_audio(result, api_url, output_dir, prefix)
 
@@ -495,8 +522,8 @@ def build_acestep_params(plan: dict, mode: str, reference_path: str | None) -> d
 
     if mode == "cover" and reference_path:
         params["task_type"] = "cover"
-        params["src_audio_path"] = reference_path
-        params["audio_cover_strength"] = 0.8
+        params["src_audio"] = reference_path
+        params["audio_cover_strength"] = 0.7
     else:
         params["task_type"] = "text2music"
 
