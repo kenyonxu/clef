@@ -49,7 +49,7 @@ def main():
     # Call API based on mode
     if args.mode in ("text", "both"):
         print("[Mode: text] Calling MiniMax music-2.6...")
-        audio_data = call_minimax_text(minimax_prompt, args.api_key)
+        audio_data = call_minimax_text(minimax_prompt, args.api_key, plan)
         text_out = output_dir / "minimax_text_output.mp3"
         text_out.write_bytes(audio_data)
         print(f"Saved: {text_out}")
@@ -267,15 +267,59 @@ def build_minimax_prompt(plan: dict) -> str:
         duration_sec = int(total_bars * 4 * 60 / bpm_val)
         parts.append(f"约{duration_sec}秒")
 
+    # Loop hint — encourage short, seamlessly loopable output
+    parts.append("适合游戏背景音乐循环播放，首尾衔接自然")
+
     return ", ".join(parts)
 
 
-def call_minimax_text(prompt: str, api_key: str) -> bytes:
+def build_instrumental_lyrics(plan: dict) -> str:
+    """Build short lyrics structure tags from plan sections to control duration.
+
+    MiniMax has no duration parameter, but section tags in lyrics influence length.
+    We map plan sections to structure tags and keep them minimal to encourage brevity.
+    """
+    sections = plan.get("sections", [])
+    if not sections:
+        return "[Intro]\n[Verse]\n[Outro]"
+
+    tags = []
+    for sec in sections:
+        name = sec.get("name", "").lower()
+        # Map common section names to MiniMax-compatible tags
+        if "intro" in name or "前奏" in name:
+            tags.append("[Intro]")
+        elif "outro" in name or "尾奏" in name or "coda" in name:
+            tags.append("[Outro]")
+        elif "chorus" in name or "副歌" in name:
+            tags.append("[Chorus]")
+        elif "bridge" in name or "桥段" in name:
+            tags.append("[Bridge]")
+        elif "verse" in name or "主歌" in name or "a段" in name:
+            tags.append("[Verse]")
+        elif "interlude" in name or "间奏" in name:
+            tags.append("[Interlude]")
+        else:
+            # Fallback: use section id as generic tag
+            sec_id = sec.get("id", "")
+            tags.append(f"[Section_{sec_id}]" if sec_id else "[Verse]")
+
+    # Remove consecutive duplicates
+    seen = []
+    for t in tags:
+        if not seen or seen[-1] != t:
+            seen.append(t)
+    return "\n".join(seen)
+
+
+def call_minimax_text(prompt: str, api_key: str, plan: dict = None) -> bytes:
     """Call MiniMax music-2.6 API and return decoded audio bytes."""
     url = "https://api.minimaxi.com/v1/music_generation"
+    lyrics = build_instrumental_lyrics(plan) if plan else "[Intro]\n[Verse]\n[Outro]"
     payload = {
         "model": "music-2.6",
         "prompt": prompt,
+        "lyrics": lyrics,
         "is_instrumental": True,
         "audio_setting": {
             "sample_rate": 44100,
@@ -312,9 +356,18 @@ def call_minimax_cover(prompt: str, ref_path: Path, api_key: str) -> bytes:
     audio_bytes = ref_path.read_bytes()
     audio_b64 = base64.b64encode(audio_bytes).decode("utf-8")
 
+    # Cover mode prompt must be 10-300 chars; trim to style + mood only
+    cover_prompt = prompt
+    if len(cover_prompt) > 300:
+        # Keep first two segments (style, mood) before first duration hint
+        parts = [p.strip() for p in cover_prompt.split(",")]
+        cover_prompt = ", ".join(parts[:4])
+        if len(cover_prompt) > 300:
+            cover_prompt = cover_prompt[:297] + "..."
+
     payload = {
         "model": "music-cover",
-        "prompt": prompt,
+        "prompt": cover_prompt,
         "audio_base64": audio_b64,
         "audio_setting": {
             "sample_rate": 44100,
