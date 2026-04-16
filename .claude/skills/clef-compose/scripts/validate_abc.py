@@ -465,7 +465,7 @@ def _parse_abc_measure_durations(
         v_body_filtered = v_body_filtered.replace("||", "|")
 
         # Split body into measures by | (excluding |: and :|)
-        measures_raw = re.split(r"(?<![:\|])\|(?![\|:])", v_body_filtered)
+        measures_raw = re.split(r"(?<![:\|])\|(?![\|:\]])", v_body_filtered)
 
         measure_num = 1
         for m_raw in measures_raw:
@@ -515,6 +515,9 @@ def _calc_abc_duration(tokens: str, default_length: float) -> float:
 
     # Remove grace notes {...} — they have zero duration in ABC standard
     tokens = re.sub(r"\{[^}]*\}", "", tokens)
+
+    # Remove ABC line comments (% to end of line)
+    tokens = re.sub(r"%[^\n]*", "", tokens)
 
     # Remove ABC decorations (!xxx!) to prevent letters inside (e.g. f in !mf!)
     # from being parsed as note names.

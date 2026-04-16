@@ -172,6 +172,27 @@ def check_channel_uniqueness(plan: dict) -> list[str]:
     return errors
 
 
+def _strip_midi_directives(content: str) -> str:
+    """Remove leading %%MIDI channel/program lines from fragment content.
+
+    merge() generates these directives from plan.json orchestration, so
+    any duplicates carried over from fragments via sanitize_content() must
+    be stripped to avoid duplicate directives in the output.
+    """
+    lines = content.splitlines()
+    filtered = []
+    strip_done = False
+    for line in lines:
+        stripped = line.strip()
+        if not strip_done and re.match(r'^%%MIDI\s+(channel|program)\b', stripped):
+            continue  # Skip this directive
+        filtered.append(line)
+        # Stop stripping once we hit a non-%%MIDI line (V: label or music)
+        if stripped and not stripped.startswith('%%'):
+            strip_done = True
+    return '\n'.join(filtered)
+
+
 def merge(plan: dict, fragments: dict, mode: str = "full") -> str:
     """Merge multiple voice fragments into a complete ABC score.
 
@@ -214,6 +235,9 @@ def merge(plan: dict, fragments: dict, mode: str = "full") -> str:
 
     for v in voice_labels:
         content = padded[v]
+        # Strip %%MIDI channel/program from fragment content to avoid
+        # duplication with the directives merge() generates from plan.json.
+        content = _strip_midi_directives(content)
         # Look up MIDI directives from orchestration
         voice_num = v.replace("V:", "")
         midi_lines = []
