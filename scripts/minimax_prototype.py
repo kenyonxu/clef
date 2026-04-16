@@ -48,7 +48,7 @@ def main():
 
     # Call API based on mode
     if args.mode in ("text", "both"):
-        print("[Mode: text] Calling MiniMax music-2.6-free...")
+        print("[Mode: text] Calling MiniMax music-2.6...")
         audio_data = call_minimax_text(minimax_prompt, args.api_key)
         text_out = output_dir / "minimax_text_output.mp3"
         text_out.write_bytes(audio_data)
@@ -227,10 +227,10 @@ def build_minimax_prompt(plan: dict) -> str:
 
 
 def call_minimax_text(prompt: str, api_key: str) -> bytes:
-    """Call MiniMax music-2.6-free API and return decoded audio bytes."""
+    """Call MiniMax music-2.6 API and return decoded audio bytes."""
     url = "https://api.minimaxi.com/v1/music_generation"
     payload = {
-        "model": "music-2.6-free",
+        "model": "music-2.6",
         "prompt": prompt,
         "is_instrumental": True,
         "audio_setting": {
@@ -244,7 +244,8 @@ def call_minimax_text(prompt: str, api_key: str) -> bytes:
         "Content-Type": "application/json",
     }
 
-    resp = requests.post(url, headers=headers, json=payload, timeout=300)
+    resp = requests.post(url, headers=headers, json=payload, timeout=300,
+                         proxies={"http": None, "https": None})
     resp.raise_for_status()
     data = resp.json()
 
@@ -262,13 +263,13 @@ def call_minimax_text(prompt: str, api_key: str) -> bytes:
 
 
 def call_minimax_cover(prompt: str, ref_path: Path, api_key: str) -> bytes:
-    """Call MiniMax music-cover-free API with reference audio."""
+    """Call MiniMax music-cover API with reference audio."""
     url = "https://api.minimaxi.com/v1/music_generation"
     audio_bytes = ref_path.read_bytes()
     audio_b64 = base64.b64encode(audio_bytes).decode("utf-8")
 
     payload = {
-        "model": "music-cover-free",
+        "model": "music-cover",
         "prompt": prompt,
         "audio_base64": audio_b64,
         "audio_setting": {
@@ -282,7 +283,8 @@ def call_minimax_cover(prompt: str, ref_path: Path, api_key: str) -> bytes:
         "Content-Type": "application/json",
     }
 
-    resp = requests.post(url, headers=headers, json=payload, timeout=300)
+    resp = requests.post(url, headers=headers, json=payload, timeout=300,
+                         proxies={"http": None, "https": None})
     resp.raise_for_status()
     data = resp.json()
 

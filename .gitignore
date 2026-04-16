@@ -22,6 +22,9 @@ Desktop.ini
 *.swp
 *.swo
 
+# Secrets
+docs/secrets/
+
 # Clef work files (intermediate)
 .clef-work/
 
