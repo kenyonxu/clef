@@ -730,3 +730,107 @@ No TBD/TODO/implement later. All code blocks contain complete implementation.
 - `call_acestep_generate(params: dict, api_url: str, api_key: str | None, output_dir: Path, prefix: str) -> Path` — defined in Task 3, used in Task 1
 - `check_server_health(api_url: str) -> bool` — defined in Task 3, used in Task 1
 - All function signatures match between definition and usage.
+
+---
+
+## E2E Test Results (2026-04-16)
+
+### 环境信息
+
+- **GPU**: RTX 5090, 31.8GB VRAM
+- **Model**: acestep-v15-turbo (DiT) + acestep-5Hz-lm-1.7B (LM)
+- **Server**: Uvicorn at http://127.0.0.1:8001
+- **Startup time**: ~60s (LM tokenizer ~9s, vLLM KV cache ~40s)
+
+### Test 1: text2music with Village Morning plan.json
+
+```bash
+python scripts/acestep_prototype.py \
+  --plan .clef-work/plan.json \
+  --mode text2music \
+  --output-dir .tmp_acestep
+```
+
+**参数映射结果:**
+```json
+{
+  "prompt": "featuring violin, nylon string guitar, acoustic bass, percussion, harp, AB form, instrumental, game background music, seamless loop",
+  "bpm": 84,
+  "key_scale": "G Major",
+  "time_signature": "4",
+  "audio_duration": 45.7,
+  "thinking": true,
+  "audio_format": "mp3",
+  "inference_steps": 8,
+  "task_type": "text2music"
+}
+```
+
+**实际输出:**
+| 指标 | 目标值 | 实际值 | 状态 |
+|------|--------|--------|------|
+| 时长 | 45.7s | 45.7s | **精确匹配** |
+| BPM | 84 | 84 | 匹配 |
+| 调性 | G Major | G Major | 匹配 |
+| 生成耗时 | - | ~2s | 极快 |
+| 文件大小 | - | 826KB | 合理 |
+| 输出格式 | mp3 | mp3 | 匹配 |
+
+**生成耗时**: 提交后约 2 秒即完成（RTX 5090 + turbo 模型 + 8 inference steps）
+
+### 对比 MiniMax
+
+| 维度 | MiniMax music-2.6 | ACE-Step 1.5 |
+|------|-------------------|--------------|
+| 时长控制 | 无参数，最低 ~2min | `audio_duration` 参数，精确匹配 |
+| BPM 控制 | 无 | `bpm` 参数，精确匹配 |
+| 调性控制 | 无 | `key_scale` 参数，精确匹配 |
+| 拍号控制 | 无 | `time_signature` 参数 |
+| 生成速度 | 30-60s（云端排队） | ~2s（本地 RTX 5090） |
+| Cover 器乐 | 不支持（DTW 需要人声） | 支持（本地文件路径） |
+| 输出格式 | mp3（hex 编码） | mp3/wav/flac |
+| 费用 | Token Plan 配额制 | 免费（本地推理） |
+| 网络要求 | 需要外网 | 无（本地 API） |
+
+### 结论
+
+**ACE-Step 1.5 完全满足 clef create+iterate 替代需求:**
+
+1. **时长精确可控** — `audio_duration=45.7` 产出 45.7s，MiniMax 最低 123s
+2. **音乐参数精确匹配** — BPM、调性、拍号全部按参数输出
+3. **生成速度极快** — 2s vs MiniMax 30-60s，适合实时预览和快速迭代
+4. **本地部署** — 无网络依赖，无 API 配额限制，无费用
+5. **支持器乐 Cover** — 不依赖 DTW 人声对齐，可使用 clef 小样作为参考
+
+**仍需解决的问题:**
+- 无 MIDI/ABC 输出（只有混合音频 mp3）
+- 无分轨输出（旋律/和声/低音/鼓混在一起）
+- 需要 RTX 3090+ 级别 GPU（~8GB+ VRAM for turbo model）
+
+**推荐路径:** ACE-Step 作为 clef 的"快速预览"工具：plan.json → ACE-Step text2music → 用户听 45s 预览确认风格方向 → 再启动多 Agent ABC 管线生成精确分轨 MIDI。
+
+### 30s 静音截断问题诊断与修复
+
+**问题**: `inference_steps=8` + 45.7s 目标时长时，30s 之后音频变为静音。
+
+**对比测试:**
+
+| # | 时长 | steps | 文件大小 | 结果 |
+|---|------|-------|----------|------|
+| 1 | 22.9s | 8 | 423KB | 正常 |
+| 2 | 45.7s | 8 | 826KB | 30s后静音 |
+| 3 | 45.7s | 20 | 840KB | 30s后基本有声音 |
+| 4 | 45.7s | 40 | 918KB | 明显改善 |
+
+**根因**: turbo 模型 8 步在长时长（>30s）时去噪不充分，音频后半段退化为静音。
+
+**修复方案**:
+1. `inference_steps` 从 8 提升到 **20**（耗时仅增加 ~1s，仍然很快）
+2. 添加 `lyrics` 参数，用结构 tag 控制段落时间发展（`[Intro - gentle]`、`[Verse - moderately]` 等）
+3. 改进 `prompt`，使用 ACE-Step 官方推荐的 tag 格式：genre, mood, instruments, tempo, production
+
+**最终验证**:
+- prompt: `"pastoral, warm, moderate, violin, nylon string guitar, acoustic bass, percussion, moderate tempo, instrumental, game background music, seamless loop"`
+- lyrics: `[Verse - gentle]\n[Verse - moderately]`
+- steps: 20
+- 结果: 45.7s 全程有声音，fade out 结尾，游戏 BGM 可接受

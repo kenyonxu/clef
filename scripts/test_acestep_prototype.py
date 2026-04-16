@@ -45,7 +45,9 @@ def test_text2music_basic_mapping():
     assert params["time_signature"] == "4"
     assert params["audio_duration"] == 32.0  # 16 bars * 4 beats * 60 / 120 bpm = 32s
     assert params["thinking"] is True
-    assert "田园晨曲" in params["prompt"]
+    assert "pastoral folk" in params["prompt"] or "田园晨曲" in params["prompt"]
+    assert "lyrics" in params  # structure tags for temporal control
+    assert "warm" in params["prompt"] or "gentle" in params["prompt"]
 
 
 def test_text2music_duration_from_sections():
