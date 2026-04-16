@@ -155,27 +155,70 @@ def generate_plan(user_prompt: str, output_dir: Path) -> dict:
     return plan
 
 
+# Instrument name translations (English → Chinese)
+_INSTRUMENT_CN = {
+    "Piano": "钢琴", "Violin": "小提琴", "Viola": "中提琴", "Cello": "大提琴",
+    "Flute": "长笛", "Clarinet": "单簧管", "Oboe": "双簧管", "Bassoon": "大管",
+    "Trumpet": "小号", "Trombone": "长号", "French Horn": "圆号", "Horn": "圆号",
+    "Acoustic Guitar": "木吉他", "Nylon Guitar": "尼龙弦吉他", "Electric Guitar": "电吉他",
+    "Acoustic Bass": "低音提琴", "Bass": "贝斯", "Electric Bass": "电贝斯",
+    "Harp": "竖琴", "Organ": "管风琴", "Accordion": "手风琴",
+    "Saxophone": "萨克斯", "Sax": "萨克斯",
+    "Percussion": "打击乐", "Drums": "鼓组", "Drum": "鼓",
+    "Strings": "弦乐", "String Ensemble": "弦乐合奏",
+    "Synth": "合成器", "Synthesizer": "合成器", "Pad": "合成垫音",
+    "Choir": "合唱", "Voice": "人声",
+    "Marimba": "马林巴", "Vibraphone": "颤音琴", "Xylophone": "木琴",
+    "Banjo": "班卓琴", "Mandolin": "曼陀林", "Ukulele": "尤克里里",
+    "Harpsichord": "大键琴", "Celesta": "钢片琴",
+    "Bagpipes": "风笛", "Recorder": "竖笛",
+}
+
+_SCALE_CN = {"major": "大调", "minor": "小调", "dorian": "多利亚调式",
+             "mixolydian": "混合利底亚调式", "pentatonic": "五声音阶", "blues": "布鲁斯"}
+
+
 def build_minimax_prompt(plan: dict) -> str:
     """Construct a Chinese prompt string for MiniMax from clef plan.json."""
     parts: list[str] = []
 
-    # Genre / Style
-    genre = plan.get("genre") or plan.get("style", "")
-    if genre:
-        parts.append(genre)
+    # Genre / Style — infer from title/sections if missing
+    style = plan.get("genre") or plan.get("style", "")
+    if not style:
+        title = plan.get("title", "")
+        sections = plan.get("sections", [])
+        energy = sum(s.get("energy_level", 5) for s in sections) / max(len(sections), 1)
+        if any(kw in title for kw in ["战斗", "Battle", "Boss", "战斗"]):
+            style = "史诗战斗"
+        elif any(kw in title for kw in ["晨", "Morning", "Dawn", "Awakening"]):
+            style = "田园晨曲"
+        elif energy >= 7:
+            style = "激昂"
+        elif energy <= 3:
+            style = "宁静抒情"
+        else:
+            style = "抒情流行"
+    parts.append(style)
 
-    # Mood / Emotion
+    # Mood / Emotion — infer from energy/dynamics if missing
     mood = plan.get("mood") or plan.get("emotion", "")
-    if mood:
-        parts.append(mood)
+    if not mood:
+        sections = plan.get("sections", [])
+        dynamics_list = [s.get("dynamics", "mf") for s in sections]
+        if "f" in dynamics_list or "ff" in dynamics_list:
+            mood = "激昂有力"
+        elif "pp" in dynamics_list or "p" in dynamics_list:
+            mood = "温柔细腻"
+        else:
+            mood = "温暖平和"
+    parts.append(mood)
 
-    # Key and scale
+    # Key and scale in Chinese
     key = plan.get("key", "")
-    scale = plan.get("scale", "")
-    if key and scale:
-        parts.append(f"{key}{scale}")
-    elif key:
-        parts.append(key)
+    scale = plan.get("scale", "major")
+    scale_cn = _SCALE_CN.get(scale, scale)
+    if key:
+        parts.append(f"{key}{scale_cn}")
 
     # Tempo / BPM
     bpm = plan.get("bpm", 0)
@@ -206,7 +249,8 @@ def build_minimax_prompt(plan: dict) -> str:
             if name and name not in instruments:
                 instruments.append(name)
     if instruments:
-        parts.append(f"以{', '.join(instruments)}为主")
+        cn_instruments = [_INSTRUMENT_CN.get(n, n) for n in instruments]
+        parts.append(f"以{'、'.join(cn_instruments)}为主")
 
     # Form
     form = plan.get("form", "")
