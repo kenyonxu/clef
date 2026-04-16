@@ -45,6 +45,8 @@ pytest-of-kenyo/
 
 # Server config with real API keys
 server/config/providers.yaml
+server/start-server.bat
+server/start.bat
 
 # Frontend build output
 server/web/dist/
