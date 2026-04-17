@@ -99,13 +99,12 @@ class TestToolPermissionsOnSession:
 
 
 class TestAgentMetadata:
-    """Test _stamp_agent_meta produces valid ABC comment."""
+    """Test stamp_agent_meta produces valid ABC comment."""
 
     def test_stamp_produces_comment_line(self) -> None:
-        from clef_server.orchestrator import ComposeOrchestrator
+        from clef_server import score_processor
 
-        orch = object.__new__(ComposeOrchestrator)
-        result = orch._stamp_agent_meta("X:1\nK:C\nC |", "clef-composer", "V:1", 1)
+        result = score_processor.stamp_agent_meta("X:1\nK:C\nC |", "clef-composer", "V:1", 1)
 
         lines = result.split("\n")
         assert lines[0].startswith("% ClefMeta:")
@@ -116,11 +115,10 @@ class TestAgentMetadata:
         assert "timestamp" in meta
 
     def test_stamp_preserves_original_content(self) -> None:
-        from clef_server.orchestrator import ComposeOrchestrator
+        from clef_server import score_processor
 
         content = "X:1\nK:C\nC E G |"
-        orch = object.__new__(ComposeOrchestrator)
-        result = orch._stamp_agent_meta(content, "clef-composer", "V:1", 1)
+        result = score_processor.stamp_agent_meta(content, "clef-composer", "V:1", 1)
 
         # Original content preserved after meta line
         assert "X:1" in result
@@ -129,22 +127,20 @@ class TestAgentMetadata:
 
     def test_meta_line_is_valid_abc_comment(self) -> None:
         """% prefix is standard ABC comment syntax."""
-        from clef_server.orchestrator import ComposeOrchestrator
+        from clef_server import score_processor
 
-        orch = object.__new__(ComposeOrchestrator)
-        result = orch._stamp_agent_meta("X:1", "clef-harmonist", "V:2", 3)
+        result = score_processor.stamp_agent_meta("X:1", "clef-harmonist", "V:2", 3)
 
         meta_line = result.split("\n")[0]
         assert meta_line.startswith("%")  # ABC comment
 
     def test_multiple_stamps_stacked(self) -> None:
         """Multiple agents can stamp the same file."""
-        from clef_server.orchestrator import ComposeOrchestrator
+        from clef_server import score_processor
 
-        orch = object.__new__(ComposeOrchestrator)
         content = "X:1\nK:C\nV:1\nC |"
-        stamped1 = orch._stamp_agent_meta(content, "clef-composer", "V:1", 1)
-        stamped2 = orch._stamp_agent_meta(stamped1, "clef-harmonist", "V:2", 1)
+        stamped1 = score_processor.stamp_agent_meta(content, "clef-composer", "V:1", 1)
+        stamped2 = score_processor.stamp_agent_meta(stamped1, "clef-harmonist", "V:2", 1)
 
         meta_lines = [l for l in stamped2.split("\n") if l.startswith("% ClefMeta:")]
         assert len(meta_lines) == 2

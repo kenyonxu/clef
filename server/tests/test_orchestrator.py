@@ -14,6 +14,7 @@ from clef_server.orchestrator import (
     ComposeOrchestrator,
     get_session_manager,
 )
+from clef_server import score_processor, response_parser, validation
 from clef_server.sessions import PHASES, SessionManager
 
 # ---------------------------------------------------------------------------
@@ -419,45 +420,45 @@ class TestExtractHelpers:
 
     def test_extract_abc_from_fenced(self, orch):
         text = '```abc\nX:1\nT:Test\nC D E F|\n```'
-        result = orch._extract_abc(text)
+        result = response_parser.extract_abc(text)
         assert result.startswith("X:1")
         assert "C D E F" in result
 
     def test_extract_abc_raw(self, orch):
         text = "X:1\nT:Test\nC D E F|"
-        result = orch._extract_abc(text)
+        result = response_parser.extract_abc(text)
         assert result == text
 
     def test_extract_abc_fallback(self, orch):
         text = "some raw text without abc header"
-        result = orch._extract_abc(text)
+        result = response_parser.extract_abc(text)
         assert result == ""  # non-ABC text is now rejected
 
     def test_extract_abc_rejects_dsml(self, orch):
         text = '<|DSML|function_calls>\n<|DSML|invoke name="write_file">\nX:1\nT:test\n```'
-        result = orch._extract_abc(text)
+        result = response_parser.extract_abc(text)
         assert result == ""
 
     def test_extract_abc_raw_header(self, orch):
         text = 'X:1\nT:test\nM:4/4\nK:C\nV:1\nC D E F |'
-        result = orch._extract_abc(text)
+        result = response_parser.extract_abc(text)
         assert "X:1" in result
         assert "C D E F" in result
 
     def test_extract_json_from_fenced(self, orch):
         text = '```json\n{"verdict": "pass", "score": 8}\n```'
-        result = orch._extract_json(text)
+        result = response_parser.extract_json(text)
         assert result["verdict"] == "pass"
         assert result["score"] == 8
 
     def test_extract_json_plain(self, orch):
         text = '{"verdict": "revise", "issues": ["bad note"]}'
-        result = orch._extract_json(text)
+        result = response_parser.extract_json(text)
         assert result["verdict"] == "revise"
 
     def test_extract_json_fallback_on_bad_json(self, orch):
         text = "not valid json at all"
-        result = orch._extract_json(text)
+        result = response_parser.extract_json(text)
         assert result["verdict"] == "revise"  # bad JSON returns revise verdict (conservative)
 
 
@@ -966,16 +967,16 @@ class TestExtractJsonConservativeFallback:
         )
 
     def test_invalid_json_returns_revise(self, orch):
-        result = orch._extract_json("this is not json at all")
+        result = response_parser.extract_json("this is not json at all")
         assert result["verdict"] == "revise"
 
     def test_valid_json_pass_verdict_preserved(self, orch):
-        result = orch._extract_json('{"verdict": "pass", "overall_score": 8}')
+        result = response_parser.extract_json('{"verdict": "pass", "overall_score": 8}')
         assert result["verdict"] == "pass"
         assert result["overall_score"] == 8
 
     def test_valid_json_revise_verdict_preserved(self, orch):
-        result = orch._extract_json('{"verdict": "revise", "overall_score": 4}')
+        result = response_parser.extract_json('{"verdict": "revise", "overall_score": 4}')
         assert result["verdict"] == "revise"
 
 
@@ -995,18 +996,18 @@ class TestStripToolMarkers:
 
     def test_no_markers_leaves_text_intact(self, orch):
         text = 'V:1\nC D E F | G A B c |'
-        assert orch._strip_tool_markers(text) == text
+        assert response_parser.strip_tool_markers(text) == text
 
     def test_removes_dsml_markers(self, orch):
         text = 'V:1\nC D E F | <function_calls>some tool stuff</function_calls>'
-        stripped = orch._strip_tool_markers(text)
+        stripped = response_parser.strip_tool_markers(text)
         assert "<function_calls>" not in stripped
         assert "V:1" in stripped
         assert "C D E F" in stripped
 
     def test_removes_invoke_tags(self, orch):
         text = 'Result:\nV:1\nC D E |\n<invoke name="write_file">\nsome params\n</invoke>'
-        stripped = orch._strip_tool_markers(text)
+        stripped = response_parser.strip_tool_markers(text)
         assert "<invoke" not in stripped
         assert "V:1" in stripped
 
@@ -1023,7 +1024,7 @@ class TestPerVoiceTruncation:
             "V:3\nC,2 G,2|D,2 A,2|C,2 G,2|D,2 A,2|C,2 G,2|D,2 A,2|\n"
             "V:4\n^D ^A ^D ^A|^D ^A ^D ^A|^D ^A ^D ^A|^D ^A ^D ^A|^D ^A ^D ^A|^D ^A ^D ^A|\n"
         )
-        result = ComposeOrchestrator._truncate_score_per_voice(abc, 3)
+        result = score_processor.truncate_score_per_voice(abc, 3)
         # All 4 voices should still be present
         assert "V:1" in result
         assert "V:2" in result
@@ -1031,9 +1032,9 @@ class TestPerVoiceTruncation:
         assert "V:4" in result
         # Each voice should have at most 3 bar lines
         for vl in ["V:1", "V:2", "V:3", "V:4"]:
-            blocks = ComposeOrchestrator._parse_voice_blocks(result)
+            blocks = score_processor.parse_voice_blocks(result)
             if vl in blocks:
-                bars = ComposeOrchestrator._count_bars(blocks[vl])
+                bars = score_processor.count_bars(blocks[vl])
                 assert bars <= 3, f"{vl} has {bars} bars, expected <= 3"
 
     def test_truncate_score_per_voice_no_over_truncate(self):
@@ -1043,11 +1044,11 @@ class TestPerVoiceTruncation:
             "V:1\nC D E F|G A B c|c B A G|\n"
             "V:2\n[C E G]| [D F A]| [E G B]|\n"
         )
-        result = ComposeOrchestrator._truncate_score_per_voice(abc, 3)
+        result = score_processor.truncate_score_per_voice(abc, 3)
         assert "V:1" in result
         assert "V:2" in result
-        blocks = ComposeOrchestrator._parse_voice_blocks(result)
-        assert ComposeOrchestrator._count_bars(blocks.get("V:1", "")) == 3
+        blocks = score_processor.parse_voice_blocks(result)
+        assert score_processor.count_bars(blocks.get("V:1", "")) == 3
 
     def test_old_global_truncate_destroys_voices(self):
         """Document the OLD bug: _truncate_to_bars on merged 4-voice score destroys later voices."""
@@ -1059,10 +1060,10 @@ class TestPerVoiceTruncation:
             "V:4\n^D ^A ^D ^A|^D ^A ^D ^A|^D ^A ^D ^A|^D ^A ^D ^A|^D ^A ^D ^A|^D ^A ^D ^A|^D ^A ^D ^A|^D ^A ^D ^A|^D ^A ^D ^A|^D ^A ^D ^A|\n"
         )
         # OLD behavior: global truncation with target=10 cuts across all 40 bars, destroying V:3/V:4
-        result_old = ComposeOrchestrator._truncate_to_bars(abc, 10)
+        result_old = score_processor.truncate_to_bars(abc, 10)
         assert "V:3" not in result_old or "V:4" not in result_old
         # NEW behavior: per-voice truncation preserves all voices
-        result_new = ComposeOrchestrator._truncate_score_per_voice(abc, 10)
+        result_new = score_processor.truncate_score_per_voice(abc, 10)
         assert "V:1" in result_new
         assert "V:2" in result_new
         assert "V:3" in result_new
@@ -1295,20 +1296,20 @@ class TestIterateEarlyStop:
 
         orchestrator._call_leader = mock_leader
         orchestrator._run_agent = AsyncMock(return_value="C D E F|G A B c|c B A G|F E D C|")
-        orchestrator._extract_abc = lambda x: x
-        orchestrator._inject_midi_programs = MagicMock()
-        orchestrator._VOICE_TO_AGENT = {"V:1": "clef-composer"}
         orchestrator._agent_defs = {"clef-composer": {}}
         orchestrator.VOICE_MAP = {"melody": "V:1"}
         orchestrator.inter_agent_delay = 0
 
         # Always return 10 failures (stagnant)
         stagnant_failures = [{"category": "duration", "voice": "V:1", "message": "measure too long", "severity": "FAIL"}] * 10
-        orchestrator._run_validation = MagicMock(return_value=stagnant_failures)
 
         with patch("clef_server.tools.merge_abc", return_value={"ok": True}):
             with patch("clef_server.tools.abc_to_midi", return_value={"ok": True}):
-                await orchestrator._phase_iterate()
+                with patch("clef_server.orchestrator.response_parser.extract_abc", side_effect=lambda x: x):
+                    with patch("clef_server.orchestrator.score_processor.inject_midi_programs"):
+                        with patch("clef_server.orchestrator.score_processor.store_fragment"):
+                            with patch("clef_server.orchestrator.validation.run_validation", return_value=stagnant_failures):
+                                await orchestrator._phase_iterate()
 
         # Should have stopped before reaching 5 rounds due to stagnation
         # Round 1: stagnation=0 (no prev), round 2: stagnation=1, round 3: stagnation=2 -> break
@@ -1356,9 +1357,6 @@ class TestIterateEarlyStop:
             "iteration_complete": False,
         })
         orchestrator._run_agent = AsyncMock(return_value="C D E F|G A B c|c B A G|F E D C|")
-        orchestrator._extract_abc = lambda x: x
-        orchestrator._inject_midi_programs = MagicMock()
-        orchestrator._VOICE_TO_AGENT = {"V:1": "clef-composer"}
         orchestrator._agent_defs = {"clef-composer": {}}
         orchestrator.VOICE_MAP = {"melody": "V:1"}
         orchestrator.inter_agent_delay = 0
@@ -1370,11 +1368,13 @@ class TestIterateEarlyStop:
             call_num += 1
             return [{"category": "duration", "voice": "V:1", "message": "measure too long", "severity": "FAIL"}] * max(1, 11 - call_num * 5)
 
-        orchestrator._run_validation = MagicMock(side_effect=improving_validation)
-
         with patch("clef_server.tools.merge_abc", return_value={"ok": True}):
             with patch("clef_server.tools.abc_to_midi", return_value={"ok": True}):
-                await orchestrator._phase_iterate()
+                with patch("clef_server.orchestrator.response_parser.extract_abc", side_effect=lambda x: x):
+                    with patch("clef_server.orchestrator.score_processor.inject_midi_programs"):
+                        with patch("clef_server.orchestrator.score_processor.store_fragment"):
+                            with patch("clef_server.orchestrator.validation.run_validation", side_effect=improving_validation):
+                                await orchestrator._phase_iterate()
 
         # Should have run all 3 rounds since fail_count was improving
         assert orchestrator.session.iteration_count == 3

@@ -135,11 +135,11 @@ class TestMicrocompactIntegration:
 
 
 class TestStampMetadataIntegration:
-    """Verify _stamp_agent_meta is called when storing fragments."""
+    """Verify stamp_agent_meta is called when storing fragments."""
 
     @pytest.mark.asyncio
     async def test_metadata_stamped_in_create_phase(self, tmp_path: Path) -> None:
-        from clef_server.orchestrator import ComposeOrchestrator
+        from clef_server import score_processor
         import clef_server.orchestrator as orch_mod
 
         session = _make_session(tmp_path)
@@ -147,14 +147,14 @@ class TestStampMetadataIntegration:
         _write_plan(tmp_path)
 
         try:
-            with patch.object(orch, '_stamp_agent_meta', wraps=orch._stamp_agent_meta) as spy:
-                # _store_fragment is called during create phase
+            with patch("clef_server.orchestrator.score_processor.stamp_agent_meta", wraps=score_processor.stamp_agent_meta) as spy:
+                # store_fragment is called during create phase
                 fragments = {}
                 abc_parts = []
-                orch._store_fragment(fragments, abc_parts, "V:1", "C D E F |")
+                score_processor.store_fragment(fragments, abc_parts, "V:1", "C D E F |")
 
                 # Should have been called to stamp the fragment
-                assert spy.call_count >= 1, "_stamp_agent_meta not called in _store_fragment"
+                assert spy.call_count >= 1, "stamp_agent_meta not called in store_fragment"
         finally:
             orch_mod._session_manager = original_mgr
 

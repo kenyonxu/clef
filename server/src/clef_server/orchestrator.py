@@ -9,7 +9,6 @@ import hashlib
 import json
 import logging
 import re
-import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -19,6 +18,9 @@ from pydantic import BaseModel, Field, model_validator
 
 from clef_server.sessions import PHASES, PHASE_ORDER, SessionManager
 from clef_server.tools import ToolMeta, ToolSafety
+
+from clef_server import score_processor, response_parser, prompt_builder, validation
+from clef_server.score_processor import VOICE_TO_AGENT as _VOICE_TO_AGENT, _BAR_RE
 
 logger = logging.getLogger(__name__)
 
@@ -141,7 +143,6 @@ class ComposeOrchestrator:
 
     # Voice label mapping: role -> ABC voice number
     VOICE_MAP = {"melody": "V:1", "harmony": "V:2", "rhythm": "V:3+V:4"}
-    _VOICE_TO_AGENT = {"V:1": "clef-composer", "V:2": "clef-harmonist", "V:3": "clef-rhythmist", "V:4": "clef-rhythmist"}
 
     # Agent config key -> agent factory name in agents.yaml
     VOICE_AGENT_MAP = {"melody": "clef-composer", "harmony": "clef-harmonist", "rhythm": "clef-rhythmist"}
@@ -286,17 +287,6 @@ class ComposeOrchestrator:
     # ------------------------------------------------------------------
     # Agent metadata (改进 4)
     # ------------------------------------------------------------------
-
-    @staticmethod
-    def _stamp_agent_meta(content: str, agent: str, voice: str, round_num: int) -> str:
-        """Inject % ClefMeta comment at top of ABC content."""
-        meta = json.dumps({
-            "agent": agent,
-            "voice": voice,
-            "round": round_num,
-            "timestamp": time.time(),
-        }, ensure_ascii=False)
-        return f"% ClefMeta: {meta}\n{content}"
 
     # ------------------------------------------------------------------
     # Session access (always fresh from the manager)
@@ -448,43 +438,6 @@ class ComposeOrchestrator:
             await self._advance_phase(next_id)
 
     # ------------------------------------------------------------------
-    # MIDI program injection
-    # ------------------------------------------------------------------
-
-    def _inject_midi_programs(self, score_path: Path, plan: dict) -> None:
-        """Inject %%MIDI program directives into score.abc based on plan.json.
-
-        Maps each voice (V:1..V:4) to its orchestration part and injects
-        the midi_program number. Skips voices that already have a program directive.
-        """
-        orch = plan.get("orchestration", {})
-        voice_map = {
-            1: orch.get("melody", {}),
-            2: orch.get("harmony", {}),
-            3: orch.get("bass", {}),
-            4: orch.get("drums", {}),
-        }
-
-        text = score_path.read_text(encoding="utf-8")
-        lines = text.split("\n")
-        new_lines: list[str] = []
-        injected_voices: set[int] = set()
-
-        for line in lines:
-            stripped = line.strip()
-            if stripped.startswith("%%MIDI program"):
-                continue
-            new_lines.append(line)
-            for voice_num, part in voice_map.items():
-                if stripped == f"V:{voice_num}" and voice_num not in injected_voices:
-                    prog = part.get("midi_program")
-                    if prog is not None:
-                        new_lines.append(f"%%MIDI program {prog}")
-                        injected_voices.add(voice_num)
-
-        score_path.write_text("\n".join(new_lines), encoding="utf-8")
-
-    # ------------------------------------------------------------------
     # Output collection
     # ------------------------------------------------------------------
 
@@ -496,61 +449,6 @@ class ComposeOrchestrator:
             for p in sorted(workdir.glob("*"))
             if p.is_file() and p.suffix in (".mid", ".abc", ".json")
         ]
-
-    # ------------------------------------------------------------------
-    # Plan summary builder
-    # ------------------------------------------------------------------
-
-    @staticmethod
-    def _build_plan_summary(plan: dict) -> dict:
-        """Build a rich parameter summary from plan.json for the confirmation UI."""
-        total_bars = plan.get("total_bars", 0)
-        bpm = plan.get("bpm", 0)
-        ts = plan.get("time_signature", "4/4")
-        beats_per_bar = int(ts.split("/")[0]) if "/" in ts else 4
-
-        # Duration
-        duration_sec = (total_bars * beats_per_bar / bpm * 60) if bpm > 0 else 0
-        if duration_sec >= 60:
-            duration_str = f"~{int(duration_sec // 60)}分{int(duration_sec % 60)}秒"
-        else:
-            duration_str = f"~{duration_sec:.0f}秒"
-
-        # Section structure compact form: "ABA（4+7+4 小节）"
-        sections = plan.get("sections", [])
-        bar_counts = [str(s.get("measures", "?")) for s in sections]
-        section_structure = f"{plan.get('form', '')}（{'+'.join(bar_counts)} 小节）"
-
-        # Orchestration description
-        orch = plan.get("orchestration", {})
-        voice_cn = {"melody": "旋律", "harmony": "和声", "bass": "低音", "drums": "鼓"}
-        inst_parts = []
-        for role in ["melody", "harmony", "bass", "drums"]:
-            part = orch.get(role, {})
-            if part:
-                name = part.get("name", part.get("instrument", ""))
-                inst_parts.append(f"{name}{voice_cn.get(role, role)}")
-
-        # SF2 status
-        sf2_count = sum(
-            1
-            for role in ["melody", "harmony", "bass"]
-            if isinstance(orch.get(role), dict) and "sf2" in orch[role]
-        )
-        sf2_status = f"已加载 {sf2_count} 个声部音色" if sf2_count > 0 else "未配置"
-
-        # Demo length with duration
-        demo_bars = plan.get("demo_length_bars", 0)
-        demo_sec = (demo_bars * beats_per_bar / bpm * 60) if bpm > 0 and demo_bars > 0 else 0
-        demo_str = f"{demo_bars} 小节（~{demo_sec:.0f}秒）" if demo_sec > 0 else f"{demo_bars} 小节"
-
-        return {
-            "duration": duration_str,
-            "section_structure": section_structure,
-            "orchestration_desc": " + ".join(inst_parts),
-            "sf2_status": sf2_status,
-            "demo_length": demo_str,
-        }
 
     # ------------------------------------------------------------------
     # Phase 0: Parse + Plan
@@ -618,13 +516,13 @@ class ComposeOrchestrator:
             raise RuntimeError(f"LLM plan failed schema validation: {e}") from e
 
         # Override total_bars from user-specified duration if present
-        plan = self._apply_duration_constraint(plan, prompt)
+        plan = score_processor.apply_duration_constraint(plan, prompt)
 
         # Calculate demo_length_bars proportionally (not LLM-generated)
-        plan["demo_length_bars"] = self._calculate_demo_bars(plan["total_bars"])
+        plan["demo_length_bars"] = score_processor.calculate_demo_bars(plan["total_bars"])
 
         # Inject SF2 profile data into orchestration if SF2 is configured
-        plan = self._inject_sf2_data(plan)
+        plan = score_processor.inject_sf2_data(plan, self._settings.get("sf2_path", ""), self.session_id)
 
         # Persist plan.json to workdir
         plan_path = Path(self.workdir) / "plan.json"
@@ -645,7 +543,7 @@ class ComposeOrchestrator:
             self.session.workdir = new_workdir
 
         self.session.record_phase("parse", "done")
-        summary = self._build_plan_summary(plan)
+        summary = prompt_builder.build_plan_summary(plan)
         self.session.set_awaiting_confirm(confirmation_data={
             "phase": "parse",
             "title": "确认音乐规划",
@@ -940,534 +838,6 @@ class ComposeOrchestrator:
 
         return executor
 
-    @staticmethod
-    def _looks_like_abc(text: str) -> bool:
-        """Heuristic: does the text look like valid ABC notation?"""
-        stripped = text.strip()
-        if not stripped:
-            return False
-        # Must start with a standard ABC header or voice label
-        has_abc_header = any(stripped.startswith(h) for h in ("X:", "T:", "M:", "K:", "L:", "V:"))
-        # Must contain at least one bar line (|) or note letters
-        has_music = "|" in stripped or any(c in stripped for c in "abcdefgABCDEFG")
-        return has_abc_header and has_music
-
-    def _extract_abc(self, text: str) -> str:
-        """Extract ABC notation from agent response text.
-
-        Handles markdown code fences (```abc ... ```) or raw ABC content.
-        Rejects text that clearly isn't ABC (tool-call syntax, prose, etc.).
-        """
-        text = text.strip()
-        # Guard against raw Content objects leaking into text
-        if "Content(type=" in text:
-            logger.warning("_extract_abc: received raw Content object, returning empty")
-            return ""
-        # Reject text containing tool-call artifacts (DSML, XML tool tags, etc.)
-        tool_markers = ("<|DSML|>", "<function_calls>", "</invoke>", "tool_call", "FunctionCall")
-        if any(m in text for m in tool_markers):
-            logger.warning("_extract_abc: response contains tool-call syntax, attempting strip")
-            text = self._strip_tool_markers(text)
-            if not self._looks_like_abc(text):
-                logger.warning("_extract_abc: stripped text still not ABC, returning empty")
-                return ""
-        # Try fenced block first
-        fence_match = re.search(r"```(?:abc)?\s*\n(.*?)```", text, re.DOTALL)
-        if fence_match:
-            text = fence_match.group(1).strip()
-        # Raw text must look like ABC
-        elif not self._looks_like_abc(text):
-            logger.warning("_extract_abc: text does not look like ABC (first 80 chars: %s...), returning empty",
-                           text[:80])
-            return ""
-
-        # Trim trailing rest-only bars
-        text = self._trim_trailing_rests(text)
-        return text
-
-    @staticmethod
-    def _is_placeholder(text: str) -> bool:
-        """Check if extracted ABC is a placeholder (not real music)."""
-        lower = text.lower().strip()
-        return (
-            "placeholder" in lower
-            or len(lower) < 10
-            or not any(c in lower for c in "|abcdefg'")
-        )
-
-    @staticmethod
-    def _strip_tool_markers(text: str) -> str:
-        """Remove known tool-call marker patterns from text.
-
-        Strips DSML blocks, function_calls tags, and other tool-call artifacts.
-        Preserves surrounding content.
-        """
-        # Remove complete DSML blocks: <|DSML|>...content...<|DSML|>
-        text = re.sub(r'<\|DSML\|>.*?<\|DSML\|>', '', text, flags=re.DOTALL)
-        # Remove individual DSML markers
-        text = text.replace('<|DSML|>', '')
-        # Remove function_calls blocks
-        text = re.sub(r'<function_calls>.*?</function_calls>', '', text, flags=re.DOTALL)
-        # Remove individual tags and their content on the same line
-        for tag in ('<function_calls>', '</function_calls>', '</invoke>'):
-            text = re.sub(rf'^\s*{re.escape(tag)}.*$', '', text, flags=re.MULTILINE)
-        # Remove <invoke ...> lines
-        text = re.sub(rf'^\s*<invoke\b.*$', '', text, flags=re.MULTILINE)
-        # Remove lines that are just tool markers
-        for marker in ('tool_call', 'FunctionCall'):
-            text = re.sub(rf'^\s*{re.escape(marker)}.*$', '', text, flags=re.MULTILINE)
-        # Clean up excessive blank lines
-        text = re.sub(r'\n{3,}', '\n\n', text)
-        return text.strip()
-
-    def _quick_lint_check(self, abc_text: str, plan_path: Path) -> str | bool:
-        """Run abc_lint on extracted ABC. Returns True if clean, or error string for feedback."""
-        from clef_server.tools import abc_lint
-        result = abc_lint(abc_text, str(plan_path))
-        if "error" in result:
-            return True  # Lint itself failed — don't block, accept as-is
-        if result.get("pass", True):
-            return True
-        issues = result.get("issues", [])
-        if not issues:
-            return True
-        lines = [f"ABC 格式检查发现 {len(issues)} 个问题："]
-        for issue in issues[:5]:
-            lines.append(f"- {issue}")
-        if len(issues) > 5:
-            lines.append(f"- ...还有 {len(issues) - 5} 个问题")
-        return "\n".join(lines)
-
-    def _extract_json(self, text: str) -> dict:
-        """Extract JSON from agent response, handling markdown fencing."""
-        text = text.strip()
-        # Reject text containing tool-call artifacts
-        tool_markers = ("<|DSML|>", "<function_calls>", "</invoke>", "tool_call", "FunctionCall")
-        if any(m in text for m in tool_markers):
-            logger.warning("_extract_json: response contains tool-call syntax, attempting strip")
-            text = self._strip_tool_markers(text)
-        fence_match = re.search(r"```(?:json)?\s*\n(.*?)```", text, re.DOTALL)
-        if fence_match:
-            text = fence_match.group(1).strip()
-        try:
-            return json.loads(text)
-        except json.JSONDecodeError:
-            logger.warning("_extract_json: failed to parse JSON, returning revise verdict")
-            return {"verdict": "revise"}
-
-    # ------------------------------------------------------------------
-    # Prompt builders & helpers
-    # ------------------------------------------------------------------
-
-    @staticmethod
-    def _apply_duration_constraint(plan: dict, user_prompt: str) -> dict:
-        """If the user prompt specifies a duration, override total_bars and redistribute sections.
-
-        Supports patterns like "45秒", "30秒左右", "1分钟", "1分30秒", "90s".
-        """
-        # Extract duration in seconds from prompt
-        seconds = 0.0
-        # Match "X分Y秒" or "X分钟Y秒"
-        m = re.search(r"(\d+)\s*(?:分|分钟)\s*(?:(\d+)\s*秒)?", user_prompt)
-        if m:
-            seconds = int(m.group(1)) * 60
-            if m.group(2):
-                seconds += int(m.group(2))
-        else:
-            # Match "X秒" or "Xs"
-            m = re.search(r"(\d+)\s*(?:秒|s)", user_prompt)
-            if m:
-                seconds = float(m.group(1))
-
-        if seconds <= 0:
-            return plan
-
-        bpm = plan.get("bpm", 120)
-        ts = plan.get("time_signature", "4/4")
-        beats_per_bar = float(ts.split("/")[0]) if "/" in ts else 4.0
-        target_bars = round(seconds * bpm / 60.0 / beats_per_bar)
-        target_bars = max(8, target_bars)  # minimum 8 bars
-
-        if target_bars == plan.get("total_bars"):
-            return plan
-
-        logger.info(
-            "Duration constraint: user wants ~%.0fs, adjusting total_bars %d → %d (bpm=%d, %s)",
-            seconds, plan.get("total_bars"), target_bars, bpm, ts,
-        )
-
-        # Redistribute sections proportionally
-        sections = plan.get("sections", [])
-        if not sections:
-            return plan
-
-        old_total = sum(s.get("measures", 1) for s in sections)
-        remaining = target_bars
-        for i, sec in enumerate(sections):
-            if i == len(sections) - 1:
-                sec["measures"] = max(2, remaining)
-            else:
-                ratio = sec.get("measures", 1) / max(old_total, 1)
-                new_measures = max(2, round(ratio * target_bars))
-                sec["measures"] = new_measures
-                remaining -= new_measures
-
-        plan["total_bars"] = target_bars
-        return plan
-
-    @staticmethod
-    def _trim_trailing_rests(abc_text: str) -> str:
-        """Remove trailing rest-only bars from ABC voice content.
-
-        Detects lines consisting solely of rests (z2, z4, z8, etc.) and bars (|)
-        at the end of the text and strips them.
-        """
-        lines = abc_text.rstrip().split("\n")
-        # Work backwards, find last non-rest line index (immutable)
-        last_non_rest = len(lines)
-        while last_non_rest > 0:
-            stripped = lines[last_non_rest - 1].strip()
-            if re.match(r'^[\s|z\d/]*$', stripped) and 'z' in stripped:
-                last_non_rest -= 1
-            else:
-                break
-        return "\n".join(lines[:last_non_rest])
-
-    @staticmethod
-    def _calculate_demo_bars(total_bars: int) -> int:
-        """Calculate demo_length_bars as ~30% of total_bars, clamped to [8, 64]."""
-        if total_bars <= 0:
-            return 8
-        return max(8, min(64, round(total_bars * 0.3)))
-
-    @staticmethod
-    def _parse_voice_blocks(score_text: str) -> dict[str, str]:
-        """Extract voice blocks from a merged score.abc.
-
-        Returns {"V:1": "C D E F|...", "V:2": "[FAc] ...", ...}
-        """
-        blocks: dict[str, str] = {}
-        lines = score_text.split("\n")
-        current_voice: str | None = None
-        current_lines: list[str] = []
-
-        for line in lines:
-            stripped = line.strip()
-            voice_match = re.match(r'^(V:\d[\+\d]*)', stripped)
-            if voice_match:
-                if current_voice and current_lines:
-                    blocks[current_voice] = "\n".join(current_lines).strip()
-                current_voice = voice_match.group(1)
-                current_lines = []
-            elif current_voice:
-                current_lines.append(line)
-
-        if current_voice and current_lines:
-            blocks[current_voice] = "\n".join(current_lines).strip()
-
-        return blocks
-
-    _BAR_RE = re.compile(r'(?<![\|:])\|(?![\|:])')
-
-    @staticmethod
-    def _count_bars(abc_text: str) -> int:
-        """Count bar lines (|) in ABC text, excluding ||, |:, and :|."""
-        count = 0
-        for line in abc_text.strip().split("\n"):
-            stripped = line.strip()
-            if stripped.startswith("%"):
-                continue
-            count += len(ComposeOrchestrator._BAR_RE.findall(stripped))
-        return count
-
-    @staticmethod
-    def _truncate_to_bars(abc_text: str, target_bars: int) -> str:
-        """Truncate ABC voice content to exactly target_bars measures."""
-        bars_found = 0
-        result_parts: list[str] = []
-        for line in abc_text.strip().split("\n"):
-            stripped = line.strip()
-            if not stripped or stripped.startswith("%"):
-                result_parts.append(line)
-                continue
-            bar_positions = [m.start() for m in ComposeOrchestrator._BAR_RE.finditer(line)]
-            if not bar_positions:
-                result_parts.append(line)
-                continue
-            new_bars = bars_found + len(bar_positions)
-            if new_bars <= target_bars:
-                result_parts.append(line)
-                bars_found = new_bars
-            else:
-                remaining = target_bars - bars_found
-                if remaining > 0 and bar_positions:
-                    end_pos = bar_positions[remaining - 1] + 1
-                    result_parts.append(line[:end_pos])
-                    bars_found = target_bars
-                break
-        return "\n".join(result_parts)
-
-    @staticmethod
-    def _truncate_score_per_voice(abc_text: str, target_bars: int) -> str:
-        """Truncate each voice independently to target_bars measures.
-
-        Unlike _truncate_to_bars which linearly cuts across all lines,
-        this method parses voice blocks (V:1, V:2, ...) and truncates
-        each one independently, preserving the multi-voice structure.
-        """
-        lines = abc_text.strip().split("\n")
-        header_lines: list[str] = []
-        voice_blocks: dict[str, list[str]] = {}
-        current_voice: str | None = None
-
-        for line in lines:
-            stripped = line.strip()
-            if not stripped or stripped.startswith("%"):
-                if current_voice is not None:
-                    voice_blocks.setdefault(current_voice, []).append(line)
-                else:
-                    header_lines.append(line)
-                continue
-
-            # Detect voice directive (same regex as _parse_voice_blocks)
-            voice_match = re.match(r'^(V:\d[\+\d]*)', stripped)
-            if voice_match:
-                current_voice = voice_match.group(1)
-                voice_blocks.setdefault(current_voice, []).append(line)
-                continue
-
-            # Header lines (before any V: directive)
-            if current_voice is None:
-                header_lines.append(line)
-            else:
-                voice_blocks.setdefault(current_voice, []).append(line)
-
-        # Truncate each voice block independently
-        truncated_blocks: dict[str, list[str]] = {}
-        for voice_label, voice_lines in voice_blocks.items():
-            truncated_blocks[voice_label] = ComposeOrchestrator._truncate_voice_lines(
-                voice_lines, target_bars
-            )
-
-        # Reassemble: header + each voice block
-        result_parts = list(header_lines)
-        for voice_label, voice_lines in truncated_blocks.items():
-            result_parts.extend(voice_lines)
-
-        return "\n".join(result_parts)
-
-    @staticmethod
-    def _truncate_voice_lines(lines: list[str], target_bars: int) -> list[str]:
-        """Truncate a single voice's lines to target_bars measures."""
-        bars_found = 0
-        result: list[str] = []
-        for line in lines:
-            stripped = line.strip()
-            if not stripped or stripped.startswith("%") or stripped.startswith("V:"):
-                result.append(line)
-                continue
-            bar_positions = [m.start() for m in ComposeOrchestrator._BAR_RE.finditer(line)]
-            if not bar_positions:
-                result.append(line)
-                continue
-            new_bars = bars_found + len(bar_positions)
-            if new_bars <= target_bars:
-                result.append(line)
-                bars_found = new_bars
-            else:
-                remaining = target_bars - bars_found
-                if remaining > 0 and bar_positions:
-                    end_pos = bar_positions[remaining - 1] + 1
-                    result.append(line[:end_pos])
-                break
-        return result
-
-    def _store_fragment(
-        self,
-        fragments: dict[str, str],
-        abc_parts: list[str],
-        voice_label: str,
-        abc_text: str,
-        round_num: int = 0,
-    ) -> None:
-        """Store ABC text into fragments, splitting multi-voice rhythm output (V:3+V:4)."""
-        # Stamp agent metadata
-        agent = self._VOICE_TO_AGENT.get(voice_label, "unknown")
-        abc_text = self._stamp_agent_meta(abc_text, agent, voice_label, round_num)
-
-        if "+" in voice_label:
-            rhythm_blocks = self._parse_voice_blocks(abc_text)
-            if rhythm_blocks:
-                for sub_label in rhythm_blocks:
-                    fragments[sub_label] = rhythm_blocks[sub_label]
-                if abc_parts is not None:
-                    abc_parts.extend(f"{label}\n{content}" for label, content in rhythm_blocks.items())
-                return
-            logger.warning("Rhythmist output had no V:3/V:4 labels, storing as %s", voice_label)
-        fragments[voice_label] = abc_text
-        if abc_parts is not None:
-            abc_parts.append(f"{voice_label}\n{abc_text}")
-
-    def _inject_sf2_data(self, plan: dict) -> dict:
-        """Inject SF2 profile data into plan's orchestration voices.
-
-        Loads the SF2 profile, matches each voice's midi_program to the profile,
-        and overrides range/register with real SF2 data.
-
-        Returns a new plan dict with SF2 data injected (does not mutate input).
-        """
-        sf2_path = self._settings.get("sf2_path", "")
-        if not sf2_path:
-            return plan
-
-        from clef_server.sf2_profile import load_sf2_profile, midi_to_note
-
-        profile = load_sf2_profile(sf2_path)
-        if not profile:
-            return plan
-
-        presets = profile.get("presets", {})
-        orch = plan.get("orchestration", {})
-        new_orch = {}
-        for role in ["melody", "harmony", "bass"]:
-            part = dict(orch.get(role, {}))
-            gm_program = part.get("midi_program")
-            if isinstance(gm_program, int) and str(gm_program) in presets:
-                preset_data = presets[str(gm_program)]
-                part["sf2"] = preset_data
-                # Override range/register with real SF2 data
-                kr = preset_data.get("key_range", [0, 127])
-                part["range"] = f"{midi_to_note(kr[0])}-{midi_to_note(kr[1])}"
-                ss = preset_data.get("sweet_spot", [kr[0], kr[1]])
-                part["register"] = f"{midi_to_note(ss[0])}-{midi_to_note(ss[1])}"
-            new_orch[role] = part
-
-        new_plan = {**plan, "orchestration": new_orch}
-
-        logger.info(
-            "Session %s: SF2 profile injected (%s, %d presets)",
-            self.session_id, profile.get("sf2_name", "?"),
-            profile.get("preset_count", 0),
-        )
-        return new_plan
-
-    def _build_create_message(self, voice: str, plan: dict) -> str:
-        """Build a detailed prompt for the create phase, including section structure."""
-        from clef_server.sf2_profile import midi_to_note
-
-        voice_label = self.VOICE_MAP.get(voice, f"V:{voice}")
-        total_bars = plan.get("total_bars", 0)
-        sections = plan.get("sections", [])
-        orch = plan.get("orchestration", {})
-        ts = plan.get("time_signature", "4/4")
-
-        # Build section summary
-        section_lines = []
-        for sec in sections:
-            section_lines.append(
-                f"  - {sec.get('name', sec.get('id', '?'))}: "
-                f"{sec.get('measures', '?')} bars, "
-                f"energy={sec.get('energy_level', 'mid')}, "
-                f"melody_strategy={sec.get('melody_strategy', 'new')}"
-            )
-        sections_text = "\n".join(section_lines)
-
-        # Get voice-specific orchestration info
-        role_map = {"melody": "melody", "harmony": "harmony", "rhythm": "bass"}
-        role = role_map.get(voice, voice)
-        voice_orch = orch.get(role, {})
-        voice_info = (
-            f"  Instrument: {voice_orch.get('instrument', 'N/A')}, "
-            f"Range: {voice_orch.get('range', 'N/A')}, "
-            f"Register: {voice_orch.get('register', 'N/A')}"
-        )
-
-        # SF2 constraints if available
-        sf2_section = ""
-        sf2 = voice_orch.get("sf2")
-        if sf2:
-            kr = sf2.get("key_range", [])
-            ss = sf2.get("sweet_spot", [])
-            chars = sf2.get("characteristics", [])
-            char_text = ", ".join(chars) if chars else "N/A"
-            sf2_section = (
-                f"\n\n## SF2 Instrument Constraints\n"
-                f"- Key range: [{kr[0]}, {kr[1]}] ({midi_to_note(kr[0])}-{midi_to_note(kr[1])})\n"
-                f"- Sweet spot (recommended register): [{ss[0]}, {ss[1]}] ({midi_to_note(ss[0])}-{midi_to_note(ss[1])})\n"
-                f"- Velocity layers: {sf2.get('vel_layers', 'N/A')}\n"
-                f"- Characteristics: {char_text}\n"
-                f"CRITICAL: Do NOT write notes outside the key range [{kr[0]}, {kr[1]}]!\n"
-            )
-
-        # Duration reference (shared by all voices)
-        beats_per_measure = int(ts.split("/")[0])
-        duration_ref = (
-            f"\n\n## Duration Self-Check (MANDATORY)\n"
-            f"Time signature: {ts} → {beats_per_measure} beats per measure.\n"
-            f"With L:1/8, each measure = {beats_per_measure * 2} eighth-note units.\n"
-            f"Duration reference (L:1/8):\n"
-            f"  f = 1 unit (eighth note)\n"
-            f"  f2 = 2 units (quarter note)\n"
-            f"  f4 = 4 units (half note)\n"
-            f"  f/2 = 0.5 units (sixteenth note)  ⚠ NOT 1 unit!\n"
-            f"  [Ace]2 = 2 units,  z = 1 unit,  z2 = 2 units\n"
-            f"VERIFY: sum of durations in EACH measure must = {beats_per_measure * 2}.\n"
-            f"Before output, re-check every measure. Do NOT output if any measure is incomplete.\n"
-        )
-
-        # Voice-specific rhythm guidance
-        voice_rules = ""
-        if role == "melody":
-            voice_rules = (
-                "\n\n## Melody Rules\n"
-                "- Follow plan.json melody_strategy per section (new/variation/sequence/development/recap/climax)\n"
-                "- Rhythm variety: sections must have contrasting density (sparse vs dense)\n"
-                "- Dynamics: at least 2 dynamic levels per section (!mf! base + !ff! climax)\n"
-                "- Large intervals (>5 semitones): insert passing notes immediately\n"
-            )
-        elif role == "harmony":
-            voice_rules = (
-                "\n\n## Harmony Rules\n"
-                "- EVERY measure must be COMPLETELY filled — sum of durations = "
-                f"{beats_per_measure * 2} eighth-note units\n"
-                "- Chord marks (\"D\") and chord notes ([FAc]) must appear in the SAME measure\n"
-                "- Voice leading: common tones keep, non-common tones move by step (≤2 semitones)\n"
-                "- Do NOT use the same rhythm pattern in every measure — vary rhythm between sections\n"
-                "- Harmony notes must align with melody's strong beats\n"
-            )
-        elif role == "bass":
-            voice_rules = (
-                "\n\n## Bass & Drum Rules\n"
-                "- Bass: prefer chord root or fifth, reference V:2 chord marks\n"
-                "- Drums: adjust density by section energy (sparse in A, fills in B/C transitions)\n"
-                "- Drum fills only at section transitions (last 1-2 bars), NOT at piece endings\n"
-                "- Bass notes stay within register range from plan.json\n"
-            )
-
-        message = (
-            f"Generate the full {voice} part as ABC notation.\n"
-            f"Use voice label {voice_label}.\n\n"
-            f"## Composition Structure\n"
-            f"- Key: {plan.get('key', 'C')}\n"
-            f"- Scale: {plan.get('scale', 'major')}\n"
-            f"- Time: {ts}\n"
-            f"- BPM: {plan.get('bpm', 120)}\n"
-            f"- Form: {plan.get('form', 'ABA')}\n"
-            f"- Total bars: {total_bars}\n\n"
-            f"## Sections (must generate content for ALL sections)\n"
-            f"{sections_text}\n\n"
-            f"## Your Voice Configuration\n"
-            f"{voice_info}"
-            f"{voice_rules}"
-            f"{duration_ref}"
-            f"{sf2_section}"
-            f"\nOutput only ABC notation for voice {voice_label}. "
-            f"CRITICAL: Your output must contain EXACTLY {total_bars} bar lines (|). "
-            f"Count your bars before outputting. If you have more than {total_bars} bars, "
-            f"remove the excess. If fewer, add rest measures (z)."
-        )
-        return message
-
     # ------------------------------------------------------------------
     # Reviewer helper
     # ------------------------------------------------------------------
@@ -1541,7 +911,7 @@ class ComposeOrchestrator:
             message += f"\nAdditional context: {extra_context}\n"
 
         if validation_failures:
-            fail_summary = self._format_validation_feedback(validation_failures)
+            fail_summary = validation.format_validation_feedback(validation_failures)
             message += f"\n\nVALIDATION REPORT (automated checks):\n{fail_summary}\n"
             message += (
                 "The above validation failures indicate TECHNICAL problems in the score. "
@@ -1550,61 +920,8 @@ class ComposeOrchestrator:
             )
 
         response_text = await self._run_agent("clef-reviewer", message, plan=plan, score_abc=score_text)
-        raw = self._extract_json(response_text)
-        return self._normalize_review(raw)
-
-    def _normalize_review(self, raw: dict) -> dict:
-        """Normalize reviewer output into a flat structure for the frontend.
-
-        The reviewer agent outputs nested "dimensions": {"melody": {"score": 7, ...}, ...}.
-        The frontend expects flat "scores": {"melody": 7, ...} + "verdict" + "summary".
-        """
-        result: dict = {"verdict": raw.get("verdict", "pass"), "scores": {}}
-
-        # Extract from nested "dimensions" format (reviewer's standard output)
-        dimensions = raw.get("dimensions", {})
-        if isinstance(dimensions, dict):
-            for key, val in dimensions.items():
-                if isinstance(val, dict):
-                    result["scores"][key] = val.get("score", 0)
-                elif isinstance(val, (int, float)):
-                    result["scores"][key] = val
-
-        # Fallback: if agent returned flat "scores" directly
-        if not result["scores"] and "scores" in raw:
-            result["scores"] = raw["scores"]
-
-        # Collect all issues into a flat list
-        all_issues: list[str] = []
-        if isinstance(dimensions, dict):
-            for val in dimensions.values():
-                if isinstance(val, dict) and "issues" in val:
-                    for issue in val["issues"]:
-                        if isinstance(issue, dict):
-                            all_issues.append(issue.get("description", str(issue)))
-                        else:
-                            all_issues.append(str(issue))
-        if not all_issues and "issues" in raw:
-            all_issues = raw["issues"]
-        result["issues"] = all_issues
-
-        # Summary: prefer explicit field, otherwise derive from overall_score
-        if "summary" in raw:
-            result["summary"] = raw["summary"]
-        elif "overall_score" in raw:
-            result["summary"] = f"Overall: {raw['overall_score']}/10"
-        else:
-            avg = sum(result["scores"].values()) / max(len(result["scores"]), 1)
-            result["summary"] = f"Overall: {avg:.1f}/10"
-
-        raw_overall = raw.get("overall_score")
-        if raw_overall is not None:
-            result["overall_score"] = raw_overall
-        else:
-            result["overall_score"] = (
-                sum(result["scores"].values()) / max(len(result["scores"]), 1)
-            )
-        return result
+        raw = response_parser.extract_json(response_text)
+        return response_parser.normalize_review(raw)
 
     # ------------------------------------------------------------------
     # Leader helper
@@ -1646,49 +963,9 @@ class ComposeOrchestrator:
             message += f"\nUser feedback: {extra_feedback}\n"
 
         response_text = await self._run_agent("clef-orchestrator", message, plan=plan, score_abc=score_text)
-        return self._extract_json(response_text)
+        return response_parser.extract_json(response_text)
 
     # ------------------------------------------------------------------
-    # Validation helpers
-    # ------------------------------------------------------------------
-
-    def _run_validation(self, score_path: Path, plan_path: Path, report_path: Path) -> list[dict]:
-        """Run validate_abc and return list of FAIL issues (empty if all pass).
-
-        Returns list of {"category": ..., "voice": ..., "message": ...}.
-        """
-        from clef_server.tools import validate_abc
-
-        result = validate_abc(str(score_path), str(plan_path), str(report_path))
-        if "error" in result:
-            logger.error("validate_abc error: %s", result["error"])
-            return []
-
-        if not report_path.exists():
-            return []
-
-        report = json.loads(report_path.read_text(encoding="utf-8"))
-        fails = report.get("fails", [])
-        # Filter out known artifacts
-        real_fails = [f for f in fails if not f.get("known_artifact", False)]
-        if real_fails:
-            logger.warning(
-                "Session %s: %d validation FAIL(s): %s",
-                self.session_id,
-                len(real_fails),
-                "; ".join(f"{f['voice']}:{f['category']}" for f in real_fails),
-            )
-        return real_fails
-
-    def _format_validation_feedback(self, failures: list[dict]) -> str:
-        """Format validation FAIL items into a feedback string for agents."""
-        if not failures:
-            return ""
-        lines = ["VALIDATION FAILURES (must fix before proceeding):"]
-        for f in failures:
-            lines.append(f"- [{f['category']}] {f['voice']}: {f['message']}")
-        lines.append("You MUST fix these issues in your output. Re-check every measure's duration.")
-        return "\n".join(lines)
 
     # ------------------------------------------------------------------
     # Best-of-N generation with repair
@@ -1741,7 +1018,7 @@ class ComposeOrchestrator:
             if not abc_text:
                 try:
                     response = await self._run_agent(agent_name, full_message, plan=plan)
-                    abc_text = self._extract_abc(response)
+                    abc_text = response_parser.extract_abc(response)
                 except RecoverableAgentError:
                     logger.warning(
                         "[RECOVERABLE] Agent %s failed in round %d, continuing",
@@ -1761,14 +1038,14 @@ class ComposeOrchestrator:
                 tmp_path = Path(self.workdir) / f"_tmp_{safe_label}.abc"
                 if tmp_path.exists():
                     tmp_content = tmp_path.read_text(encoding="utf-8").strip()
-                    if tmp_content and self._looks_like_abc(tmp_content):
+                    if tmp_content and response_parser.looks_like_abc(tmp_content):
                         abc_text = tmp_content
                         logger.info(
                             "Recovered ABC from %s (agent wrote via write_file but final response was rejected)",
                             tmp_path.name,
                         )
 
-            if not abc_text or self._is_placeholder(abc_text):
+            if not abc_text or response_parser.is_placeholder(abc_text):
                 candidates.append({
                     "round": round_idx, "abc": abc_text or "",
                     "fail_count": 999, "failures": [],
@@ -1786,7 +1063,7 @@ class ComposeOrchestrator:
                 abc_text = fix_result["abc"]
 
             # Quick lint check
-            lint_ok = self._quick_lint_check(abc_text, plan_path)
+            lint_ok = response_parser.quick_lint_check(abc_text, plan_path)
             if lint_ok is not True and lint_ok:
                 feedback = str(lint_ok)
                 candidates.append({
@@ -1797,9 +1074,13 @@ class ComposeOrchestrator:
 
             # Validate via validate_abc
             report_path = Path(self.workdir) / f"_candidate_r{round_idx}_report.json"
-            failures = self._run_validation_from_abc(
-                abc_text, plan_path, report_path, voice_label,
-            )
+            failures = validation.run_validation_from_abc(
+            abc_text,
+            plan_path,
+            report_path,
+            Path(self.workdir),
+            voice_label
+        )
             fail_count = len(failures)
 
             candidates.append({
@@ -1820,7 +1101,7 @@ class ComposeOrchestrator:
                 break
 
             # Prepare feedback for next round
-            feedback = self._format_validation_feedback(failures)
+            feedback = validation.format_validation_feedback(failures)
 
         # Select best candidate
         if not candidates:
@@ -1841,44 +1122,6 @@ class ComposeOrchestrator:
 
         return best["abc"], best["fail_count"]
 
-    def _run_validation_from_abc(
-        self,
-        abc_text: str,
-        plan_path: Path,
-        report_path: Path,
-        voice_label: str = "",
-    ) -> list[dict]:
-        """Write ABC to temp file, validate, return failures."""
-        from clef_server.tools import validate_abc as validate_tool
-
-        safe_label = voice_label.replace(":", "_").replace("+", "_").replace(" ", "_")
-        tmp_abc = Path(self.workdir) / f"_tmp_{safe_label}.abc"
-        tmp_abc.write_text(abc_text, encoding="utf-8")
-
-        try:
-            result = validate_tool(str(tmp_abc), str(plan_path), str(report_path))
-        except Exception as e:
-            logger.warning("Validation failed: %s", e)
-            return [{"category": "validation_error", "voice": voice_label, "message": str(e)}]
-
-        if isinstance(result, dict) and "error" in result:
-            return [{"category": "validation_error", "voice": voice_label, "message": result["error"]}]
-
-        # Read report
-        if report_path.exists():
-            try:
-                report = json.loads(report_path.read_text(encoding="utf-8"))
-                fails = [
-                    {"category": f.get("category", ""), "voice": f.get("voice", voice_label), "message": f.get("message", "")}
-                    for f in report.get("fails", [])
-                    if not f.get("known_artifact", False)
-                ]
-                return fails
-            except (json.JSONDecodeError, OSError) as e:
-                logger.warning("Report parse failed: %s", e)
-                return []
-        return []
-
     async def _attempt_repair(
         self,
         abc_text: str,
@@ -1893,7 +1136,7 @@ class ComposeOrchestrator:
         if not abc_text:
             return {"abc": "", "fail_count": 999, "failures": failures}
 
-        feedback = self._format_validation_feedback(failures)
+        feedback = validation.format_validation_feedback(failures)
         repair_msg = (
             f"修复以下 ABC 内容中的验证错误：\n\n"
             f"## 验证失败项\n{feedback}\n\n"
@@ -1905,7 +1148,7 @@ class ComposeOrchestrator:
 
         try:
             response = await self._run_agent("clef-repair", repair_msg, plan=plan)
-            repaired_abc = self._extract_abc(response)
+            repaired_abc = response_parser.extract_abc(response)
         except Exception as e:
             logger.warning("Repair agent failed: %s", e)
             return {"abc": abc_text, "fail_count": len(failures), "failures": failures}
@@ -1920,8 +1163,12 @@ class ComposeOrchestrator:
 
         # Validate repaired version
         report_path = Path(self.workdir) / "_repair_report.json"
-        new_failures = self._run_validation_from_abc(
-            repaired_abc, plan_path, report_path, voice_label,
+        new_failures = validation.run_validation_from_abc(
+            repaired_abc,
+            plan_path,
+            report_path,
+            Path(self.workdir),
+            voice_label
         )
 
         return {
@@ -1953,7 +1200,7 @@ class ComposeOrchestrator:
             f"Example: 2 2 2 2 | 4 4 | 2 2 1 1 2 |"
         )
         rhythm_response = await self._run_agent(agent_name, rhythm_msg, plan=plan)
-        rhythm_text = self._extract_rhythm(rhythm_response)
+        rhythm_text = response_parser.extract_rhythm(rhythm_response)
 
         # Validate rhythm
         rhythm_result = validate_rhythm_skeleton(rhythm_text)
@@ -1966,7 +1213,7 @@ class ComposeOrchestrator:
             )
             rhythm_msg += f"\n\nPrevious attempt had errors: {bad_summary}. Fix and output corrected skeleton."
             rhythm_response = await self._run_agent(agent_name, rhythm_msg, plan=plan)
-            rhythm_text = self._extract_rhythm(rhythm_response)
+            rhythm_text = response_parser.extract_rhythm(rhythm_response)
             rhythm_result = validate_rhythm_skeleton(rhythm_text)
 
         if not rhythm_result["passed"]:
@@ -1983,27 +1230,7 @@ class ComposeOrchestrator:
             f"Rhythm: {rhythm_text}"
         )
         pitch_response = await self._run_agent(agent_name, pitch_msg, plan=plan)
-        return self._extract_abc(pitch_response)
-
-    def _extract_rhythm(self, response: str) -> str:
-        """Extract rhythm skeleton from agent response."""
-        import re as _re
-        # Reject tool-call artifacts
-        tool_markers = ("<|DSML|>", "<function_calls>", "</invoke>", "tool_call", "FunctionCall")
-        if any(m in response for m in tool_markers):
-            logger.warning("_extract_rhythm: response contains tool-call syntax, attempting strip")
-            response = self._strip_tool_markers(response)
-        match = _re.search(r"```(?:rhythm)?\s*\n?(.*?)```", response, _re.DOTALL)
-        if match:
-            return match.group(1).strip()
-        # Fallback: look for | separated numbers
-        lines = response.strip().split("\n")
-        for line in lines:
-            if "|" in line and any(c.isdigit() for c in line):
-                return line.strip()
-        # Nothing recognizable found
-        logger.warning("_extract_rhythm: no rhythm pattern found in response")
-        return ""
+        return response_parser.extract_abc(pitch_response)
 
     # ------------------------------------------------------------------
     # Phase 1: Sample (方向小样)
@@ -2054,7 +1281,7 @@ class ComposeOrchestrator:
                 voice_label=voice_label,
             )
 
-            self._store_fragment(fragments, abc_parts, voice_label, best_abc or "")
+            score_processor.store_fragment(fragments, abc_parts, voice_label, best_abc or "")
             self.session.record_sub_step(voice_display, "done", agent=agent_name)
             logger.info("Sample voice %s: %d FAILs", voice_label, fail_count)
 
@@ -2068,7 +1295,7 @@ class ComposeOrchestrator:
             logger.error("merge_abc failed: %s", merge_result["error"])
             raise RuntimeError(f"merge_abc failed: {merge_result['error']}")
 
-        self._inject_midi_programs(score_path, plan)
+        score_processor.inject_midi_programs(score_path, plan)
         self.session.record_sub_step("合并声部", "done")
 
         # Step 2: Melody gate — review melody only up to 3 times
@@ -2092,23 +1319,23 @@ class ComposeOrchestrator:
                 plan=plan,
                 score_abc=score_path.read_text(encoding="utf-8") if score_path.exists() else "",
             )
-            abc_text = self._extract_abc(response)
+            abc_text = response_parser.extract_abc(response)
             fragments[melody_label] = abc_text
             merge_result = merge_abc(str(plan_path), fragments, str(score_path))
             if "error" in merge_result:
                 logger.error("merge_abc (melody gate) failed: %s", merge_result["error"])
                 raise RuntimeError(f"merge_abc (melody gate) failed: {merge_result['error']}")
-            self._inject_midi_programs(score_path, plan)
+            score_processor.inject_midi_programs(score_path, plan)
 
         self.session.record_sub_step("旋律审查", "done", agent="clef-reviewer")
 
         # Post melody gate: validate bar count consistency across all fragments
         demo_bars = plan.get("demo_length_bars", 8)
         for label in list(fragments):
-            actual = self._count_bars(fragments[label])
+            actual = score_processor.count_bars(fragments[label])
             if actual > demo_bars + 1:
                 logger.warning("Sample fragment %s has %d bars (target %d), truncating", label, actual, demo_bars)
-                fragments[label] = self._truncate_to_bars(fragments[label], demo_bars)
+                fragments[label] = score_processor.truncate_to_bars(fragments[label], demo_bars)
 
         # Step 3: Convert sample to MIDI (versioned by round)
         sample_round = self.session.sample_round
@@ -2177,7 +1404,7 @@ class ComposeOrchestrator:
             leader_response = await self._run_agent(
                 "clef-orchestrator", leader_prompt, plan=plan
             )
-            leader_result = self._extract_json(leader_response)
+            leader_result = response_parser.extract_json(leader_response)
             leader_tasks = leader_result.get("tasks")
         except Exception as e:
             logger.warning("Leader pre-planning failed, falling back to generation_order: %s", e)
@@ -2267,7 +1494,7 @@ class ComposeOrchestrator:
                     max_rounds=2,
                     voice_label=voice_label,
                 )
-                self._store_fragment(fragments, None, voice_label, best_abc)
+                score_processor.store_fragment(fragments, None, voice_label, best_abc)
                 self.session.record_sub_step(voice_display, "done", agent=agent_name)
                 completed_agents.add(agent_name)
                 await asyncio.sleep(self.inter_agent_delay)
@@ -2292,7 +1519,7 @@ class ComposeOrchestrator:
                 voice_display = self._VOICE_DISPLAY_NAMES.get(voice, f"生成 {voice}")
                 self.session.record_sub_step(voice_display, "running", agent=agent_name)
 
-                message = self._build_create_message(voice, plan)
+                message = prompt_builder.build_create_message(voice, plan)
 
                 best_abc, fail_count = await self._generate_with_best_of_n(
                     agent_name=agent_name,
@@ -2304,7 +1531,7 @@ class ComposeOrchestrator:
                 )
                 abc_text = best_abc
 
-                self._store_fragment(fragments, None, voice_label, abc_text)
+                score_processor.store_fragment(fragments, None, voice_label, abc_text)
                 self.session.record_sub_step(voice_display, "done", agent=agent_name)
                 await asyncio.sleep(self.inter_agent_delay)
 
@@ -2312,13 +1539,13 @@ class ComposeOrchestrator:
         target_bars = plan.get("total_bars", 0)
         if target_bars > 0:
             for label in list(fragments):
-                actual = self._count_bars(fragments[label])
+                actual = score_processor.count_bars(fragments[label])
                 if actual > target_bars + 1:
                     logger.warning(
                         "Session %s: Voice %s has %d bars (target %d), truncating",
                         self.session_id, label, actual, target_bars,
                     )
-                    fragments[label] = self._truncate_to_bars(fragments[label], target_bars)
+                    fragments[label] = score_processor.truncate_to_bars(fragments[label], target_bars)
 
         # Merge all fragments
         from clef_server.tools import merge_abc
@@ -2328,13 +1555,13 @@ class ComposeOrchestrator:
             logger.error("merge_abc failed: %s", merge_result["error"])
             raise RuntimeError(f"merge_abc failed: {merge_result['error']}")
 
-        self._inject_midi_programs(score_path, plan)
+        score_processor.inject_midi_programs(score_path, plan)
         self.session.record_sub_step("合并声部", "done")
         self.session.record_sub_step("技术验证", "running")
 
         # Validate and store failures for iteration phase
         report_path = Path(self.workdir) / "validation_report.json"
-        failures = self._run_validation(score_path, plan_path, report_path)
+        failures = validation.run_validation(score_path, plan_path, report_path, session_id=self.session_id)
         self._validation_failures = failures  # Persist for iterate phase
 
         if failures:
@@ -2353,18 +1580,18 @@ class ComposeOrchestrator:
                     len(failures), repaired["fail_count"],
                 )
                 score_path.write_text(repaired["abc"], encoding="utf-8")
-                self._inject_midi_programs(score_path, plan)
+                score_processor.inject_midi_programs(score_path, plan)
                 # Re-validate
-                self._validation_failures = self._run_validation(score_path, plan_path, report_path)
+                self._validation_failures = validation.run_validation(score_path, plan_path, report_path, session_id=self.session_id)
                 # Re-enforce bar limits after repair
                 if target_bars > 0:
                     for label in list(fragments):
-                        actual = self._count_bars(fragments[label])
+                        actual = score_processor.count_bars(fragments[label])
                         if actual > target_bars + 1:
-                            fragments[label] = self._truncate_to_bars(fragments[label], target_bars)
+                            fragments[label] = score_processor.truncate_to_bars(fragments[label], target_bars)
                             merge_result = merge_abc(str(plan_path), fragments, str(score_path))
                             if "error" not in merge_result:
-                                self._inject_midi_programs(score_path, plan)
+                                score_processor.inject_midi_programs(score_path, plan)
             else:
                 logger.info("Repair did not improve, keeping original")
 
@@ -2472,7 +1699,7 @@ class ComposeOrchestrator:
 
                 # Append validation failures if any
                 if self._validation_failures:
-                    instruction += "\n\n" + self._format_validation_feedback(self._validation_failures)
+                    instruction += "\n\n" + validation.format_validation_feedback(self._validation_failures)
 
                 current_score = score_path.read_text(encoding="utf-8") if score_path.exists() else ""
                 task_label = f"执行任务 ({agent_name})"
@@ -2483,17 +1710,17 @@ class ComposeOrchestrator:
                     plan=plan,
                     score_abc=current_score,
                 )
-                abc_text = self._extract_abc(response)
+                abc_text = response_parser.extract_abc(response)
 
                 voice = task.get("voice", "melody")
                 voice_label = self.VOICE_MAP.get(voice, f"V:{voice}")
 
                 # Replace voice content via merge_abc instead of appending
-                all_fragments = self._parse_voice_blocks(current_score)
+                all_fragments = score_processor.parse_voice_blocks(current_score)
                 if "+" in voice_label:
                     # Handle rhythm multi-voice (V:3+V:4)
                     sub_labels = [l.strip() for l in voice_label.split("+")]
-                    rhythm_blocks = self._parse_voice_blocks(f"RHYTHM_PLACEHOLDER\n{abc_text}\n")
+                    rhythm_blocks = score_processor.parse_voice_blocks(f"RHYTHM_PLACEHOLDER\n{abc_text}\n")
                     for sub_label in sub_labels:
                         if sub_label in rhythm_blocks:
                             all_fragments[sub_label] = rhythm_blocks[sub_label]
@@ -2509,10 +1736,10 @@ class ComposeOrchestrator:
                 target_bars = plan.get("total_bars", 0)
                 if target_bars > 0:
                     current_score = score_path.read_text(encoding="utf-8")
-                    voice_blocks = self._parse_voice_blocks(current_score)
+                    voice_blocks = score_processor.parse_voice_blocks(current_score)
                     needs_truncate = False
                     for vl in voice_blocks:
-                        voice_bars = self._count_bars(voice_blocks[vl])
+                        voice_bars = score_processor.count_bars(voice_blocks[vl])
                         if voice_bars > target_bars + 1:
                             needs_truncate = True
                             logger.warning(
@@ -2520,7 +1747,7 @@ class ComposeOrchestrator:
                                 self.session_id, agent_name, vl, voice_bars, target_bars,
                             )
                     if needs_truncate:
-                        truncated = self._truncate_score_per_voice(current_score, target_bars)
+                        truncated = score_processor.truncate_score_per_voice(current_score, target_bars)
                         score_path.write_text(truncated, encoding="utf-8")
 
                 completed_agents.add(agent_name)
@@ -2533,9 +1760,9 @@ class ComposeOrchestrator:
                 current_score = score_path.read_text(encoding="utf-8") if score_path.exists() else ""
 
             # Validate + export versioned MIDI after each iteration round
-            self._inject_midi_programs(score_path, plan)
+            score_processor.inject_midi_programs(score_path, plan)
             report_path = Path(self.workdir) / f"validation_report_iter{round_num}.json"
-            failures = self._run_validation(score_path, plan_path, report_path)
+            failures = validation.run_validation(score_path, plan_path, report_path, session_id=self.session_id)
             self._validation_failures = failures
 
             # Early stop: if fail_count hasn't improved for 2 rounds, stop iterating
@@ -2626,7 +1853,7 @@ class ComposeOrchestrator:
 
         self.session.record_sub_step("生成表现力方案", "running", agent="clef-orchestrator")
         response = await self._run_agent("clef-orchestrator", message, plan=plan)
-        expression_plan = self._extract_json(response)
+        expression_plan = response_parser.extract_json(response)
 
         self.session.record_sub_step("生成表现力方案", "done", agent="clef-orchestrator")
 
