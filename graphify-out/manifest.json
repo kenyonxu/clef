@@ -1,0 +1,278 @@
+{
+  "/home/kai-remote/github/clef-dev/addons/clef/output/_tmp_analysis.py": {
+    "mtime": 1776251196.745159,
+    "hash": "34fb71b856a825beaf23dc542bb33cf3"
+  },
+  "/home/kai-remote/github/clef-dev/CLAUDE.md": {
+    "mtime": 1776251196.6688628,
+    "hash": "79c036eae655d2254fec56c367eb6ee9"
+  },
+  "/home/kai-remote/github/clef-dev/README.md": {
+    "mtime": 1776251196.6688628,
+    "hash": "ad62543fccfb2b5189ea109b951859c9"
+  },
+  "/home/kai-remote/github/clef-dev/LICENSE.txt": {
+    "mtime": 1776251196.6688628,
+    "hash": "fecc45b56279dadf0cd47b49c9a4bd05"
+  },
+  "/home/kai-remote/github/clef-dev/docs/plugin-localization.md": {
+    "mtime": 1776251197.068161,
+    "hash": "89519a201e9bc21edee1a40a02e1b638"
+  },
+  "/home/kai-remote/github/clef-dev/docs/agent-frameworks-research.md": {
+    "mtime": 1776251197.0678263,
+    "hash": "cccb7761368d335a4e8afd186e404e82"
+  },
+  "/home/kai-remote/github/clef-dev/docs/clef-compose-zhihu-article.md": {
+    "mtime": 1776251197.0680056,
+    "hash": "698f7c33cb97331bf9e5ad346fc8ba3b"
+  },
+  "/home/kai-remote/github/clef-dev/docs/skills-reference.md": {
+    "mtime": 1776251197.068161,
+    "hash": "6a338dd379286661696c457c28e34f56"
+  },
+  "/home/kai-remote/github/clef-dev/docs/\u97f3\u4e50\u7f16\u66f2\u6280\u5de7.md": {
+    "mtime": 1776251197.0698903,
+    "hash": "0af1d5ead571d6ba0ebeb712eef3b4a4"
+  },
+  "/home/kai-remote/github/clef-dev/docs/plans/2026-04-02-clef-compose-best-practice-optimization.md": {
+    "mtime": 1776251197.0681298,
+    "hash": "9b3fc303855a170d6a9b7da7917ce4f2"
+  },
+  "/home/kai-remote/github/clef-dev/docs/plans/2026-04-04-p2-arrangement-extension-plan.md": {
+    "mtime": 1776251197.068161,
+    "hash": "f3597f3023285017c65e17650e8eccf1"
+  },
+  "/home/kai-remote/github/clef-dev/docs/plans/2026-04-04-midi-quality-gaps-design.md": {
+    "mtime": 1776251197.0681298,
+    "hash": "8dfbfce5a7aff8960ceeaae35d94e25d"
+  },
+  "/home/kai-remote/github/clef-dev/docs/plans/2026-04-02-piano-roll-interactive-design.md": {
+    "mtime": 1776251197.0681298,
+    "hash": "f59f8150b4f4783507d33ceaa3e71e66"
+  },
+  "/home/kai-remote/github/clef-dev/docs/plans/2026-04-05-audio-engine-upgrade-plan.md": {
+    "mtime": 1776251197.068161,
+    "hash": "5c8f011836c799822f1f5c2829a59518"
+  },
+  "/home/kai-remote/github/clef-dev/docs/plans/2026-03-29-clef-station-phase2-plan.md": {
+    "mtime": 1776251197.0681298,
+    "hash": "4fc479386420f5d091f5e1e215c6cfc1"
+  },
+  "/home/kai-remote/github/clef-dev/docs/plans/2026-04-04-p2-arrangement-extension-design.md": {
+    "mtime": 1776251197.0681298,
+    "hash": "aee95187b74339dc0e88393b8213d76a"
+  },
+  "/home/kai-remote/github/clef-dev/docs/plans/2026-04-06-piano-roll-editing-enhancement-design.md": {
+    "mtime": 1776251197.068161,
+    "hash": "d8a66b9caec61cef9f7a4d0e7b82dafa"
+  },
+  "/home/kai-remote/github/clef-dev/docs/plans/2026-04-04-clef-iterate-skill-design.md": {
+    "mtime": 1776251197.0681298,
+    "hash": "f5e0d541d58ea436cd27adafee28f744"
+  },
+  "/home/kai-remote/github/clef-dev/docs/plans/2026-04-05-audio-engine-upgrade-design.md": {
+    "mtime": 1776251197.068161,
+    "hash": "612f124e92e5aa477247c36d33705c05"
+  },
+  "/home/kai-remote/github/clef-dev/docs/plans/2026-03-30-piano-roll-design.md": {
+    "mtime": 1776251197.0681298,
+    "hash": "4ed8ca5e1c048b33cbef577de1207e22"
+  },
+  "/home/kai-remote/github/clef-dev/docs/plans/2026-04-05-claude-code-source-research.md": {
+    "mtime": 1776251197.068161,
+    "hash": "a684d5a858374736523aa8a78365191b"
+  },
+  "/home/kai-remote/github/clef-dev/docs/plans/2026-04-02-clef-server-astrbot-design.md": {
+    "mtime": 1776251197.0681298,
+    "hash": "23436e7ef4a7a2548d18b4dc31aaf02a"
+  },
+  "/home/kai-remote/github/clef-dev/docs/plans/2026-03-29-clef-station-phase3-plan.md": {
+    "mtime": 1776251197.0681298,
+    "hash": "d59ea7db043058fc3cf78d8ec9820966"
+  },
+  "/home/kai-remote/github/clef-dev/docs/plans/2026-03-30-piano-roll-implementation.md": {
+    "mtime": 1776251197.0681298,
+    "hash": "832a51c1aa4b74565d4751ce78d95e36"
+  },
+  "/home/kai-remote/github/clef-dev/docs/plans/2026-04-05-feedback-mode-design.md": {
+    "mtime": 1776251197.068161,
+    "hash": "7c29324e29d01b3f8ca113b2d3092bb5"
+  },
+  "/home/kai-remote/github/clef-dev/docs/plans/2026-03-29-clef-station-design.md": {
+    "mtime": 1776251197.0680056,
+    "hash": "f0b76d6510981c1bacb1a8244314bf43"
+  },
+  "/home/kai-remote/github/clef-dev/docs/plans/2026-04-02-plugin-localization.md": {
+    "mtime": 1776251197.0681298,
+    "hash": "51e9c8dc31cdc597d1329332438478af"
+  },
+  "/home/kai-remote/github/clef-dev/docs/plans/2026-03-30-workflow-fixes.md": {
+    "mtime": 1776251197.0681298,
+    "hash": "9a14a08a676d5210cf9414a21c1c1796"
+  },
+  "/home/kai-remote/github/clef-dev/docs/plans/2026-04-04-miditools-algorithm-survey.md": {
+    "mtime": 1776251197.0681298,
+    "hash": "a8b333791aaa03846a1cc3c048078750"
+  },
+  "/home/kai-remote/github/clef-dev/docs/plans/2026-03-29-clef-station-phase4-plan.md": {
+    "mtime": 1776251197.0681298,
+    "hash": "66ccbe6a140f5b4639b7a2b266282883"
+  },
+  "/home/kai-remote/github/clef-dev/docs/plans/2026-04-04-piano-roll-interactive-plan.md": {
+    "mtime": 1776251197.068161,
+    "hash": "677c6d2bc25bbc29985c9d754df33520"
+  },
+  "/home/kai-remote/github/clef-dev/docs/plans/2026-03-30-midi-analyze-tool.md": {
+    "mtime": 1776251197.0681298,
+    "hash": "4a7857f3dd9b663f65952778d8b2c676"
+  },
+  "/home/kai-remote/github/clef-dev/docs/plans/2026-03-29-clef-station-phase1-plan.md": {
+    "mtime": 1776251197.0681298,
+    "hash": "6e4dc02b4ec26da5cfd740099d607664"
+  },
+  "/home/kai-remote/github/clef-dev/docs/plans/2026-03-30-agent-teams-p0-p1.md": {
+    "mtime": 1776251197.0681298,
+    "hash": "d55c25b59c2980fecfe02d5bd06d536a"
+  },
+  "/home/kai-remote/github/clef-dev/docs/plans/2026-04-02-chatmusician-hybrid-mode-design.md": {
+    "mtime": 1776251197.0681298,
+    "hash": "119b2b0a9972ad7593a75ad4a99a25e1"
+  },
+  "/home/kai-remote/github/clef-dev/docs/plans/2026-04-04-piano-roll-ux-fixes.md": {
+    "mtime": 1776251197.068161,
+    "hash": "0a630bda96c61defd3da64173ded128c"
+  },
+  "/home/kai-remote/github/clef-dev/docs/plans/2026-04-06-clef-server-agent-framework.md": {
+    "mtime": 1776251197.068161,
+    "hash": "8eeec482ed727cba01a828c291eb4d5d"
+  },
+  "/home/kai-remote/github/clef-dev/docs/plans/2026-04-06-piano-roll-editing-enhancement-plan.md": {
+    "mtime": 1776251197.068161,
+    "hash": "07f347fe8764fb7853987e1594144363"
+  },
+  "/home/kai-remote/github/clef-dev/docs/superpowers/plans/2026-04-06-clef-server.md": {
+    "mtime": 1776251197.0696855,
+    "hash": "161bbbe86eec4bc1c79847f653fde53b"
+  },
+  "/home/kai-remote/github/clef-dev/docs/superpowers/plans/2026-04-07-velocity-lane.md": {
+    "mtime": 1776251197.0698903,
+    "hash": "376677c588f60e2a2b5fc4815c170116"
+  },
+  "/home/kai-remote/github/clef-dev/docs/superpowers/specs/2026-04-07-velocity-lane-design.md": {
+    "mtime": 1776251197.0698903,
+    "hash": "eeab42cb99eb244682af08bbd74c0b47"
+  },
+  "/home/kai-remote/github/clef-dev/openspec/config.yaml": {
+    "mtime": 1776251197.0698903,
+    "hash": "9e3e7672b387a282583011181ab35f9a"
+  },
+  "/home/kai-remote/github/clef-dev/addons/clef/README.md": {
+    "mtime": 1776251196.6691582,
+    "hash": "2979fb4b7f092b05e45615d00b07a8f8"
+  },
+  "/home/kai-remote/github/clef-dev/addons/clef/docs/clef_json_spec.md": {
+    "mtime": 1776251196.6702633,
+    "hash": "dba2ac66babd609ca85782382f5a1bd6"
+  },
+  "/home/kai-remote/github/clef-dev/addons/clef/docs/user_guide.md": {
+    "mtime": 1776251196.6706376,
+    "hash": "85a42696f6e051608f67f29fc15c8879"
+  },
+  "/home/kai-remote/github/clef-dev/addons/clef/docs/theory.md": {
+    "mtime": 1776251196.6706376,
+    "hash": "8c1e4c701c13e39f30add33338287650"
+  },
+  "/home/kai-remote/github/clef-dev/addons/clef/docs/user_docs/llm_midi_composer_guide_cn.md": {
+    "mtime": 1776251196.6706376,
+    "hash": "3445d4af4ef8363c0223c437e4ce0983"
+  },
+  "/home/kai-remote/github/clef-dev/addons/clef/sound_front/GeneralUser-GS/documentation/CHANGELOG.html": {
+    "mtime": 1776251197.052161,
+    "hash": "655c8ccc41a45b4c83f40adb7eeab333"
+  },
+  "/home/kai-remote/github/clef-dev/addons/clef/sound_front/GeneralUser-GS/documentation/README.html": {
+    "mtime": 1776251197.0535448,
+    "hash": "99138c86aecd53367813352aa988ccaa"
+  },
+  "/home/kai-remote/github/clef-dev/addons/clef/sound_front/GeneralUser-GS/documentation/LICENSE.txt": {
+    "mtime": 1776251197.0535448,
+    "hash": "f339df226039d9e1484b075f04f312f1"
+  },
+  "/home/kai-remote/github/clef-dev/addons/clef/knowledge/README.md": {
+    "mtime": 1776251196.6744382,
+    "hash": "f535edc189a0eaf99efc65749954f207"
+  },
+  "/home/kai-remote/github/clef-dev/addons/clef/sound_front/GeneralUser-GS/documentation/percussion map.pdf": {
+    "mtime": 1776251197.059161,
+    "hash": "1d2d9b8ae5906b369b3c17c1df5947a3"
+  },
+  "/home/kai-remote/github/clef-dev/addons/clef/sound_front/GeneralUser-GS/documentation/README.pdf": {
+    "mtime": 1776251197.059161,
+    "hash": "36667ba59b84d0ea074933389488ef55"
+  },
+  "/home/kai-remote/github/clef-dev/icon.svg": {
+    "mtime": 1776251197.0698903,
+    "hash": "a16f2eed1b4496c4abf03d329708ba09"
+  },
+  "/home/kai-remote/github/clef-dev/addons/clef/icons/clef_icon.png": {
+    "mtime": 1776251196.674293,
+    "hash": "646b99b558bce886dafdbb4459cdb9b4"
+  },
+  "/home/kai-remote/github/clef-dev/addons/clef/output/DungeonExploration_r1.mp3": {
+    "mtime": 1776251196.7431588,
+    "hash": "1c86e8bf757509a36f2cec725f6923fe"
+  },
+  "/home/kai-remote/github/clef-dev/addons/clef/output/DungeonExploration_sample.mp3": {
+    "mtime": 1776251196.745159,
+    "hash": "f6e20383b4f7a7a4ab37d959443224d5"
+  },
+  "/home/kai-remote/github/clef-dev/addons/clef/output/DungeonExploration_final.mp3": {
+    "mtime": 1776251196.6831584,
+    "hash": "376d2cfd9a940531960f111fe4e4f209"
+  },
+  "/home/kai-remote/github/clef-dev/addons/clef/output/DungeonExploration_final.wav": {
+    "mtime": 1776251196.7381587,
+    "hash": "eecfae599199042609cd65e3bf4c1683"
+  },
+  "/home/kai-remote/github/clef-dev/addons/clef/sound_front/GeneralUser-GS/support/MIDI timing test.ogg": {
+    "mtime": 1776251197.0661612,
+    "hash": "3bdea84a8880f8bffff2f2ba93395b9a"
+  },
+  "/home/kai-remote/github/clef-dev/addons/clef/sound_front/GeneralUser-GS/demo MIDIs/audio/Breakout.ogg": {
+    "mtime": 1776251196.9501603,
+    "hash": "b28c60925fe8f62dda898e6cc592b0d4"
+  },
+  "/home/kai-remote/github/clef-dev/addons/clef/sound_front/GeneralUser-GS/demo MIDIs/audio/Bond.ogg": {
+    "mtime": 1776251196.92416,
+    "hash": "17be0c6d9ab44fffe92e6b8b7424a12e"
+  },
+  "/home/kai-remote/github/clef-dev/addons/clef/sound_front/GeneralUser-GS/demo MIDIs/audio/Earth Day - by Richard Audd (fixed).ogg": {
+    "mtime": 1776251196.9741604,
+    "hash": "9943d6f14bf2cdd4ad2e12b3e51136f5"
+  },
+  "/home/kai-remote/github/clef-dev/addons/clef/sound_front/GeneralUser-GS/demo MIDIs/audio/Jump!.ogg": {
+    "mtime": 1776251197.0011606,
+    "hash": "e3730fe5a381323b710bb18a942c8875"
+  },
+  "/home/kai-remote/github/clef-dev/addons/clef/sound_front/GeneralUser-GS/demo MIDIs/audio/J-cycle.ogg": {
+    "mtime": 1776251196.9841604,
+    "hash": "6a17dfd323f58b26fce05a5381ceb15c"
+  },
+  "/home/kai-remote/github/clef-dev/addons/clef/sound_front/GeneralUser-GS/demo MIDIs/audio/The HYBRID Collage (v2.0) - by S. Christian Collins.ogg": {
+    "mtime": 1776251197.0341609,
+    "hash": "cdb11594910864dec211d036d596f30c"
+  },
+  "/home/kai-remote/github/clef-dev/addons/clef/sound_front/GeneralUser-GS/demo MIDIs/audio/Umi no Mieru Machi.ogg": {
+    "mtime": 1776251197.052161,
+    "hash": "05bbd63382417994f153b7afb3b70864"
+  },
+  "/home/kai-remote/github/clef-dev/addons/clef/sound_front/GeneralUser-GS/demo MIDIs/audio/Santa Claus is Comin' to Town.ogg": {
+    "mtime": 1776251197.0201607,
+    "hash": "a2d1b442a305fd5f1ff72f4c7203a27b"
+  },
+  "/home/kai-remote/github/clef-dev/addons/clef/sound_front/GeneralUser-GS/demo MIDIs/audio/Dance.ogg": {
+    "mtime": 1776251196.9611604,
+    "hash": "7caccd34e47c9b81d21047a235e7ced1"
+  }
+}

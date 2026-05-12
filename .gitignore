@@ -36,3 +36,6 @@ Desktop.ini
 # Python dependencies (vendored)
 music21/
 pytest-of-kenyo/
+
+# graphify cache (heavy, not needed in repo)
+graphify-out/cache
