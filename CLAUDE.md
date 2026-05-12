@@ -122,9 +122,20 @@ Available skills: /office-hours, /plan-ceo-review, /plan-eng-review, /plan-desig
 
 ## graphify
 
-This project has a graphify knowledge graph at graphify-out/.
+项目有两个知识图谱：
+
+### addons/clef/ 图谱（GDScript AST）
+- **位置：** `addons/clef/graphify-out/`
+- **内容：** 1249 nodes · 1620 edges · 51 communities — 覆盖所有 GDScript 文件的结构分析（MidiStreamPlayer、PianoRoll、Sf2Reader 等核心类的调用链/属性/信号）
+- **Wiki：** `addons/clef/graphify-out/obsidian/` — 1300+ 个 Obsidian 笔记，可用 Obsidian 打开作为 vault
+- **HTML 图：** `addons/clef/graphify-out/graph.html` — 浏览器直接打开
+- **God nodes：** PianoRoll (169) > MidiStreamPlayer (101) > Sf2Reader (81) > ClefStation (61) > ClefVoice (48)
+
+### server/ 图谱（Python + TypeScript）
+- **位置：** `graphify-out/`（项目根目录）
+- **内容：** Server 端 FastAPI + Agent 系统的知识图谱
 
 Rules:
-- Before answering architecture or codebase questions, read graphify-out/GRAPH_REPORT.md for god nodes and community structure
-- If graphify-out/wiki/index.md exists, navigate it instead of reading raw files
-- After modifying code files in this session, run `graphify update .` to keep the graph current (AST-only, no API cost)
+- 回答 `addons/clef/` 架构问题前 → 读 `addons/clef/graphify-out/GRAPH_REPORT.md`
+- 回答 `server/` 架构问题前 → 读 `graphify-out/GRAPH_REPORT.md`
+- 修改 GDScript 文件后 → 在 `addons/clef/` 运行 `graphify update .` 增量更新图谱
