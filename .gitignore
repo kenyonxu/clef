@@ -2,6 +2,9 @@
 .godot/
 /android/
 
+# Old MIDI addon (replaced by clef)
+addons/midi/
+
 # Python
 __pycache__/
 *.pyc
@@ -18,6 +21,9 @@ Desktop.ini
 .vs/
 *.swp
 *.swo
+
+# Secrets
+docs/secrets/
 
 # Clef work files (intermediate)
 .clef-work/
@@ -37,5 +43,26 @@ Desktop.ini
 music21/
 pytest-of-kenyo/
 
-# graphify cache (heavy, not needed in repo)
-graphify-out/cache
+# Server config with real API keys
+server/config/providers.yaml
+server/start-server.bat
+server/start.bat
+
+# Frontend build output
+server/web/dist/
+server/web/node_modules/
+
+# Graphify build artifacts (track graph.json, GRAPH_REPORT.md, manifest.json, cost.json)
+graphify-out/cache/
+graphify-out/.graphify_*
+.graphify_python
+.graphify_detect.json
+.graphify_extract.json
+.graphify_ast.json
+.graphify_semantic.json
+.graphify_analysis.json
+.graphify_labels.json
+.graphify_incremental.json
+.graphify_cached.json
+.graphify_uncached.txt
+.graphify_old.json

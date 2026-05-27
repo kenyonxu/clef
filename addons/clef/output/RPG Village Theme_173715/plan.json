@@ -1,0 +1,125 @@
+{
+  "title": "RPG Village Theme",
+  "key": "C",
+  "scale": "major",
+  "bpm": 80,
+  "time_signature": "4/4",
+  "form": "ABA",
+  "total_bars": 15,
+  "sections": [
+    {
+      "id": "A1",
+      "name": "Introduction",
+      "measures": 4
+    },
+    {
+      "id": "B",
+      "name": "Development",
+      "measures": 7
+    },
+    {
+      "id": "A2",
+      "name": "Recapitulation",
+      "measures": 4
+    }
+  ],
+  "orchestration": {
+    "melody": {
+      "name": "Flute",
+      "channel": 1,
+      "instrument": "Flute",
+      "range": "C-1-D#9",
+      "register": "C#3-C5",
+      "midi_program": 73,
+      "sf2": {
+        "name": "Flute",
+        "gm_name": "flute",
+        "is_drum": false,
+        "key_range": [
+          0,
+          123
+        ],
+        "vel_range": [
+          0,
+          127
+        ],
+        "sweet_spot": [
+          49,
+          72
+        ],
+        "vel_layers": 1,
+        "avg_attack": -1.0,
+        "avg_release": -1.0,
+        "quality": "high",
+        "characteristics": []
+      }
+    },
+    "harmony": {
+      "name": "Strings",
+      "channel": 2,
+      "instrument": "String Ensemble",
+      "range": "C-1-D8",
+      "register": "G2-F#4",
+      "midi_program": 49,
+      "sf2": {
+        "name": "Slow Strings",
+        "gm_name": "slow_strings",
+        "is_drum": false,
+        "key_range": [
+          0,
+          110
+        ],
+        "vel_range": [
+          0,
+          127
+        ],
+        "sweet_spot": [
+          43,
+          66
+        ],
+        "vel_layers": 1,
+        "avg_attack": -1.0,
+        "avg_release": -1.0,
+        "quality": "high",
+        "characteristics": []
+      }
+    },
+    "bass": {
+      "name": "Cello",
+      "channel": 3,
+      "instrument": "Cello",
+      "range": "C-1-C8",
+      "register": "F#2-F4",
+      "midi_program": 42,
+      "sf2": {
+        "name": "Cello",
+        "gm_name": "cello",
+        "is_drum": false,
+        "key_range": [
+          0,
+          108
+        ],
+        "vel_range": [
+          0,
+          127
+        ],
+        "sweet_spot": [
+          42,
+          65
+        ],
+        "vel_layers": 1,
+        "avg_attack": 0.006,
+        "avg_release": -1.0,
+        "quality": "high",
+        "characteristics": [
+          "percussive"
+        ]
+      }
+    }
+  },
+  "generation_order": [
+    "harmony",
+    "melody"
+  ],
+  "demo_length_bars": 8
+}

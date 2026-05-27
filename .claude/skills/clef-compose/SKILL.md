@@ -60,7 +60,7 @@ description: LLM 辅助 MIDI 作曲 Skill。基于 ABC 记谱法，通过多 Age
 | clef-leader | review_report.json, validation_report.json, user_feedback.json, plan.json | tasks.json | SKILL.md |
 | clef-arranger | plan.json, score.abc | ABC 片段（V:5+ 编曲层） | SKILL.md |
 | validate_abc.py | score.abc, plan.json | validation_report.json | SKILL.md / Leader |
-| merge_abc.py | 多个 ABC 片段 | score.abc（合并后） | SKILL.md |
+| clef_tools.py merge | 多个 ABC 片段（--files 或 --dir） | score.abc（合并后） | SKILL.md |
 | abc_to_midi.py | score.abc | *.mid | SKILL.md |
 
 ---
@@ -285,10 +285,18 @@ Step 1a 生成 plan.json 时必须为每个 section 指定 `melody_strategy`。C
       若 3 轮后 verdict 仍为 "revise"：跳过门控继续流程，在 `.clef-work/melody_gate_skipped.json` 写入 `{"reason": "旋律专项审核3轮未通过", "last_verdict": "revise"}`，Step 2a 首轮创作时 Leader 应关注旋律质量。
    - 若 `verdict == "pass"`：继续下一步
    - 若 `demo_mode == "chords_only"`：跳过此步骤
-4. 使用 `merge_abc.py` 合并声部
+4. 使用 `clef_tools.py merge --files` 合并声部（推荐）：
+   ```bash
+   python .claude/skills/clef-compose/scripts/clef_tools.py merge --plan .clef-work/plan.json --files .clef-work/fragments/V1_melody.abc .clef-work/fragments/V2_harmony.abc -o .clef-work/score.abc
+   ```
 5. Agent: Reviewer (clef-reviewer) — 审核合并后的完整方向小样（7 维通用评审）
 
-使用 `merge_abc.py` 合并声部，`abc_to_midi.py` 转换为 MIDI，输出到 `addons/clef/output/<name>_sample.mid` 供用户试听。
+使用 `clef_tools.py merge --files` 合并声部，`abc_to_midi.py` 转换为 MIDI，输出到 `addons/clef/output/<name>_sample.mid` 供用户试听。
+
+> **合并方式说明**：`clef_tools.py merge` 支持两种模式：
+> - `--files f1.abc f2.abc ...`：显式指定片段文件（推荐，精确控制）
+> - `--dir <目录>`：扫描目录中所有 .abc 文件（自动排除 score.abc 等非片段文件）
+> - 两种模式均支持三级声部识别：文件内容中的 V:N 行 → 文件名约定（melody.abc→V:1）→ 文件名中 V<N> 模式
 
 生成前清理旧文件：`rm -f addons/clef/output/<name>_sample.mid`
 
@@ -298,7 +306,7 @@ Step 1a 生成 plan.json 时必须为每个 section 指定 `melody_strategy`。C
 1. 根据用户反馈定向修改对应声部（Composer/Harmonist）
 2. 若用户要求调整长度（如"太长了，缩短到4小节"），直接修改 plan.json 的 `demo_length_bars`，无需重新规划
 3. 若修改了旋律（Composer），重新执行步骤 3 旋律专项审核门控
-4. 使用 `merge_abc.py` 重新合并，`abc_to_midi.py` 重新生成 MIDI
+4. 使用 `clef_tools.py merge --files` 重新合并，`abc_to_midi.py` 重新生成 MIDI
 5. **Agent: Reviewer (clef-reviewer)** — 再次审核修改后的方向小样
 6. 重新展示审核报告摘要 + 试听文件，回到用户确认点 2
 7. 最多 10 轮反馈回路，超过后建议用户回到 Step 1a 调整 plan.json
@@ -316,7 +324,10 @@ Step 1a 生成 plan.json 时必须为每个 section 指定 `melody_strategy`。C
    - 若 `["melody", "harmony"]`：先 Composer 生成完整版 V:1（复用 Step 1 确认的动机方向），再 Harmonist 生成完整版 V:2（参考 V:1）
 2. Agent: Rhythmist — V:3 低音 + V:4 鼓组（始终在旋律/和声之后）
 3. **Agent 输出检查**：读取各 Agent 输出的 ABC 片段，检查是否包含 `% NOTE:` 失败信号。如果某 Agent 输出了 `% NOTE:`，记录原因，不将该片段合并到 score.abc。
-4. 运行 `merge_abc.py` 合并所有声部 → `.clef-work/score.abc`
+4. 运行 `clef_tools.py merge --files` 合并所有声部 → `.clef-work/score.abc`：
+   ```bash
+   python .claude/skills/clef-compose/scripts/clef_tools.py merge --plan .clef-work/plan.json --files .clef-work/fragments/V1_melody.abc .clef-work/fragments/V2_harmony.abc .clef-work/fragments/V3_bass.abc .clef-work/fragments/V4_drums.abc -o .clef-work/score.abc
+   ```
 5. 运行 `python .claude/skills/clef-compose/scripts/snapshot.py --step 2a --output "score.abc" --note "首轮创作完成"`
 6. 运行 `validate_abc.py` 技术验证 → `.clef-work/validation_report.json`
    > 注：写入 score.abc 后 Leader 必须手动运行 validate_abc.py 生成验证报告。
@@ -343,7 +354,14 @@ Step 1a 生成 plan.json 时必须为每个 section 指定 `melody_strategy`。C
 score.abc → validate → review → Leader决策 → [并行/串行]Agent修改 → merge → validate → review → Leader决策 → ...
 ```
 
-**注意：** 如果 validate_abc.py 报告 FAIL（格式错误），直接派 Revision Agent 修正格式，不计入迭代轮数。
+**注意：** 如果 validate_abc.py 报告 FAIL（格式错误），按以下优先级处理，不计入迭代轮数：
+1. **确定性修复**：如果有 `measure_duration` FAIL，先运行 `fix_measure_duration` 自动修复：
+   ```bash
+   python .claude/skills/clef-compose/scripts/clef_tools.py fix-measure-duration .clef-work/score.abc
+   python .claude/skills/clef-compose/scripts/validate_abc.py .clef-work/score.abc .clef-work/plan.json -o .clef-work/validation_report.json
+   ```
+   偏差 ≤2 单位的小节会自动调整最后一个音符/休止符；偏差 >2 的留给 Revision。
+2. **Revision Agent**：确定性修复后仍有 FAIL，派 Revision Agent 修正剩余问题。
 
 **2c. 输出试听文件**
 
@@ -435,8 +453,9 @@ V:N 的 voice_id 必须与 plan.json 中对应层的 voice_id 一致。
    cat .clef-work/layer_arpeggio_pad.abc >> .clef-work/score.abc
    ```
 3. 运行 `validate_abc.py` 技术验证（编曲层仅检查：音域越界 FAIL、小节不完整 FAIL、格式错误 FAIL。旋律性检查对 V:5+ 跳过）
-4. 如果 validate FAIL → 修正 layer 文件后重新 append（注意不要重复 append，先从 snapshot 回滚）
-5. 运行 `abc_to_midi.py` 转换，供用户试听
+4. 如果 validate FAIL 且有 `measure_duration` 错误 → 先运行 `fix_measure_duration` 自动修复，再重新 validate
+5. 如果确定性修复后仍有 FAIL → 修正 layer 文件后重新 append（注意不要重复 append，先从 snapshot 回滚）
+5. 运行 `abc_to_midi.py` 转换，输出到 `addons/clef/output/<name>_with_layers.mid` 供用户试听
 
 **2.5.4 Reviewer 审核 + 自动修正循环** ⭐
 
@@ -566,3 +585,4 @@ python .claude/skills/clef-compose/scripts/archive.py --workdir .clef-work
 11. **validate_abc.py 伪影标记**：`clef=perc` 声部的 pitch_range/measure_duration 误报自动降级为 WARN + `known_artifact` 标记
 12. **Revision 后必须独立验证**：Leader 派 Revision 修正后，不得信任 Revision Agent 的自检报告。必须**手动运行** `validate_abc.py` 重新生成 `validation_report.json`，然后读取该文件确认所有 FAIL 已清除。若仍有 FAIL，再次派 Revision 或升级处理
 13. **abc_lint.py 作为 Revision 前置门禁**：在 merge 后、派 Revision 前可先运行 `abc_lint.py <abc> --fix` 自动修正确定性问题（`||`、`%% V:`、`=X` 还原号），减少 Revision 负担
+14. **fix_measure_duration 作为 Revision 前置门禁**：validate_abc.py 检出 `measure_duration` FAIL 时，先运行 `fix_measure_duration` 确定性修复（偏离 ≤2 单位自动调整最后一个音符/休止符），偏差过大的才交给 Revision Agent。与 abc_lint.py 一起构成双重前置门禁

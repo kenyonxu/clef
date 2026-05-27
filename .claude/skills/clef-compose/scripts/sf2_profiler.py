@@ -504,8 +504,14 @@ def build_profile(
     for preset in presets:
         if filter_presets is not None and preset.preset_index not in filter_presets:
             continue
-        if preset.bank != 0:
-            continue  # Only use bank 0 (standard GM)
+        # Skip non-standard banks (but include bank 128 = GM drums)
+        if preset.bank not in (0, 128):
+            continue
+
+        # Only use preset_index=0 for drum kit (standard GM kit)
+        is_drum = preset.bank == 128
+        if is_drum and preset.preset_index != 0:
+            continue
 
         # Collect all instrument zones referenced by this preset
         all_inst_zones: list[InstrumentZone] = []
@@ -519,9 +525,33 @@ def build_profile(
         if not non_global_zones:
             continue
 
-        # Aggregate key_range across all preset zones
-        kr_lo = min(pz.key_range[0] for pz in preset.zones if not pz.is_global)
-        kr_hi = max(pz.key_range[1] for pz in preset.zones if not pz.is_global)
+        # Aggregate key_range: use instrument zone key_ranges when preset zone
+        # doesn't specify one (common for drum kits where key_range is per-zone)
+        kr_lo = 127
+        kr_hi = 0
+        for pz in preset.zones:
+            if pz.is_global:
+                continue
+            # Preset zone has explicit narrow key_range → use it
+            pz_lo, pz_hi = pz.key_range
+            if pz_lo > 0 or pz_hi < 127:
+                kr_lo = min(kr_lo, pz_lo)
+                kr_hi = max(kr_hi, pz_hi)
+            else:
+                # Preset zone covers full range → check instrument zones
+                if pz.instrument_index >= 0 and pz.instrument_index < len(instruments):
+                    inst = instruments[pz.instrument_index]
+                    for iz in inst.zones:
+                        if iz.is_global:
+                            continue
+                        iz_lo, iz_hi = iz.key_range
+                        kr_lo = min(kr_lo, iz_lo)
+                        kr_hi = max(kr_hi, iz_hi)
+
+        # Fallback: if still full range, use preset zones directly
+        if kr_lo > kr_hi:
+            kr_lo = min(pz.key_range[0] for pz in preset.zones if not pz.is_global)
+            kr_hi = max(pz.key_range[1] for pz in preset.zones if not pz.is_global)
 
         # Aggregate vel_range
         vr_lo = min(pz.vel_range[0] for pz in preset.zones if not pz.is_global)
@@ -541,11 +571,14 @@ def build_profile(
         characteristics = _derive_characteristics(avg_attack, avg_release, non_global_zones)
 
         # Map preset index to a GM name hint
-        gm_name = _preset_to_gm_name(preset.preset_index)
+        gm_name = "drum_kit" if is_drum else _preset_to_gm_name(preset.preset_index)
 
-        result['presets'][str(preset.preset_index)] = {
+        profile_key = "drum" if is_drum else str(preset.preset_index)
+
+        result['presets'][profile_key] = {
             "name": preset.name,
             "gm_name": gm_name,
+            "is_drum": is_drum,
             "key_range": [kr_lo, kr_hi],
             "vel_range": [vr_lo, vr_hi],
             "sweet_spot": list(sweet_spot),

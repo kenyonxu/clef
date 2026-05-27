@@ -199,8 +199,8 @@ var _clipboard_ref_pitch: int = 60
 ## 当前选中轨道
 var _active_channel: int = 0
 
-enum Mode { PLAYING, EDITING, FEEDBACK }
-var _mode: Mode = Mode.PLAYING
+enum Mode { PLAYBACK, EDIT, FEEDBACK }
+var _mode: Mode = Mode.PLAYBACK
 
 enum EditSubMode { SELECT }
 var _edit_sub_mode: EditSubMode = EditSubMode.SELECT
@@ -345,7 +345,7 @@ func set_note_velocity(note_index: int, new_velocity: int) -> void:
 	queue_redraw()
 ## 更新播放头位置
 func set_playback_position(position: float, force: bool = false) -> void:
-	if _mode == Mode.EDITING and not force and not _playing:
+	if _mode == Mode.EDIT and not force and not _playing:
 		return
 	_playback_position = position
 	playback_position_changed.emit(position)
@@ -394,24 +394,24 @@ func set_mode(new_mode: Mode) -> void:
 	if _mode == new_mode:
 		return
 	_mode = new_mode
-	if new_mode == Mode.EDITING:
+	if new_mode == Mode.EDIT:
 		_playback_position = -1.0
 		_playing = false
-	elif new_mode == Mode.PLAYING:
+	elif new_mode == Mode.PLAYBACK:
 		_selection.clear()
 		selection_changed.emit(_selection)
 	elif new_mode == Mode.FEEDBACK:
 		_selection.clear()
 		selection_changed.emit(_selection)
 	mode_changed.emit(new_mode)
-	editing_changed.emit(new_mode == Mode.EDITING)
+	editing_changed.emit(new_mode == Mode.EDIT)
 	if is_instance_valid(_actions):
 		_actions._rebuild_context_menu()
 	queue_redraw()
 
 
 func set_editing(enabled: bool) -> void:
-	set_mode(Mode.EDITING if enabled else Mode.PLAYING)
+	set_mode(Mode.EDIT if enabled else Mode.PLAYBACK)
 
 
 func set_playing(playing: bool) -> void:
@@ -420,7 +420,7 @@ func set_playing(playing: bool) -> void:
 		queue_redraw()
 
 func is_editing() -> bool:
-	return _mode == Mode.EDITING
+	return _mode == Mode.EDIT
 
 
 func is_feedback_mode() -> bool:
@@ -519,7 +519,7 @@ func _notification(what: int) -> void:
 
 
 func _shortcut_input(event: InputEvent) -> void:
-	if _mode != Mode.EDITING:
+	if _mode != Mode.EDIT:
 		return
 	var key := event as InputEventKey
 	if key == null or not key.pressed:
@@ -653,21 +653,21 @@ func _gui_input(event: InputEvent) -> void:
 					return
 			# 导出按钮
 			if mb.position.x >= export_x:
-				if _mode == Mode.EDITING:
+				if _mode == Mode.EDIT:
 					_show_export_dialog()
 				accept_event()
 				return
 			# "+" 按钮（仅编辑模式）
-			if _mode == Mode.EDITING and mb.position.x >= plus_x and mb.position.x < export_x:
+			if _mode == Mode.EDIT and mb.position.x >= plus_x and mb.position.x < export_x:
 				_open_gm_selector_popup()
 				accept_event()
 				return
 			# 轨道切换
-			if _mode == Mode.EDITING:
+			if _mode == Mode.EDIT:
 				_handle_legend_click(mb.position.x)
 				accept_event()
 				return
-		if mb.pressed and mb.button_index == MOUSE_BUTTON_RIGHT and _mode == Mode.EDITING:
+		if mb.pressed and mb.button_index == MOUSE_BUTTON_RIGHT and _mode == Mode.EDIT:
 				var ch := _hit_test_legend(mb.position.x)
 				if ch >= 0:
 					_legend_context_channel = ch
@@ -736,7 +736,7 @@ func _handle_mouse_button(mb: InputEventMouseButton) -> void:
 
 
 func _handle_left_press(mb: InputEventMouseButton) -> void:
-	if _mode == Mode.PLAYING:
+	if _mode == Mode.PLAYBACK:
 		_selection.clear()
 		selection_changed.emit(_selection)
 		queue_redraw()
@@ -762,7 +762,7 @@ func _handle_left_press(mb: InputEventMouseButton) -> void:
 			_selection.append(hit["index"])
 			selection_changed.emit(_selection)
 		# 仅编辑模式开始拖拽
-		if _mode == Mode.EDITING:
+		if _mode == Mode.EDIT:
 			_dragging = true
 			_drag_start_pos = mb.position
 			_drag_original_notes.clear()
@@ -782,7 +782,7 @@ func _handle_left_press(mb: InputEventMouseButton) -> void:
 				})
 		queue_redraw()
 	else:
-		if _mode == Mode.EDITING and mb.alt_pressed:
+		if _mode == Mode.EDIT and mb.alt_pressed:
 			# Alt+点击 → 创建音符
 			_creating_note = true
 			_create_pitch = clampi(_y_to_pitch(mb.position.y), 0, 127)
@@ -887,7 +887,7 @@ func _handle_left_release(_mb: InputEventMouseButton) -> void:
 
 
 func _handle_right_click(mb: InputEventMouseButton) -> void:
-	if _mode == Mode.PLAYING:
+	if _mode == Mode.PLAYBACK:
 		return
 	var hit := _hit_test(mb.position)
 	if hit["index"] >= 0:
@@ -927,7 +927,7 @@ func _handle_mouse_motion(event: InputEventMouseMotion) -> void:
 	else:
 		var hit := _hit_test(event.position)
 		var new_note: int =  hit["index"]
-		var new_edge: String = hit["edge"] if _mode == Mode.EDITING and new_note >= 0 and _selection.has(new_note) else "none"
+		var new_edge: String = hit["edge"] if _mode == Mode.EDIT and new_note >= 0 and _selection.has(new_note) else "none"
 		if new_note != _hovered_note or new_edge != _hovered_edge:
 			_hovered_note = new_note
 			_hovered_edge = new_edge
@@ -1062,12 +1062,12 @@ func _draw_legend() -> void:
 
 	# "+" 按钮（跟随轨道末尾）
 	var plus_rect := Rect2(x + 4, 0, plus_width, _LEGEND_HEIGHT)
-	draw_rect(plus_rect, Color(0.12, 0.12, 0.16) if _mode == Mode.EDITING else Color(0.08, 0.08, 0.1))
+	draw_rect(plus_rect, Color(0.12, 0.12, 0.16) if _mode == Mode.EDIT else Color(0.08, 0.08, 0.1))
 	draw_line(Vector2(plus_rect.position.x, 0),
 		Vector2(plus_rect.position.x, _LEGEND_HEIGHT), Color(0.2, 0.2, 0.25))
 	var ps := font.get_string_size("+", HORIZONTAL_ALIGNMENT_CENTER, -1, 20)
 	draw_string(font, Vector2(plus_rect.position.x + plus_width / 2 - ps.x / 2, _LEGEND_HEIGHT / 2 + 5),
-		"+", HORIZONTAL_ALIGNMENT_CENTER, -1, 20, Color(0.6, 0.8, 0.6) if _mode == Mode.EDITING else Color(0.4, 0.4, 0.4))
+		"+", HORIZONTAL_ALIGNMENT_CENTER, -1, 20, Color(0.6, 0.8, 0.6) if _mode == Mode.EDIT else Color(0.4, 0.4, 0.4))
 
 	# "⩩" 反馈按钮
 	var feedback_rect := Rect2(size.x - plus_width * 2, 0, plus_width, _LEGEND_HEIGHT)
@@ -1081,12 +1081,12 @@ func _draw_legend() -> void:
 
 	# "⤓" 导出按钮（固定右端）
 	var export_rect := Rect2(size.x - plus_width, 0, plus_width, _LEGEND_HEIGHT)
-	draw_rect(export_rect, Color(0.12, 0.12, 0.16) if _mode == Mode.EDITING else Color(0.08, 0.08, 0.1))
+	draw_rect(export_rect, Color(0.12, 0.12, 0.16) if _mode == Mode.EDIT else Color(0.08, 0.08, 0.1))
 	draw_line(Vector2(export_rect.position.x, 0),
 		Vector2(export_rect.position.x, _LEGEND_HEIGHT), Color(0.2, 0.2, 0.25))
 	var es := font.get_string_size("⤓", HORIZONTAL_ALIGNMENT_CENTER, -1, 20)
 	draw_string(font, Vector2(export_rect.position.x + plus_width / 2 - es.x / 2, _LEGEND_HEIGHT / 2 + 5),
-		"⤓", HORIZONTAL_ALIGNMENT_CENTER, -1, 20, Color(0.6, 0.7, 0.9) if _mode == Mode.EDITING else Color(0.4, 0.4, 0.4))
+		"⤓", HORIZONTAL_ALIGNMENT_CENTER, -1, 20, Color(0.6, 0.7, 0.9) if _mode == Mode.EDIT else Color(0.4, 0.4, 0.4))
 
 
 func _draw_pitch_grid() -> void:
@@ -1162,7 +1162,7 @@ func _draw_notes() -> void:
 		if sel_set.has(i):
 			draw_rect(Rect2(x - 1, y - 1, w + 2, h + 2), Color(1, 1, 1, 0.9), false, 2.0)
 			# 边缘拖拽手柄（仅编辑模式）
-			if _mode == Mode.EDITING:
+			if _mode == Mode.EDIT:
 				var hw := _EDGE_HANDLE_WIDTH
 				var hc := _EDGE_HANDLE_HOVER_COLOR if i == _hovered_note and _hovered_edge != "none" else _EDGE_HANDLE_COLOR
 				draw_rect(Rect2(x - hw / 2.0, y, hw, h), hc)

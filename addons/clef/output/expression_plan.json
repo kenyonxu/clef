@@ -1,0 +1,91 @@
+{
+  "tracks": [
+    {
+      "channel": 0,
+      "name": "Violin (melody)",
+      "events": [
+        {"time_beats": 0, "type": "cc", "control": 7, "value": 90},
+        {"time_beats": 0, "type": "cc", "control": 10, "value": 64},
+        {"time_beats": 0, "type": "cc", "control": 11, "value": 85},
+        {"time_beats": 0, "type": "cc", "control": 91, "value": 30},
+        {"time_beats": 8, "type": "cc", "control": 11, "value": 80},
+        {"time_beats": 16, "type": "cc", "control": 11, "value": 90},
+        {"time_beats": 24, "type": "cc", "control": 11, "value": 78},
+        {"time_beats": 30, "type": "cc", "control": 11, "value": 70},
+        {"time_beats": 32, "type": "cc", "control": 7, "value": 100},
+        {"time_beats": 32, "type": "cc", "control": 11, "value": 95},
+        {"time_beats": 40, "type": "cc", "control": 11, "value": 105},
+        {"time_beats": 48, "type": "cc", "control": 11, "value": 115},
+        {"time_beats": 52, "type": "cc", "control": 11, "value": 120},
+        {"time_beats": 56, "type": "cc", "control": 11, "value": 100},
+        {"time_beats": 60, "type": "cc", "control": 11, "value": 80}
+      ]
+    },
+    {
+      "channel": 1,
+      "name": "Nylon Guitar (harmony)",
+      "events": [
+        {"time_beats": 0, "type": "cc", "control": 7, "value": 60},
+        {"time_beats": 0, "type": "cc", "control": 10, "value": 80},
+        {"time_beats": 0, "type": "cc", "control": 11, "value": 75},
+        {"time_beats": 0, "type": "cc", "control": 91, "value": 50},
+        {"time_beats": 8, "type": "cc", "control": 11, "value": 70},
+        {"time_beats": 16, "type": "cc", "control": 11, "value": 80},
+        {"time_beats": 24, "type": "cc", "control": 11, "value": 72},
+        {"time_beats": 30, "type": "cc", "control": 11, "value": 65},
+        {"time_beats": 32, "type": "cc", "control": 7, "value": 75},
+        {"time_beats": 32, "type": "cc", "control": 11, "value": 85},
+        {"time_beats": 40, "type": "cc", "control": 11, "value": 90},
+        {"time_beats": 48, "type": "cc", "control": 11, "value": 95},
+        {"time_beats": 52, "type": "cc", "control": 11, "value": 100},
+        {"time_beats": 56, "type": "cc", "control": 11, "value": 85},
+        {"time_beats": 60, "type": "cc", "control": 11, "value": 70}
+      ]
+    },
+    {
+      "channel": 2,
+      "name": "Acoustic Bass",
+      "events": [
+        {"time_beats": 0, "type": "cc", "control": 7, "value": 70},
+        {"time_beats": 0, "type": "cc", "control": 10, "value": 48},
+        {"time_beats": 0, "type": "cc", "control": 11, "value": 80},
+        {"time_beats": 0, "type": "cc", "control": 91, "value": 20},
+        {"time_beats": 8, "type": "cc", "control": 11, "value": 75},
+        {"time_beats": 16, "type": "cc", "control": 11, "value": 85},
+        {"time_beats": 24, "type": "cc", "control": 11, "value": 78},
+        {"time_beats": 30, "type": "cc", "control": 11, "value": 70},
+        {"time_beats": 32, "type": "cc", "control": 7, "value": 80},
+        {"time_beats": 32, "type": "cc", "control": 11, "value": 90},
+        {"time_beats": 40, "type": "cc", "control": 11, "value": 95},
+        {"time_beats": 48, "type": "cc", "control": 11, "value": 100},
+        {"time_beats": 52, "type": "cc", "control": 11, "value": 105},
+        {"time_beats": 56, "type": "cc", "control": 11, "value": 90},
+        {"time_beats": 60, "type": "cc", "control": 11, "value": 75}
+      ]
+    },
+    {
+      "channel": 9,
+      "name": "Percussion",
+      "events": [
+        {"time_beats": 0, "type": "cc", "control": 7, "value": 40},
+        {"time_beats": 0, "type": "cc", "control": 10, "value": 64},
+        {"time_beats": 0, "type": "cc", "control": 91, "value": 40},
+        {"time_beats": 32, "type": "cc", "control": 7, "value": 65}
+      ]
+    },
+    {
+      "channel": 3,
+      "name": "Harp (arpeggio_pad)",
+      "events": [
+        {"time_beats": 32, "type": "cc", "control": 7, "value": 55},
+        {"time_beats": 32, "type": "cc", "control": 10, "value": 90},
+        {"time_beats": 32, "type": "cc", "control": 11, "value": 70},
+        {"time_beats": 32, "type": "cc", "control": 91, "value": 70},
+        {"time_beats": 40, "type": "cc", "control": 11, "value": 75},
+        {"time_beats": 48, "type": "cc", "control": 11, "value": 80},
+        {"time_beats": 56, "type": "cc", "control": 11, "value": 65},
+        {"time_beats": 60, "type": "cc", "control": 11, "value": 50}
+      ]
+    }
+  ]
+}

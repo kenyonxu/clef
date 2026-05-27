@@ -1,0 +1,287 @@
+{
+  "fails": [
+    {
+      "category": "measure_duration",
+      "severity": "fail",
+      "voice": "V:1",
+      "message": "Measure 1 duration 5.50 beats, expected 6 beats (time signature 6/8)",
+      "known_artifact": false
+    },
+    {
+      "category": "measure_duration",
+      "severity": "fail",
+      "voice": "V:1",
+      "message": "Measure 2 duration 2.00 beats, expected 6 beats (time signature 6/8)",
+      "known_artifact": false
+    },
+    {
+      "category": "measure_duration",
+      "severity": "fail",
+      "voice": "V:1",
+      "message": "Measure 3 duration 2.00 beats, expected 6 beats (time signature 6/8)",
+      "known_artifact": false
+    },
+    {
+      "category": "measure_duration",
+      "severity": "fail",
+      "voice": "V:1",
+      "message": "Measure 4 duration 2.00 beats, expected 6 beats (time signature 6/8)",
+      "known_artifact": false
+    },
+    {
+      "category": "measure_duration",
+      "severity": "fail",
+      "voice": "V:1",
+      "message": "Measure 5 duration 2.00 beats, expected 6 beats (time signature 6/8)",
+      "known_artifact": false
+    },
+    {
+      "category": "measure_duration",
+      "severity": "fail",
+      "voice": "V:1",
+      "message": "Measure 6 duration 2.00 beats, expected 6 beats (time signature 6/8)",
+      "known_artifact": false
+    },
+    {
+      "category": "measure_duration",
+      "severity": "fail",
+      "voice": "V:1",
+      "message": "Measure 7 duration 3.00 beats, expected 6 beats (time signature 6/8)",
+      "known_artifact": false
+    },
+    {
+      "category": "measure_duration",
+      "severity": "fail",
+      "voice": "V:1",
+      "message": "Measure 8 duration 2.00 beats, expected 6 beats (time signature 6/8)",
+      "known_artifact": false
+    },
+    {
+      "category": "measure_duration",
+      "severity": "fail",
+      "voice": "V:1",
+      "message": "Measure 9 duration 2.00 beats, expected 6 beats (time signature 6/8)",
+      "known_artifact": false
+    },
+    {
+      "category": "measure_duration",
+      "severity": "fail",
+      "voice": "V:1",
+      "message": "Measure 10 duration 3.00 beats, expected 6 beats (time signature 6/8)",
+      "known_artifact": false
+    },
+    {
+      "category": "measure_duration",
+      "severity": "fail",
+      "voice": "V:1",
+      "message": "Measure 11 duration 2.00 beats, expected 6 beats (time signature 6/8)",
+      "known_artifact": false
+    },
+    {
+      "category": "measure_duration",
+      "severity": "fail",
+      "voice": "V:2",
+      "message": "Measure 1 duration 6.50 beats, expected 6 beats (time signature 6/8)",
+      "known_artifact": false
+    },
+    {
+      "category": "measure_duration",
+      "severity": "fail",
+      "voice": "V:2",
+      "message": "Measure 2 duration 4.00 beats, expected 6 beats (time signature 6/8)",
+      "known_artifact": false
+    },
+    {
+      "category": "measure_duration",
+      "severity": "fail",
+      "voice": "V:2",
+      "message": "Measure 3 duration 4.00 beats, expected 6 beats (time signature 6/8)",
+      "known_artifact": false
+    },
+    {
+      "category": "measure_duration",
+      "severity": "fail",
+      "voice": "V:2",
+      "message": "Measure 4 duration 4.00 beats, expected 6 beats (time signature 6/8)",
+      "known_artifact": false
+    },
+    {
+      "category": "measure_duration",
+      "severity": "fail",
+      "voice": "V:2",
+      "message": "Measure 5 duration 4.00 beats, expected 6 beats (time signature 6/8)",
+      "known_artifact": false
+    },
+    {
+      "category": "measure_duration",
+      "severity": "fail",
+      "voice": "V:2",
+      "message": "Measure 6 duration 4.00 beats, expected 6 beats (time signature 6/8)",
+      "known_artifact": false
+    },
+    {
+      "category": "measure_duration",
+      "severity": "fail",
+      "voice": "V:2",
+      "message": "Measure 7 duration 4.00 beats, expected 6 beats (time signature 6/8)",
+      "known_artifact": false
+    },
+    {
+      "category": "measure_duration",
+      "severity": "fail",
+      "voice": "V:2",
+      "message": "Measure 8 duration 4.00 beats, expected 6 beats (time signature 6/8)",
+      "known_artifact": false
+    },
+    {
+      "category": "measure_duration",
+      "severity": "fail",
+      "voice": "V:3",
+      "message": "Measure 1 duration 2.00 beats, expected 6 beats (time signature 6/8)",
+      "known_artifact": false
+    },
+    {
+      "category": "measure_duration",
+      "severity": "fail",
+      "voice": "V:3",
+      "message": "Measure 2 duration 2.00 beats, expected 6 beats (time signature 6/8)",
+      "known_artifact": false
+    },
+    {
+      "category": "measure_duration",
+      "severity": "fail",
+      "voice": "V:3",
+      "message": "Measure 3 duration 2.00 beats, expected 6 beats (time signature 6/8)",
+      "known_artifact": false
+    },
+    {
+      "category": "measure_duration",
+      "severity": "fail",
+      "voice": "V:3",
+      "message": "Measure 4 duration 2.00 beats, expected 6 beats (time signature 6/8)",
+      "known_artifact": false
+    },
+    {
+      "category": "measure_duration",
+      "severity": "fail",
+      "voice": "V:3",
+      "message": "Measure 5 duration 2.50 beats, expected 6 beats (time signature 6/8)",
+      "known_artifact": false
+    },
+    {
+      "category": "measure_duration",
+      "severity": "fail",
+      "voice": "V:3",
+      "message": "Measure 6 duration 2.50 beats, expected 6 beats (time signature 6/8)",
+      "known_artifact": false
+    },
+    {
+      "category": "measure_duration",
+      "severity": "fail",
+      "voice": "V:3",
+      "message": "Measure 7 duration 2.00 beats, expected 6 beats (time signature 6/8)",
+      "known_artifact": false
+    },
+    {
+      "category": "measure_duration",
+      "severity": "fail",
+      "voice": "V:3",
+      "message": "Measure 8 duration 2.00 beats, expected 6 beats (time signature 6/8)",
+      "known_artifact": false
+    },
+    {
+      "category": "measure_duration",
+      "severity": "fail",
+      "voice": "V:4",
+      "message": "Measure 1 duration 2.00 beats, expected 6 beats (time signature 6/8)",
+      "known_artifact": false
+    },
+    {
+      "category": "measure_duration",
+      "severity": "fail",
+      "voice": "V:4",
+      "message": "Measure 2 duration 2.00 beats, expected 6 beats (time signature 6/8)",
+      "known_artifact": false
+    },
+    {
+      "category": "measure_duration",
+      "severity": "fail",
+      "voice": "V:4",
+      "message": "Measure 3 duration 2.00 beats, expected 6 beats (time signature 6/8)",
+      "known_artifact": false
+    },
+    {
+      "category": "measure_duration",
+      "severity": "fail",
+      "voice": "V:4",
+      "message": "Measure 4 duration 2.00 beats, expected 6 beats (time signature 6/8)",
+      "known_artifact": false
+    },
+    {
+      "category": "measure_duration",
+      "severity": "fail",
+      "voice": "V:4",
+      "message": "Measure 5 duration 2.50 beats, expected 6 beats (time signature 6/8)",
+      "known_artifact": false
+    },
+    {
+      "category": "measure_duration",
+      "severity": "fail",
+      "voice": "V:4",
+      "message": "Measure 6 duration 2.50 beats, expected 6 beats (time signature 6/8)",
+      "known_artifact": false
+    },
+    {
+      "category": "measure_duration",
+      "severity": "fail",
+      "voice": "V:4",
+      "message": "Measure 7 duration 2.00 beats, expected 6 beats (time signature 6/8)",
+      "known_artifact": false
+    },
+    {
+      "category": "measure_duration",
+      "severity": "fail",
+      "voice": "V:4",
+      "message": "Measure 8 duration 2.00 beats, expected 6 beats (time signature 6/8)",
+      "known_artifact": false
+    },
+    {
+      "category": "voice_alignment",
+      "severity": "fail",
+      "voice": "global",
+      "message": "Voices have different measure counts: V:1: 11, V:2: 22, V:3: 14, V:4: 14",
+      "known_artifact": false
+    }
+  ],
+  "warns": [],
+  "passes": [
+    "key_consistency",
+    "pitch_range",
+    "large_interval",
+    "sweet_spot",
+    "channel_uniqueness"
+  ],
+  "infos": [
+    {
+      "category": "voice_overlap",
+      "severity": "info",
+      "voice": "V:1",
+      "message": "Actual range (86-95) exceeds target register (44-67) by 28 semitones above",
+      "known_artifact": false
+    },
+    {
+      "category": "voice_overlap",
+      "severity": "info",
+      "voice": "V:2",
+      "message": "Actual range (45-78) exceeds target register (42-65) by 13 semitones above",
+      "known_artifact": false
+    },
+    {
+      "category": "voice_overlap",
+      "severity": "info",
+      "voice": "V:3",
+      "message": "Actual range (50-57) exceeds target register (51-74) by 1 semitones below",
+      "known_artifact": false
+    }
+  ]
+}

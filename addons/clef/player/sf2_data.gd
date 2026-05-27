@@ -88,7 +88,7 @@ class Sf2InstrumentZone extends RefCounted:
 	## 循环结束地址偏移 (字索引, 有符号)
 	var loop_end_offset: int = 0
 	## 采样循环模式 (位标志: 0=无循环, 1=持续循环, 2=持续期间循环, 3=保留)
-	var sample_modes: int = 0
+	var sample_modes: int = -1
 	## 初始滤波器截止频率 (Hz, -1.0 表示未设置)
 	var filter_fc: float = -1.0
 	## 初始滤波器共振 (0.0-1.0, -1.0 表示未设置)
@@ -100,6 +100,30 @@ class Sf2InstrumentZone extends RefCounted:
 	## 是否为全局区域 (无采样链接的区域)
 	var is_global: bool = false
 
+	## 复制区域 (用于全局区域继承, 匹配参考插件 global_bag.duplicate() 行为)
+	func duplicate() -> Sf2InstrumentZone:
+		var dup := Sf2InstrumentZone.new()
+		dup.key_range = key_range
+		dup.vel_range = vel_range
+		dup.sample_index = sample_index
+		dup.root_key = root_key
+		dup.tuning_cents = tuning_cents
+		dup.attack = attack
+		dup.hold = hold
+		dup.decay = decay
+		dup.sustain = sustain
+		dup.release = release
+		dup.start_offset = start_offset
+		dup.end_offset = end_offset
+		dup.loop_start_offset = loop_start_offset
+		dup.loop_end_offset = loop_end_offset
+		dup.sample_modes = sample_modes
+		dup.filter_fc = filter_fc
+		dup.filter_q = filter_q
+		dup.mod_lfo_to_filter_fc = mod_lfo_to_filter_fc
+		dup.mod_env_to_filter_fc = mod_env_to_filter_fc
+		return dup
+	
 
 ## SF2 采样头
 class Sf2SampleHeader extends RefCounted:

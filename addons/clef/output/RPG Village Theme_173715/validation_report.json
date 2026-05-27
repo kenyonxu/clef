@@ -1,0 +1,50 @@
+{
+  "fails": [
+    {
+      "category": "measure_duration",
+      "severity": "fail",
+      "voice": "V:1",
+      "message": "Measure 1 duration 6.50 beats, expected 4 beats (time signature 4/4)",
+      "known_artifact": false
+    },
+    {
+      "category": "measure_duration",
+      "severity": "fail",
+      "voice": "V:2",
+      "message": "Measure 1 duration 6.50 beats, expected 4 beats (time signature 4/4)",
+      "known_artifact": false
+    }
+  ],
+  "warns": [],
+  "passes": [
+    "key_consistency",
+    "pitch_range",
+    "large_interval",
+    "voice_alignment",
+    "sweet_spot",
+    "channel_uniqueness"
+  ],
+  "infos": [
+    {
+      "category": "voice_overlap",
+      "severity": "info",
+      "voice": "V:1",
+      "message": "Actual range (71-86) exceeds target register (49-72) by 14 semitones above",
+      "known_artifact": false
+    },
+    {
+      "category": "voice_overlap",
+      "severity": "info",
+      "voice": "V:2",
+      "message": "Actual range (45-71) exceeds target register (43-66) by 5 semitones above",
+      "known_artifact": false
+    },
+    {
+      "category": "voice_overlap",
+      "severity": "info",
+      "voice": "global",
+      "message": "V:2 (45-71) and V:3 (48-59) overlap by 11 semitones (>5th)",
+      "known_artifact": false
+    }
+  ]
+}

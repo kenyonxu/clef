@@ -1,5 +1,6 @@
 ## Clef 音色库 — 将 SF2 采样转换为 AudioStreamWAV 并缓存
 ## 包装 Sf2Bank 的匹配逻辑，添加 AudioStreamWAV 生成层
+## 支持多区域叠加: 同一键位的多个匹配采样同时返回
 class_name ClefBank extends RefCounted
 
 ## 前置静音采样数 (44100/8 = 5512, 约 125ms, 防止播放咔嗒声)
@@ -29,19 +30,31 @@ func load_from_sf2(sf2_data: Sf2Data) -> void:
 	_sf2_bank.load_from_data(sf2_data)
 
 
-## 获取乐器信息 (带缓存)
+## 获取所有匹配的乐器信息 (多区域叠加, 带缓存)
 ## @param preset_index 预设编号 (0-127)
 ## @param key MIDI 键位 (0-127)
 ## @param velocity 力度 (0-127)
 ## @param channel MIDI 通道 (0-15)
-## @return 乐器信息, 若未找到返回 null
-func get_instrument(preset_index: int, key: int, velocity: int, channel: int) -> ClefInstrumentInfo:
+## @return 乐器信息数组, 若未找到返回空数组
+func get_instruments(preset_index: int, key: int, velocity: int, channel: int) -> Array[ClefInstrumentInfo]:
+	var result: Array[ClefInstrumentInfo] = []
 	if _sf2_bank == null:
-		return null
-	var sample: Sf2SampleInfo = _sf2_bank.get_sample(preset_index, key, velocity, channel)
-	if sample == null or sample.sample_data.size() == 0:
-		return null
+		return result
 
+	var samples: Array[Sf2SampleInfo] = _sf2_bank.get_samples(preset_index, key, velocity, channel)
+	for sample in samples:
+		if sample.sample_data.size() == 0:
+			continue
+
+		var info := _build_instrument_info(sample, channel)
+		if info != null:
+			result.append(info)
+
+	return result
+
+
+## 为单个采样构建 ClefInstrumentInfo (带缓存)
+func _build_instrument_info(sample: Sf2SampleInfo, channel: int) -> ClefInstrumentInfo:
 	var is_stereo: bool = sample.linked_sample_data.size() > 0
 
 	# 缓存 key: 基于采样数据特征
@@ -98,6 +111,8 @@ func get_instrument(preset_index: int, key: int, velocity: int, channel: int) ->
 	else:
 		asw.loop_mode = AudioStreamWAV.LOOP_DISABLED
 
+	# DIAG: AudioStreamWAV loop config
+	print("[BANK] has_loop=%s loop_mode=%d loop_begin=%d loop_end=%d data=%d stereo=%s" % ["YES" if sample.has_loop else "NO", asw.loop_mode, asw.loop_begin, asw.loop_end, asw.data.size(), "YES" if is_stereo else "NO"])
 	info.stream = asw
 	info.root_key = sample.root_key
 

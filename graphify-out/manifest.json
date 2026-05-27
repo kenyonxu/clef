@@ -1,278 +1,1772 @@
 {
+  "/home/kai-remote/github/clef-dev/entities.json": {
+    "mtime": 1779530080.894108,
+    "ast_hash": "8887cd40a79ba0008cc7642f1b54d7dd",
+    "semantic_hash": "8887cd40a79ba0008cc7642f1b54d7dd"
+  },
+  "/home/kai-remote/github/clef-dev/.vscode/settings.json": {
+    "mtime": 1779530080.8872209,
+    "ast_hash": "1fae4d768d8a4024a59b56ebe6c37168",
+    "semantic_hash": "1fae4d768d8a4024a59b56ebe6c37168"
+  },
+  "/home/kai-remote/github/clef-dev/.understand-anything/knowledge-graph.json": {
+    "mtime": 1776251196.6688628,
+    "ast_hash": "24871754e4f4b787fc2cd9113e428523",
+    "semantic_hash": "24871754e4f4b787fc2cd9113e428523"
+  },
+  "/home/kai-remote/github/clef-dev/.understand-anything/meta.json": {
+    "mtime": 1776251196.6688628,
+    "ast_hash": "14e6dd876f25cf37d787275ff5540d61",
+    "semantic_hash": "14e6dd876f25cf37d787275ff5540d61"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/settings.json": {
+    "mtime": 1779868105.383602,
+    "ast_hash": "c9ff390535568aa925c107f4131ffdea",
+    "semantic_hash": ""
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/vercel-react-best-practices/metadata.json": {
+    "mtime": 1779530080.7603724,
+    "ast_hash": "5cd9ae4fc688353236c3b92e8f06dfcc",
+    "semantic_hash": "5cd9ae4fc688353236c3b92e8f06dfcc"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/clef-compose/scripts/snapshot.py": {
+    "mtime": 1776251196.6641583,
+    "ast_hash": "a7c30828dc95b400c274c188474e56c1",
+    "semantic_hash": "a7c30828dc95b400c274c188474e56c1"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/clef-compose/scripts/abc_lint.py": {
+    "mtime": 1776251196.6632228,
+    "ast_hash": "c724a4cf55f076d79b09684edbb2dee0",
+    "semantic_hash": "c724a4cf55f076d79b09684edbb2dee0"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/clef-compose/scripts/merge_abc.py": {
+    "mtime": 1779530080.7585537,
+    "ast_hash": "9765a150ffc139f0c95da1189c77d4b9",
+    "semantic_hash": "9765a150ffc139f0c95da1189c77d4b9"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/clef-compose/scripts/analyze_midi.py": {
+    "mtime": 1776251196.6636734,
+    "ast_hash": "30d9573a8cf06b5c9b36f62e7ce09061",
+    "semantic_hash": "30d9573a8cf06b5c9b36f62e7ce09061"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/clef-compose/scripts/extract_solo.py": {
+    "mtime": 1776251196.6641583,
+    "ast_hash": "8b3a0eec6d8bd7c08df21273e30d96c1",
+    "semantic_hash": "8b3a0eec6d8bd7c08df21273e30d96c1"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/clef-compose/scripts/fix_measure_duration.py": {
+    "mtime": 1779530080.758377,
+    "ast_hash": "c0613dc0b7da022fb1fdb39196e2a5b4",
+    "semantic_hash": "c0613dc0b7da022fb1fdb39196e2a5b4"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/clef-compose/scripts/sf2_profiler.py": {
+    "mtime": 1779530080.758665,
+    "ast_hash": "5fd90052c619838b379018ec6b41751e",
+    "semantic_hash": "5fd90052c619838b379018ec6b41751e"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/clef-compose/scripts/check_dependencies.py": {
+    "mtime": 1776251196.6636734,
+    "ast_hash": "409815aaaa508830853eb3f3f80b8f62",
+    "semantic_hash": "409815aaaa508830853eb3f3f80b8f62"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/clef-compose/scripts/validate_abc.py": {
+    "mtime": 1779530080.7588084,
+    "ast_hash": "4e366752175f04fd8ae2b2021cfa8935",
+    "semantic_hash": "4e366752175f04fd8ae2b2021cfa8935"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/clef-compose/scripts/archive.py": {
+    "mtime": 1776251196.6636734,
+    "ast_hash": "e0eae41b364f6ed034003e204a0fd136",
+    "semantic_hash": "e0eae41b364f6ed034003e204a0fd136"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/clef-compose/scripts/inject_expression.py": {
+    "mtime": 1779530080.7584858,
+    "ast_hash": "11bd9db695a4d25397429272a26599b5",
+    "semantic_hash": "11bd9db695a4d25397429272a26599b5"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/clef-compose/scripts/abc_to_midi.py": {
+    "mtime": 1779530080.7580223,
+    "ast_hash": "532c6783e01a5f8808ae063bba964e3e",
+    "semantic_hash": "532c6783e01a5f8808ae063bba964e3e"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/clef-compose/scripts/build_portable.py": {
+    "mtime": 1776251196.6636734,
+    "ast_hash": "5dbf9b577494c8e299f5a33bb8637042",
+    "semantic_hash": "5dbf9b577494c8e299f5a33bb8637042"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/clef-compose/scripts/clef_tools.py": {
+    "mtime": 1779530080.7582273,
+    "ast_hash": "4e9dbb16f6095ffff290075b29712e5e",
+    "semantic_hash": "4e9dbb16f6095ffff290075b29712e5e"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/clef-compose/templates/intermediate_schemas.json": {
+    "mtime": 1776251196.6651583,
+    "ast_hash": "0db6fc2d4b75bf5fb7aa6f76ace3dfa3",
+    "semantic_hash": "0db6fc2d4b75bf5fb7aa6f76ace3dfa3"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/clef-compose/tests/test_e2e_pipeline.py": {
+    "mtime": 1776251196.6661928,
+    "ast_hash": "1aa911695bddcc065f91d26e31f1f516",
+    "semantic_hash": "1aa911695bddcc065f91d26e31f1f516"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/clef-compose/tests/test_validate_abc.py": {
+    "mtime": 1776251196.6661928,
+    "ast_hash": "545c017f002ac0c1cff7a1d50b6a1576",
+    "semantic_hash": "545c017f002ac0c1cff7a1d50b6a1576"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/clef-compose/tests/test_merge_abc.py": {
+    "mtime": 1776251196.6661928,
+    "ast_hash": "9c867b65752a6e4639caaec24063514a",
+    "semantic_hash": "9c867b65752a6e4639caaec24063514a"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/clef-compose/tests/test_analyze_midi.py": {
+    "mtime": 1776251196.6661928,
+    "ast_hash": "31007447ff2dc7cc3bf5ae0a9cc00c68",
+    "semantic_hash": "31007447ff2dc7cc3bf5ae0a9cc00c68"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/clef-compose/tests/test_extract_solo.py": {
+    "mtime": 1776251196.6661928,
+    "ast_hash": "16072bcd44580c08743ad469198b40f0",
+    "semantic_hash": "16072bcd44580c08743ad469198b40f0"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/clef-compose/tests/test_abc_to_midi.py": {
+    "mtime": 1776251196.6661928,
+    "ast_hash": "1a59f03b7359a26d7b363d51658b7281",
+    "semantic_hash": "1a59f03b7359a26d7b363d51658b7281"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/clef-compose/tests/test_inject_expression.py": {
+    "mtime": 1776251196.6661928,
+    "ast_hash": "0a76bdc008d897f53332325fdf3f26f8",
+    "semantic_hash": "0a76bdc008d897f53332325fdf3f26f8"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/clef-compose/tests/test_clef_tools.py": {
+    "mtime": 1776251196.6661928,
+    "ast_hash": "a2e6ffd67e2f981dd0d761463ee87cdb",
+    "semantic_hash": "a2e6ffd67e2f981dd0d761463ee87cdb"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/clef-compose/tests/fixtures/test_plan.json": {
+    "mtime": 1776251196.6661928,
+    "ast_hash": "609596a2f5e68ac53e603964163c97d7",
+    "semantic_hash": "609596a2f5e68ac53e603964163c97d7"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/clef-compose/tests/fixtures/expression_plan.json": {
+    "mtime": 1776251196.6661446,
+    "ast_hash": "661e705c29fca4e6aeb433e6fac540f8",
+    "semantic_hash": "661e705c29fca4e6aeb433e6fac540f8"
+  },
   "/home/kai-remote/github/clef-dev/addons/clef/output/_tmp_analysis.py": {
     "mtime": 1776251196.745159,
-    "hash": "34fb71b856a825beaf23dc542bb33cf3"
+    "ast_hash": "34fb71b856a825beaf23dc542bb33cf3",
+    "semantic_hash": "34fb71b856a825beaf23dc542bb33cf3"
+  },
+  "/home/kai-remote/github/clef-dev/addons/clef/output/agent_feedback_2026-04-08T09-53-17.json": {
+    "mtime": 1779530080.8889825,
+    "ast_hash": "97c73ab466e9a8504bb289d3e7d45d2f",
+    "semantic_hash": "97c73ab466e9a8504bb289d3e7d45d2f"
+  },
+  "/home/kai-remote/github/clef-dev/addons/clef/output/review_report.json": {
+    "mtime": 1779530080.8892517,
+    "ast_hash": "862d48ff89591568969644522a68aa40",
+    "semantic_hash": "862d48ff89591568969644522a68aa40"
+  },
+  "/home/kai-remote/github/clef-dev/addons/clef/output/plan.json": {
+    "mtime": 1779530080.889212,
+    "ast_hash": "4d1727c2e8ac18c61f90b73b3da29ae9",
+    "semantic_hash": "4d1727c2e8ac18c61f90b73b3da29ae9"
+  },
+  "/home/kai-remote/github/clef-dev/addons/clef/output/expression_plan.json": {
+    "mtime": 1779530080.889163,
+    "ast_hash": "2c39c5fb7464680b8ee736ad80a5dba5",
+    "semantic_hash": "2c39c5fb7464680b8ee736ad80a5dba5"
+  },
+  "/home/kai-remote/github/clef-dev/addons/clef/output/Village Morning_192635/validation_report_iter3.json": {
+    "mtime": 1779530080.8889263,
+    "ast_hash": "7279bdad4db5b698fe6309abb6d965e5",
+    "semantic_hash": "7279bdad4db5b698fe6309abb6d965e5"
+  },
+  "/home/kai-remote/github/clef-dev/addons/clef/output/Village Morning_192635/validation_report_iter1.json": {
+    "mtime": 1779530080.8889263,
+    "ast_hash": "26444763b837358907ad3772777f808b",
+    "semantic_hash": "26444763b837358907ad3772777f808b"
+  },
+  "/home/kai-remote/github/clef-dev/addons/clef/output/Village Morning_192635/review_sample_r0.json": {
+    "mtime": 1779530080.8885946,
+    "ast_hash": "7a065d9f087bb7f787c27b259ad5c24d",
+    "semantic_hash": "7a065d9f087bb7f787c27b259ad5c24d"
+  },
+  "/home/kai-remote/github/clef-dev/addons/clef/output/Village Morning_192635/validation_report.json": {
+    "mtime": 1779530080.8889081,
+    "ast_hash": "4b93a128ca215e79c0fa17d0db25dddc",
+    "semantic_hash": "4b93a128ca215e79c0fa17d0db25dddc"
+  },
+  "/home/kai-remote/github/clef-dev/addons/clef/output/Village Morning_192635/_candidate_r1_report.json": {
+    "mtime": 1779530080.8885777,
+    "ast_hash": "c3c0eb914bc88d1ea151ecd82e3698c8",
+    "semantic_hash": "c3c0eb914bc88d1ea151ecd82e3698c8"
+  },
+  "/home/kai-remote/github/clef-dev/addons/clef/output/Village Morning_192635/review_iter_r3.json": {
+    "mtime": 1779530080.8885946,
+    "ast_hash": "478e9df43b3750dba3ec6eb4f4d6c6b8",
+    "semantic_hash": "478e9df43b3750dba3ec6eb4f4d6c6b8"
+  },
+  "/home/kai-remote/github/clef-dev/addons/clef/output/Village Morning_192635/validation_report_iter2.json": {
+    "mtime": 1779530080.8889263,
+    "ast_hash": "7279bdad4db5b698fe6309abb6d965e5",
+    "semantic_hash": "7279bdad4db5b698fe6309abb6d965e5"
+  },
+  "/home/kai-remote/github/clef-dev/addons/clef/output/Village Morning_192635/review_iter_r2.json": {
+    "mtime": 1779530080.8885946,
+    "ast_hash": "baf1736f51ce7d4baa6b3a4abfbb9658",
+    "semantic_hash": "baf1736f51ce7d4baa6b3a4abfbb9658"
+  },
+  "/home/kai-remote/github/clef-dev/addons/clef/output/Village Morning_192635/review_final_r3.json": {
+    "mtime": 1779530080.8885946,
+    "ast_hash": "0ebaa376eba3cda02c18513c002d4bef",
+    "semantic_hash": "0ebaa376eba3cda02c18513c002d4bef"
+  },
+  "/home/kai-remote/github/clef-dev/addons/clef/output/Village Morning_192635/review_iter_r1.json": {
+    "mtime": 1779530080.8885946,
+    "ast_hash": "550c8119de27f033ae5edc18e20bd78e",
+    "semantic_hash": "550c8119de27f033ae5edc18e20bd78e"
+  },
+  "/home/kai-remote/github/clef-dev/addons/clef/output/Village Morning_192635/plan.json": {
+    "mtime": 1779530080.8885946,
+    "ast_hash": "9986a65addb8af472981763169c928ad",
+    "semantic_hash": "9986a65addb8af472981763169c928ad"
+  },
+  "/home/kai-remote/github/clef-dev/addons/clef/output/Village Morning_192635/expression_plan.json": {
+    "mtime": 1779530080.8885946,
+    "ast_hash": "2fd1f996da66b36a5b84375d2a454142",
+    "semantic_hash": "2fd1f996da66b36a5b84375d2a454142"
+  },
+  "/home/kai-remote/github/clef-dev/addons/clef/output/RPG Village Theme_135456/review_sample_r0.json": {
+    "mtime": 1779530080.888209,
+    "ast_hash": "51a855cbc57955ccb9e02804bfaf13b5",
+    "semantic_hash": "51a855cbc57955ccb9e02804bfaf13b5"
+  },
+  "/home/kai-remote/github/clef-dev/addons/clef/output/RPG Village Theme_135456/plan.json": {
+    "mtime": 1779530080.888209,
+    "ast_hash": "e4833289c82289e58acfaacca9a3c07a",
+    "semantic_hash": "e4833289c82289e58acfaacca9a3c07a"
+  },
+  "/home/kai-remote/github/clef-dev/addons/clef/output/RPG Village Theme_173715/review_final_r1.json": {
+    "mtime": 1779530080.8883185,
+    "ast_hash": "0cda40ddae43f681d6576fcbaeb953d8",
+    "semantic_hash": "0cda40ddae43f681d6576fcbaeb953d8"
+  },
+  "/home/kai-remote/github/clef-dev/addons/clef/output/RPG Village Theme_173715/review_sample_r0.json": {
+    "mtime": 1779530080.8883185,
+    "ast_hash": "e26c9b7b367ae734b81b9f8d2d5f2194",
+    "semantic_hash": "e26c9b7b367ae734b81b9f8d2d5f2194"
+  },
+  "/home/kai-remote/github/clef-dev/addons/clef/output/RPG Village Theme_173715/validation_report.json": {
+    "mtime": 1779530080.8883185,
+    "ast_hash": "26c1dc18d0de899b998fb409809207f6",
+    "semantic_hash": "26c1dc18d0de899b998fb409809207f6"
+  },
+  "/home/kai-remote/github/clef-dev/addons/clef/output/RPG Village Theme_173715/_candidate_r1_report.json": {
+    "mtime": 1779530080.8883185,
+    "ast_hash": "539bd0aa8e37b55323642d06a29b7059",
+    "semantic_hash": "539bd0aa8e37b55323642d06a29b7059"
+  },
+  "/home/kai-remote/github/clef-dev/addons/clef/output/RPG Village Theme_173715/review_iter_r1.json": {
+    "mtime": 1779530080.8883185,
+    "ast_hash": "d9bad76e02838d53c870dc3d23e95bba",
+    "semantic_hash": "d9bad76e02838d53c870dc3d23e95bba"
+  },
+  "/home/kai-remote/github/clef-dev/addons/clef/output/RPG Village Theme_173715/plan.json": {
+    "mtime": 1779530080.8883185,
+    "ast_hash": "0ce23f53b0bb4947df4fb02e503d92e0",
+    "semantic_hash": "0ce23f53b0bb4947df4fb02e503d92e0"
+  },
+  "/home/kai-remote/github/clef-dev/addons/clef/output/RPG Village Theme_173715/expression_plan.json": {
+    "mtime": 1779530080.8883185,
+    "ast_hash": "2311a82176a84cefa5bb54eb950c6e79",
+    "semantic_hash": "2311a82176a84cefa5bb54eb950c6e79"
+  },
+  "/home/kai-remote/github/clef-dev/addons/clef/output/_194548/review_sample_r0.json": {
+    "mtime": 1779530080.8889825,
+    "ast_hash": "b455e0540a693c703f015350be4ddaf1",
+    "semantic_hash": "b455e0540a693c703f015350be4ddaf1"
+  },
+  "/home/kai-remote/github/clef-dev/addons/clef/output/_194548/plan.json": {
+    "mtime": 1779530080.8889825,
+    "ast_hash": "bbc386a98bb3c270b8720096c35a3e42",
+    "semantic_hash": "bbc386a98bb3c270b8720096c35a3e42"
+  },
+  "/home/kai-remote/github/clef-dev/addons/clef/output/\u6668\u5149\u4e2d\u7684\u6d1b\u5c14\u8fbe_162158/validation_report_iter3.json": {
+    "mtime": 1779530080.8893661,
+    "ast_hash": "13e77e9363f8e8b1c5868c69f286d4dc",
+    "semantic_hash": "13e77e9363f8e8b1c5868c69f286d4dc"
+  },
+  "/home/kai-remote/github/clef-dev/addons/clef/output/\u6668\u5149\u4e2d\u7684\u6d1b\u5c14\u8fbe_162158/validation_report_iter1.json": {
+    "mtime": 1779530080.8893661,
+    "ast_hash": "13e77e9363f8e8b1c5868c69f286d4dc",
+    "semantic_hash": "13e77e9363f8e8b1c5868c69f286d4dc"
+  },
+  "/home/kai-remote/github/clef-dev/addons/clef/output/\u6668\u5149\u4e2d\u7684\u6d1b\u5c14\u8fbe_162158/review_sample_r0.json": {
+    "mtime": 1779530080.8893661,
+    "ast_hash": "a5374f836f8828387c9b6a18cab65442",
+    "semantic_hash": "a5374f836f8828387c9b6a18cab65442"
+  },
+  "/home/kai-remote/github/clef-dev/addons/clef/output/\u6668\u5149\u4e2d\u7684\u6d1b\u5c14\u8fbe_162158/validation_report.json": {
+    "mtime": 1779530080.8893661,
+    "ast_hash": "1796ba75e7a514afe6cf101e2216be4c",
+    "semantic_hash": "1796ba75e7a514afe6cf101e2216be4c"
+  },
+  "/home/kai-remote/github/clef-dev/addons/clef/output/\u6668\u5149\u4e2d\u7684\u6d1b\u5c14\u8fbe_162158/review_iter_r3.json": {
+    "mtime": 1779530080.8893661,
+    "ast_hash": "a26cb0bfab1958bd3a73da928ef33124",
+    "semantic_hash": "a26cb0bfab1958bd3a73da928ef33124"
+  },
+  "/home/kai-remote/github/clef-dev/addons/clef/output/\u6668\u5149\u4e2d\u7684\u6d1b\u5c14\u8fbe_162158/validation_report_iter2.json": {
+    "mtime": 1779530080.8893661,
+    "ast_hash": "13e77e9363f8e8b1c5868c69f286d4dc",
+    "semantic_hash": "13e77e9363f8e8b1c5868c69f286d4dc"
+  },
+  "/home/kai-remote/github/clef-dev/addons/clef/output/\u6668\u5149\u4e2d\u7684\u6d1b\u5c14\u8fbe_162158/review_iter_r2.json": {
+    "mtime": 1779530080.8893661,
+    "ast_hash": "608aec8cd10107ccded24d07c56886f4",
+    "semantic_hash": "608aec8cd10107ccded24d07c56886f4"
+  },
+  "/home/kai-remote/github/clef-dev/addons/clef/output/\u6668\u5149\u4e2d\u7684\u6d1b\u5c14\u8fbe_162158/review_final_r3.json": {
+    "mtime": 1779530080.8893661,
+    "ast_hash": "055031a618148697def54e3fad73ff07",
+    "semantic_hash": "055031a618148697def54e3fad73ff07"
+  },
+  "/home/kai-remote/github/clef-dev/addons/clef/output/\u6668\u5149\u4e2d\u7684\u6d1b\u5c14\u8fbe_162158/review_iter_r1.json": {
+    "mtime": 1779530080.8893661,
+    "ast_hash": "99b8a512023505b4a79fcdc1fef88491",
+    "semantic_hash": "99b8a512023505b4a79fcdc1fef88491"
+  },
+  "/home/kai-remote/github/clef-dev/addons/clef/output/\u6668\u5149\u4e2d\u7684\u6d1b\u5c14\u8fbe_162158/plan.json": {
+    "mtime": 1779530080.8893661,
+    "ast_hash": "8ab2b33fb9766827f897ec6590f7e681",
+    "semantic_hash": "8ab2b33fb9766827f897ec6590f7e681"
+  },
+  "/home/kai-remote/github/clef-dev/addons/clef/sound_front/GeneralUser-GS/GeneralUser-GS.sf2.profile.json": {
+    "mtime": 1779530080.8903017,
+    "ast_hash": "8576aea9ca69302e2386c2ffdb62988c",
+    "semantic_hash": "8576aea9ca69302e2386c2ffdb62988c"
+  },
+  "/home/kai-remote/github/clef-dev/addons/clef/sound_front/GeneralUser-GS/GeneralUser-GS_profile.json": {
+    "mtime": 1779530080.8903513,
+    "ast_hash": "8576aea9ca69302e2386c2ffdb62988c",
+    "semantic_hash": "8576aea9ca69302e2386c2ffdb62988c"
+  },
+  "/home/kai-remote/github/clef-dev/addons/clef/knowledge/sf2_generaluser_gs.json": {
+    "mtime": 1776251196.674588,
+    "ast_hash": "987dcd129b98a03c4f027d8f593716a2",
+    "semantic_hash": "987dcd129b98a03c4f027d8f593716a2"
+  },
+  "/home/kai-remote/github/clef-dev/addons/clef/templates/llm_compose_guide.json": {
+    "mtime": 1776251197.067499,
+    "ast_hash": "e870c7ab25bc2f1e0a14dd62a57242e1",
+    "semantic_hash": "e870c7ab25bc2f1e0a14dd62a57242e1"
+  },
+  "/home/kai-remote/github/clef-dev/addons/clef/templates/self_eval_checklist.json": {
+    "mtime": 1776251197.067499,
+    "ast_hash": "671b00d1426f7abf5b81a2154db228c4",
+    "semantic_hash": "671b00d1426f7abf5b81a2154db228c4"
+  },
+  "/home/kai-remote/github/clef-dev/addons/clef/templates/default.json": {
+    "mtime": 1776251197.0661612,
+    "ast_hash": "7c619d587496296ddcb0ef0528a487d5",
+    "semantic_hash": "7c619d587496296ddcb0ef0528a487d5"
+  },
+  "/home/kai-remote/github/clef-dev/addons/clef/templates/validation_rules.json": {
+    "mtime": 1776251197.067499,
+    "ast_hash": "c89c9ffa8648a4b48a4315e87ac80872",
+    "semantic_hash": "c89c9ffa8648a4b48a4315e87ac80872"
+  },
+  "/home/kai-remote/github/clef-dev/addons/clef/templates/example_full.json": {
+    "mtime": 1776251197.067499,
+    "ast_hash": "b77d0bb0c4f0b615dde427af8dfc3008",
+    "semantic_hash": "b77d0bb0c4f0b615dde427af8dfc3008"
+  },
+  "/home/kai-remote/github/clef-dev/scripts/test_cover_params.py": {
+    "mtime": 1779530080.8945794,
+    "ast_hash": "d65ef51adde05db4680a20de0b26119b",
+    "semantic_hash": "d65ef51adde05db4680a20de0b26119b"
+  },
+  "/home/kai-remote/github/clef-dev/scripts/minimax_prototype.py": {
+    "mtime": 1779530080.894305,
+    "ast_hash": "85e20492ccca5f1d38022a0ebc78b995",
+    "semantic_hash": "85e20492ccca5f1d38022a0ebc78b995"
+  },
+  "/home/kai-remote/github/clef-dev/scripts/test_cover_strength.py": {
+    "mtime": 1779530080.8946269,
+    "ast_hash": "02a230f291625d2368fee4509f1452ce",
+    "semantic_hash": "02a230f291625d2368fee4509f1452ce"
+  },
+  "/home/kai-remote/github/clef-dev/scripts/test_t2m_8bit.py": {
+    "mtime": 1779530080.8946657,
+    "ast_hash": "7a8144d3a744f0265ee9873133d06858",
+    "semantic_hash": "7a8144d3a744f0265ee9873133d06858"
+  },
+  "/home/kai-remote/github/clef-dev/scripts/test_t2m_spacebattle.py": {
+    "mtime": 1779530080.8947062,
+    "ast_hash": "c09bb3fc753897c1e38d504a1a43dd08",
+    "semantic_hash": "c09bb3fc753897c1e38d504a1a43dd08"
+  },
+  "/home/kai-remote/github/clef-dev/scripts/acestep_prototype.py": {
+    "mtime": 1779530080.8942237,
+    "ast_hash": "f8d357d70e4b92b1a241dfc16909dc98",
+    "semantic_hash": "f8d357d70e4b92b1a241dfc16909dc98"
+  },
+  "/home/kai-remote/github/clef-dev/scripts/test_acestep_prototype.py": {
+    "mtime": 1779530080.8945222,
+    "ast_hash": "887200bfc88f6464a336169fe4b7d962",
+    "semantic_hash": "887200bfc88f6464a336169fe4b7d962"
+  },
+  "/home/kai-remote/github/clef-dev/scripts/test_cover_noprompt.py": {
+    "mtime": 1779530080.8945627,
+    "ast_hash": "dd28cbb14dcaca76c261aee90cba13c4",
+    "semantic_hash": "dd28cbb14dcaca76c261aee90cba13c4"
+  },
+  "/home/kai-remote/github/clef-dev/scripts/test_t2m_chiptune.py": {
+    "mtime": 1779530080.8946831,
+    "ast_hash": "ebecd2a75faa4ff426ec7e248f47a5ca",
+    "semantic_hash": "ebecd2a75faa4ff426ec7e248f47a5ca"
+  },
+  "/home/kai-remote/github/clef-dev/scripts/test_acestep_lego.py": {
+    "mtime": 1779530080.8944914,
+    "ast_hash": "685b4b08dba4fcd12553b5780da9c1c3",
+    "semantic_hash": "685b4b08dba4fcd12553b5780da9c1c3"
+  },
+  "/home/kai-remote/github/clef-dev/scripts/test_cover_upload.py": {
+    "mtime": 1779530080.894648,
+    "ast_hash": "cd4ec120fd73cf92f67f35ab0cb863a0",
+    "semantic_hash": "cd4ec120fd73cf92f67f35ab0cb863a0"
+  },
+  "/home/kai-remote/github/clef-dev/scripts/test_cover_spacebattle.py": {
+    "mtime": 1779530080.894614,
+    "ast_hash": "530b2dd0380f96ecda108f0ed965c14f",
+    "semantic_hash": "530b2dd0380f96ecda108f0ed965c14f"
+  },
+  "/home/kai-remote/github/clef-dev/scripts/test_cover_e2e.py": {
+    "mtime": 1779530080.8945398,
+    "ast_hash": "91034038e7b4de129adf2071c18cefbc",
+    "semantic_hash": "91034038e7b4de129adf2071c18cefbc"
+  },
+  "/home/kai-remote/github/clef-dev/mempalace.yaml": {
+    "mtime": 1779530080.8941596,
+    "ast_hash": "c1d7bc076407059d9a7e8f096e0486d6",
+    "semantic_hash": "c1d7bc076407059d9a7e8f096e0486d6"
   },
   "/home/kai-remote/github/clef-dev/CLAUDE.md": {
-    "mtime": 1776251196.6688628,
-    "hash": "79c036eae655d2254fec56c367eb6ee9"
+    "mtime": 1779530080.8874302,
+    "ast_hash": "7465e2531de2a859971964d714b3c4d3",
+    "semantic_hash": "7465e2531de2a859971964d714b3c4d3"
   },
   "/home/kai-remote/github/clef-dev/README.md": {
     "mtime": 1776251196.6688628,
-    "hash": "ad62543fccfb2b5189ea109b951859c9"
+    "ast_hash": "ad62543fccfb2b5189ea109b951859c9",
+    "semantic_hash": "ad62543fccfb2b5189ea109b951859c9"
   },
   "/home/kai-remote/github/clef-dev/LICENSE.txt": {
     "mtime": 1776251196.6688628,
-    "hash": "fecc45b56279dadf0cd47b49c9a4bd05"
+    "ast_hash": "fecc45b56279dadf0cd47b49c9a4bd05",
+    "semantic_hash": "fecc45b56279dadf0cd47b49c9a4bd05"
+  },
+  "/home/kai-remote/github/clef-dev/docs/Agent\u6846\u67b6\u6982\u89c8.md": {
+    "mtime": 1779530080.890578,
+    "ast_hash": "3b8f4f9a2dfe1b37e65bcbe54d1983b5",
+    "semantic_hash": "3b8f4f9a2dfe1b37e65bcbe54d1983b5"
+  },
+  "/home/kai-remote/github/clef-dev/docs/\u6280\u672f\u6559\u79d1\u4e66\uff1a\u9876\u7ea7\u5f00\u53d1\u56e2\u961f\u8bbe\u8ba1\u7684Harness\u5de5\u7a0b\u9879\u76ee\u6e90\u7801\u4ec0\u4e48\u6837.md": {
+    "mtime": 1779530080.8940694,
+    "ast_hash": "3f0372abe0f35d2af5d04f2e5172b813",
+    "semantic_hash": "3f0372abe0f35d2af5d04f2e5172b813"
+  },
+  "/home/kai-remote/github/clef-dev/docs/graphify-guide.md": {
+    "mtime": 1779530080.891281,
+    "ast_hash": "cea18500504c3a8d74a2938fbbaf07b3",
+    "semantic_hash": "cea18500504c3a8d74a2938fbbaf07b3"
   },
   "/home/kai-remote/github/clef-dev/docs/plugin-localization.md": {
     "mtime": 1776251197.068161,
-    "hash": "89519a201e9bc21edee1a40a02e1b638"
+    "ast_hash": "89519a201e9bc21edee1a40a02e1b638",
+    "semantic_hash": "89519a201e9bc21edee1a40a02e1b638"
   },
   "/home/kai-remote/github/clef-dev/docs/agent-frameworks-research.md": {
     "mtime": 1776251197.0678263,
-    "hash": "cccb7761368d335a4e8afd186e404e82"
+    "ast_hash": "cccb7761368d335a4e8afd186e404e82",
+    "semantic_hash": "cccb7761368d335a4e8afd186e404e82"
+  },
+  "/home/kai-remote/github/clef-dev/docs/gdtoolkit-guide.md": {
+    "mtime": 1779530080.8911626,
+    "ast_hash": "50effffee6d6189a92dc7ef21aa1f838",
+    "semantic_hash": "50effffee6d6189a92dc7ef21aa1f838"
+  },
+  "/home/kai-remote/github/clef-dev/docs/\u97f3\u4e50\u751f\u6210 (Music Generation) - MiniMax \u5f00\u653e\u5e73\u53f0.md": {
+    "mtime": 1779530080.894108,
+    "ast_hash": "121cb3e5c874492f83f8ce593bcd4f22",
+    "semantic_hash": "121cb3e5c874492f83f8ce593bcd4f22"
   },
   "/home/kai-remote/github/clef-dev/docs/clef-compose-zhihu-article.md": {
     "mtime": 1776251197.0680056,
-    "hash": "698f7c33cb97331bf9e5ad346fc8ba3b"
+    "ast_hash": "698f7c33cb97331bf9e5ad346fc8ba3b",
+    "semantic_hash": "698f7c33cb97331bf9e5ad346fc8ba3b"
+  },
+  "/home/kai-remote/github/clef-dev/docs/Thin Harness, Fat Skills.md": {
+    "mtime": 1779530080.8906455,
+    "ast_hash": "d6abc8ca2aa8743c9b8fe533d5590ea3",
+    "semantic_hash": "d6abc8ca2aa8743c9b8fe533d5590ea3"
   },
   "/home/kai-remote/github/clef-dev/docs/skills-reference.md": {
     "mtime": 1776251197.068161,
-    "hash": "6a338dd379286661696c457c28e34f56"
+    "ast_hash": "6a338dd379286661696c457c28e34f56",
+    "semantic_hash": "6a338dd379286661696c457c28e34f56"
+  },
+  "/home/kai-remote/github/clef-dev/docs/clef-vs-midi-comparative-analysis.md": {
+    "mtime": 1779530080.890722,
+    "ast_hash": "b045448cb02a616fda16fd4866d02b43",
+    "semantic_hash": "b045448cb02a616fda16fd4866d02b43"
   },
   "/home/kai-remote/github/clef-dev/docs/\u97f3\u4e50\u7f16\u66f2\u6280\u5de7.md": {
     "mtime": 1776251197.0698903,
-    "hash": "0af1d5ead571d6ba0ebeb712eef3b4a4"
+    "ast_hash": "0af1d5ead571d6ba0ebeb712eef3b4a4",
+    "semantic_hash": "0af1d5ead571d6ba0ebeb712eef3b4a4"
   },
   "/home/kai-remote/github/clef-dev/docs/plans/2026-04-02-clef-compose-best-practice-optimization.md": {
     "mtime": 1776251197.0681298,
-    "hash": "9b3fc303855a170d6a9b7da7917ce4f2"
+    "ast_hash": "9b3fc303855a170d6a9b7da7917ce4f2",
+    "semantic_hash": "9b3fc303855a170d6a9b7da7917ce4f2"
   },
   "/home/kai-remote/github/clef-dev/docs/plans/2026-04-04-p2-arrangement-extension-plan.md": {
     "mtime": 1776251197.068161,
-    "hash": "f3597f3023285017c65e17650e8eccf1"
+    "ast_hash": "f3597f3023285017c65e17650e8eccf1",
+    "semantic_hash": "f3597f3023285017c65e17650e8eccf1"
   },
   "/home/kai-remote/github/clef-dev/docs/plans/2026-04-04-midi-quality-gaps-design.md": {
     "mtime": 1776251197.0681298,
-    "hash": "8dfbfce5a7aff8960ceeaae35d94e25d"
+    "ast_hash": "8dfbfce5a7aff8960ceeaae35d94e25d",
+    "semantic_hash": "8dfbfce5a7aff8960ceeaae35d94e25d"
   },
   "/home/kai-remote/github/clef-dev/docs/plans/2026-04-02-piano-roll-interactive-design.md": {
     "mtime": 1776251197.0681298,
-    "hash": "f59f8150b4f4783507d33ceaa3e71e66"
+    "ast_hash": "f59f8150b4f4783507d33ceaa3e71e66",
+    "semantic_hash": "f59f8150b4f4783507d33ceaa3e71e66"
   },
   "/home/kai-remote/github/clef-dev/docs/plans/2026-04-05-audio-engine-upgrade-plan.md": {
     "mtime": 1776251197.068161,
-    "hash": "5c8f011836c799822f1f5c2829a59518"
+    "ast_hash": "5c8f011836c799822f1f5c2829a59518",
+    "semantic_hash": "5c8f011836c799822f1f5c2829a59518"
   },
   "/home/kai-remote/github/clef-dev/docs/plans/2026-03-29-clef-station-phase2-plan.md": {
     "mtime": 1776251197.0681298,
-    "hash": "4fc479386420f5d091f5e1e215c6cfc1"
+    "ast_hash": "4fc479386420f5d091f5e1e215c6cfc1",
+    "semantic_hash": "4fc479386420f5d091f5e1e215c6cfc1"
+  },
+  "/home/kai-remote/github/clef-dev/docs/plans/2026-04-10-playback-quality-fixes.md": {
+    "mtime": 1779530080.8915882,
+    "ast_hash": "480c20071e95f701dd86490d1894ee70",
+    "semantic_hash": "480c20071e95f701dd86490d1894ee70"
   },
   "/home/kai-remote/github/clef-dev/docs/plans/2026-04-04-p2-arrangement-extension-design.md": {
     "mtime": 1776251197.0681298,
-    "hash": "aee95187b74339dc0e88393b8213d76a"
+    "ast_hash": "aee95187b74339dc0e88393b8213d76a",
+    "semantic_hash": "aee95187b74339dc0e88393b8213d76a"
   },
   "/home/kai-remote/github/clef-dev/docs/plans/2026-04-06-piano-roll-editing-enhancement-design.md": {
     "mtime": 1776251197.068161,
-    "hash": "d8a66b9caec61cef9f7a4d0e7b82dafa"
+    "ast_hash": "d8a66b9caec61cef9f7a4d0e7b82dafa",
+    "semantic_hash": "d8a66b9caec61cef9f7a4d0e7b82dafa"
   },
   "/home/kai-remote/github/clef-dev/docs/plans/2026-04-04-clef-iterate-skill-design.md": {
     "mtime": 1776251197.0681298,
-    "hash": "f5e0d541d58ea436cd27adafee28f744"
+    "ast_hash": "f5e0d541d58ea436cd27adafee28f744",
+    "semantic_hash": "f5e0d541d58ea436cd27adafee28f744"
+  },
+  "/home/kai-remote/github/clef-dev/docs/plans/2026-04-10-clef-vs-midi-plugin-comparative-analysis.md": {
+    "mtime": 1779530080.8915277,
+    "ast_hash": "014b5cd55d11f22f2e528eb04b205c43",
+    "semantic_hash": "014b5cd55d11f22f2e528eb04b205c43"
   },
   "/home/kai-remote/github/clef-dev/docs/plans/2026-04-05-audio-engine-upgrade-design.md": {
     "mtime": 1776251197.068161,
-    "hash": "612f124e92e5aa477247c36d33705c05"
+    "ast_hash": "612f124e92e5aa477247c36d33705c05",
+    "semantic_hash": "612f124e92e5aa477247c36d33705c05"
   },
   "/home/kai-remote/github/clef-dev/docs/plans/2026-03-30-piano-roll-design.md": {
     "mtime": 1776251197.0681298,
-    "hash": "4ed8ca5e1c048b33cbef577de1207e22"
+    "ast_hash": "4ed8ca5e1c048b33cbef577de1207e22",
+    "semantic_hash": "4ed8ca5e1c048b33cbef577de1207e22"
   },
   "/home/kai-remote/github/clef-dev/docs/plans/2026-04-05-claude-code-source-research.md": {
     "mtime": 1776251197.068161,
-    "hash": "a684d5a858374736523aa8a78365191b"
+    "ast_hash": "a684d5a858374736523aa8a78365191b",
+    "semantic_hash": "a684d5a858374736523aa8a78365191b"
   },
   "/home/kai-remote/github/clef-dev/docs/plans/2026-04-02-clef-server-astrbot-design.md": {
     "mtime": 1776251197.0681298,
-    "hash": "23436e7ef4a7a2548d18b4dc31aaf02a"
+    "ast_hash": "23436e7ef4a7a2548d18b4dc31aaf02a",
+    "semantic_hash": "23436e7ef4a7a2548d18b4dc31aaf02a"
   },
   "/home/kai-remote/github/clef-dev/docs/plans/2026-03-29-clef-station-phase3-plan.md": {
     "mtime": 1776251197.0681298,
-    "hash": "d59ea7db043058fc3cf78d8ec9820966"
+    "ast_hash": "d59ea7db043058fc3cf78d8ec9820966",
+    "semantic_hash": "d59ea7db043058fc3cf78d8ec9820966"
   },
   "/home/kai-remote/github/clef-dev/docs/plans/2026-03-30-piano-roll-implementation.md": {
     "mtime": 1776251197.0681298,
-    "hash": "832a51c1aa4b74565d4751ce78d95e36"
+    "ast_hash": "832a51c1aa4b74565d4751ce78d95e36",
+    "semantic_hash": "832a51c1aa4b74565d4751ce78d95e36"
   },
   "/home/kai-remote/github/clef-dev/docs/plans/2026-04-05-feedback-mode-design.md": {
     "mtime": 1776251197.068161,
-    "hash": "7c29324e29d01b3f8ca113b2d3092bb5"
+    "ast_hash": "7c29324e29d01b3f8ca113b2d3092bb5",
+    "semantic_hash": "7c29324e29d01b3f8ca113b2d3092bb5"
   },
   "/home/kai-remote/github/clef-dev/docs/plans/2026-03-29-clef-station-design.md": {
     "mtime": 1776251197.0680056,
-    "hash": "f0b76d6510981c1bacb1a8244314bf43"
+    "ast_hash": "f0b76d6510981c1bacb1a8244314bf43",
+    "semantic_hash": "f0b76d6510981c1bacb1a8244314bf43"
   },
   "/home/kai-remote/github/clef-dev/docs/plans/2026-04-02-plugin-localization.md": {
     "mtime": 1776251197.0681298,
-    "hash": "51e9c8dc31cdc597d1329332438478af"
+    "ast_hash": "51e9c8dc31cdc597d1329332438478af",
+    "semantic_hash": "51e9c8dc31cdc597d1329332438478af"
   },
   "/home/kai-remote/github/clef-dev/docs/plans/2026-03-30-workflow-fixes.md": {
     "mtime": 1776251197.0681298,
-    "hash": "9a14a08a676d5210cf9414a21c1c1796"
+    "ast_hash": "9a14a08a676d5210cf9414a21c1c1796",
+    "semantic_hash": "9a14a08a676d5210cf9414a21c1c1796"
   },
   "/home/kai-remote/github/clef-dev/docs/plans/2026-04-04-miditools-algorithm-survey.md": {
     "mtime": 1776251197.0681298,
-    "hash": "a8b333791aaa03846a1cc3c048078750"
+    "ast_hash": "a8b333791aaa03846a1cc3c048078750",
+    "semantic_hash": "a8b333791aaa03846a1cc3c048078750"
   },
   "/home/kai-remote/github/clef-dev/docs/plans/2026-03-29-clef-station-phase4-plan.md": {
     "mtime": 1776251197.0681298,
-    "hash": "66ccbe6a140f5b4639b7a2b266282883"
+    "ast_hash": "66ccbe6a140f5b4639b7a2b266282883",
+    "semantic_hash": "66ccbe6a140f5b4639b7a2b266282883"
   },
   "/home/kai-remote/github/clef-dev/docs/plans/2026-04-04-piano-roll-interactive-plan.md": {
     "mtime": 1776251197.068161,
-    "hash": "677c6d2bc25bbc29985c9d754df33520"
+    "ast_hash": "677c6d2bc25bbc29985c9d754df33520",
+    "semantic_hash": "677c6d2bc25bbc29985c9d754df33520"
   },
   "/home/kai-remote/github/clef-dev/docs/plans/2026-03-30-midi-analyze-tool.md": {
     "mtime": 1776251197.0681298,
-    "hash": "4a7857f3dd9b663f65952778d8b2c676"
+    "ast_hash": "4a7857f3dd9b663f65952778d8b2c676",
+    "semantic_hash": "4a7857f3dd9b663f65952778d8b2c676"
   },
   "/home/kai-remote/github/clef-dev/docs/plans/2026-03-29-clef-station-phase1-plan.md": {
     "mtime": 1776251197.0681298,
-    "hash": "6e4dc02b4ec26da5cfd740099d607664"
+    "ast_hash": "6e4dc02b4ec26da5cfd740099d607664",
+    "semantic_hash": "6e4dc02b4ec26da5cfd740099d607664"
   },
   "/home/kai-remote/github/clef-dev/docs/plans/2026-03-30-agent-teams-p0-p1.md": {
     "mtime": 1776251197.0681298,
-    "hash": "d55c25b59c2980fecfe02d5bd06d536a"
+    "ast_hash": "d55c25b59c2980fecfe02d5bd06d536a",
+    "semantic_hash": "d55c25b59c2980fecfe02d5bd06d536a"
   },
   "/home/kai-remote/github/clef-dev/docs/plans/2026-04-02-chatmusician-hybrid-mode-design.md": {
     "mtime": 1776251197.0681298,
-    "hash": "119b2b0a9972ad7593a75ad4a99a25e1"
+    "ast_hash": "119b2b0a9972ad7593a75ad4a99a25e1",
+    "semantic_hash": "119b2b0a9972ad7593a75ad4a99a25e1"
   },
   "/home/kai-remote/github/clef-dev/docs/plans/2026-04-04-piano-roll-ux-fixes.md": {
     "mtime": 1776251197.068161,
-    "hash": "0a630bda96c61defd3da64173ded128c"
+    "ast_hash": "0a630bda96c61defd3da64173ded128c",
+    "semantic_hash": "0a630bda96c61defd3da64173ded128c"
   },
   "/home/kai-remote/github/clef-dev/docs/plans/2026-04-06-clef-server-agent-framework.md": {
     "mtime": 1776251197.068161,
-    "hash": "8eeec482ed727cba01a828c291eb4d5d"
+    "ast_hash": "8eeec482ed727cba01a828c291eb4d5d",
+    "semantic_hash": "8eeec482ed727cba01a828c291eb4d5d"
+  },
+  "/home/kai-remote/github/clef-dev/docs/plans/2026-04-10-clef-server-harness-engineering-optimization.md": {
+    "mtime": 1779530080.8914278,
+    "ast_hash": "f955bfd57bfccc8720529501954845bc",
+    "semantic_hash": "f955bfd57bfccc8720529501954845bc"
   },
   "/home/kai-remote/github/clef-dev/docs/plans/2026-04-06-piano-roll-editing-enhancement-plan.md": {
     "mtime": 1776251197.068161,
-    "hash": "07f347fe8764fb7853987e1594144363"
+    "ast_hash": "07f347fe8764fb7853987e1594144363",
+    "semantic_hash": "07f347fe8764fb7853987e1594144363"
+  },
+  "/home/kai-remote/github/clef-dev/docs/design-references/spotify/preview.html": {
+    "mtime": 1779530080.891115,
+    "ast_hash": "4ba6a673f8911f1d1aae143a1fb89655",
+    "semantic_hash": "4ba6a673f8911f1d1aae143a1fb89655"
+  },
+  "/home/kai-remote/github/clef-dev/docs/design-references/spotify/preview-dark.html": {
+    "mtime": 1779530080.891099,
+    "ast_hash": "18c283f782e6f367be00b02e4568b58a",
+    "semantic_hash": "18c283f782e6f367be00b02e4568b58a"
+  },
+  "/home/kai-remote/github/clef-dev/docs/design-references/spotify/README.md": {
+    "mtime": 1779530080.8910348,
+    "ast_hash": "46aa4a7640f27658830175eb3dd3335a",
+    "semantic_hash": "46aa4a7640f27658830175eb3dd3335a"
+  },
+  "/home/kai-remote/github/clef-dev/docs/design-references/spotify/DESIGN.md": {
+    "mtime": 1779530080.890974,
+    "ast_hash": "999127f0c31052a69990a5c1b59cba23",
+    "semantic_hash": "999127f0c31052a69990a5c1b59cba23"
+  },
+  "/home/kai-remote/github/clef-dev/docs/design-references/linear/preview.html": {
+    "mtime": 1779530080.8909543,
+    "ast_hash": "900e4c255cd8ad665e2c29b5512f2f8a",
+    "semantic_hash": "900e4c255cd8ad665e2c29b5512f2f8a"
+  },
+  "/home/kai-remote/github/clef-dev/docs/design-references/linear/preview-dark.html": {
+    "mtime": 1779530080.8908505,
+    "ast_hash": "7c5ef1efe121415b336b3d2b7d7792ee",
+    "semantic_hash": "7c5ef1efe121415b336b3d2b7d7792ee"
+  },
+  "/home/kai-remote/github/clef-dev/docs/design-references/linear/DESIGN.md": {
+    "mtime": 1779530080.8907523,
+    "ast_hash": "2bfd6d2bcbfb969b612fb94a34904c5d",
+    "semantic_hash": "2bfd6d2bcbfb969b612fb94a34904c5d"
+  },
+  "/home/kai-remote/github/clef-dev/docs/superpowers/plans/2026-04-15-server-iterate-express-review-fixes.md": {
+    "mtime": 1779530080.893105,
+    "ast_hash": "e5804f1080921ca44055f82d408da209",
+    "semantic_hash": "e5804f1080921ca44055f82d408da209"
+  },
+  "/home/kai-remote/github/clef-dev/docs/superpowers/plans/2026-04-10-agent-loop-and-prompt-reform.md": {
+    "mtime": 1779530080.8922892,
+    "ast_hash": "e1ab590b68591f4444cd17df56d10796",
+    "semantic_hash": "e1ab590b68591f4444cd17df56d10796"
+  },
+  "/home/kai-remote/github/clef-dev/docs/superpowers/plans/2026-04-13-turn-toolcall-rename.md": {
+    "mtime": 1779530080.8928661,
+    "ast_hash": "b6ac9a380596b71c5b3b46589fcbe3cd",
+    "semantic_hash": "b6ac9a380596b71c5b3b46589fcbe3cd"
+  },
+  "/home/kai-remote/github/clef-dev/docs/superpowers/plans/2026-04-13-turn-wasting-fixes.md": {
+    "mtime": 1779530080.8929055,
+    "ast_hash": "8533af6abb1d8c99bfad56515d4ad01c",
+    "semantic_hash": "8533af6abb1d8c99bfad56515d4ad01c"
+  },
+  "/home/kai-remote/github/clef-dev/docs/superpowers/plans/2026-04-13-dedup-turn-budget.md": {
+    "mtime": 1779530080.8925588,
+    "ast_hash": "918fd44623757e22b5b72ad91300c91e",
+    "semantic_hash": "918fd44623757e22b5b72ad91300c91e"
+  },
+  "/home/kai-remote/github/clef-dev/docs/superpowers/plans/2026-04-07-clef-workflow-alignment.md": {
+    "mtime": 1779530080.8919542,
+    "ast_hash": "1493a963e8a75c5eb6432e097217a1a3",
+    "semantic_hash": "1493a963e8a75c5eb6432e097217a1a3"
+  },
+  "/home/kai-remote/github/clef-dev/docs/superpowers/plans/2026-04-15-minimax-prototype.md": {
+    "mtime": 1779530080.893019,
+    "ast_hash": "2ad9520a4190eccba86d958d3001c194",
+    "semantic_hash": "2ad9520a4190eccba86d958d3001c194"
+  },
+  "/home/kai-remote/github/clef-dev/docs/superpowers/plans/2026-04-09-workflow-ux.md": {
+    "mtime": 1779530080.892056,
+    "ast_hash": "457794cf41adf703951940329e6d6db6",
+    "semantic_hash": "457794cf41adf703951940329e6d6db6"
+  },
+  "/home/kai-remote/github/clef-dev/docs/superpowers/plans/2026-04-11-code-driven-repair-loop.md": {
+    "mtime": 1779530080.8924944,
+    "ast_hash": "8f07495b7d554e70dfe5aaee19063717",
+    "semantic_hash": "8f07495b7d554e70dfe5aaee19063717"
+  },
+  "/home/kai-remote/github/clef-dev/docs/superpowers/plans/2026-04-14-e2e-create-phase-fixes.md": {
+    "mtime": 1779530080.8929842,
+    "ast_hash": "ff808098fa31748142498cc01c62aeb3",
+    "semantic_hash": "ff808098fa31748142498cc01c62aeb3"
+  },
+  "/home/kai-remote/github/clef-dev/docs/superpowers/plans/2026-04-13-profile-switching.md": {
+    "mtime": 1779530080.892628,
+    "ast_hash": "1d5af793932e6f72a6058cdefc012833",
+    "semantic_hash": "1d5af793932e6f72a6058cdefc012833"
+  },
+  "/home/kai-remote/github/clef-dev/docs/superpowers/plans/2026-04-16-acestep-prototype.md": {
+    "mtime": 1779530080.8932464,
+    "ast_hash": "9d7b95774794972318cd44499c6a54c6",
+    "semantic_hash": "9d7b95774794972318cd44499c6a54c6"
+  },
+  "/home/kai-remote/github/clef-dev/docs/superpowers/plans/2026-04-13-server-five-fixes.md": {
+    "mtime": 1779530080.8926728,
+    "ast_hash": "6d2cf6391b1e42a0d932c0b98d9841e8",
+    "semantic_hash": "6d2cf6391b1e42a0d932c0b98d9841e8"
   },
   "/home/kai-remote/github/clef-dev/docs/superpowers/plans/2026-04-06-clef-server.md": {
     "mtime": 1776251197.0696855,
-    "hash": "161bbbe86eec4bc1c79847f653fde53b"
+    "ast_hash": "161bbbe86eec4bc1c79847f653fde53b",
+    "semantic_hash": "161bbbe86eec4bc1c79847f653fde53b"
+  },
+  "/home/kai-remote/github/clef-dev/docs/superpowers/plans/2026-04-13-server-scheduling-recovery.md": {
+    "mtime": 1779530080.892812,
+    "ast_hash": "8e6153894d8564ad01234aee9c1db38f",
+    "semantic_hash": "8e6153894d8564ad01234aee9c1db38f"
+  },
+  "/home/kai-remote/github/clef-dev/docs/superpowers/plans/2026-04-17-orchestrator-decomposition.md": {
+    "mtime": 1779530080.8934517,
+    "ast_hash": "2754a5bfb1dfeb1660c9070557a0e0a4",
+    "semantic_hash": "2754a5bfb1dfeb1660c9070557a0e0a4"
+  },
+  "/home/kai-remote/github/clef-dev/docs/superpowers/plans/2026-04-07-clef-web-frontend-mvp.md": {
+    "mtime": 1779530080.8917625,
+    "ast_hash": "f6d798de550f4080b9ad733b3a43db44",
+    "semantic_hash": "f6d798de550f4080b9ad733b3a43db44"
   },
   "/home/kai-remote/github/clef-dev/docs/superpowers/plans/2026-04-07-velocity-lane.md": {
     "mtime": 1776251197.0698903,
-    "hash": "376677c588f60e2a2b5fc4815c170116"
+    "ast_hash": "376677c588f60e2a2b5fc4815c170116",
+    "semantic_hash": "376677c588f60e2a2b5fc4815c170116"
+  },
+  "/home/kai-remote/github/clef-dev/docs/superpowers/plans/reviews/2026-04-12-repair-loop-review.md": {
+    "mtime": 1779530080.8934834,
+    "ast_hash": "7b870feb263730b7d77e767fc35893f2",
+    "semantic_hash": "7b870feb263730b7d77e767fc35893f2"
+  },
+  "/home/kai-remote/github/clef-dev/docs/superpowers/specs/2026-04-09-workflow-ux-design.md": {
+    "mtime": 1779530080.89372,
+    "ast_hash": "3184b312b7435d56099b54e7e6f7d87e",
+    "semantic_hash": "3184b312b7435d56099b54e7e6f7d87e"
+  },
+  "/home/kai-remote/github/clef-dev/docs/superpowers/specs/2026-04-07-clef-web-frontend-design.md": {
+    "mtime": 1779530080.8936167,
+    "ast_hash": "d063338f6687b01f4a153f0d5490281b",
+    "semantic_hash": "d063338f6687b01f4a153f0d5490281b"
+  },
+  "/home/kai-remote/github/clef-dev/docs/superpowers/specs/2026-04-07-clef-workflow-alignment-design.md": {
+    "mtime": 1779530080.893679,
+    "ast_hash": "e6bb0e9b6d00ca3fb2e0071701a60873",
+    "semantic_hash": "e6bb0e9b6d00ca3fb2e0071701a60873"
   },
   "/home/kai-remote/github/clef-dev/docs/superpowers/specs/2026-04-07-velocity-lane-design.md": {
     "mtime": 1776251197.0698903,
-    "hash": "eeab42cb99eb244682af08bbd74c0b47"
+    "ast_hash": "eeab42cb99eb244682af08bbd74c0b47",
+    "semantic_hash": "eeab42cb99eb244682af08bbd74c0b47"
+  },
+  "/home/kai-remote/github/clef-dev/docs/superpowers/specs/2026-04-13-profile-switching-design.md": {
+    "mtime": 1779530080.893748,
+    "ast_hash": "397c0fcf79911cd534777786d1fbfae6",
+    "semantic_hash": "397c0fcf79911cd534777786d1fbfae6"
+  },
+  "/home/kai-remote/github/clef-dev/docs/superpowers/specs/2026-04-15-minimax-prototype-design.md": {
+    "mtime": 1779530080.8937824,
+    "ast_hash": "b456b6b99bed1fbd98f5165e9cb61cf7",
+    "semantic_hash": "b456b6b99bed1fbd98f5165e9cb61cf7"
   },
   "/home/kai-remote/github/clef-dev/openspec/config.yaml": {
     "mtime": 1776251197.0698903,
-    "hash": "9e3e7672b387a282583011181ab35f9a"
+    "ast_hash": "9e3e7672b387a282583011181ab35f9a",
+    "semantic_hash": "9e3e7672b387a282583011181ab35f9a"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/frontend-design/SKILL.md": {
+    "mtime": 1779530080.7588947,
+    "ast_hash": "06a0520e81f698334258c73ff0de533b",
+    "semantic_hash": "06a0520e81f698334258c73ff0de533b"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/frontend-design/LICENSE.txt": {
+    "mtime": 1779530080.758842,
+    "ast_hash": "2ee41112a44fe7014dce33e26468ba93",
+    "semantic_hash": "2ee41112a44fe7014dce33e26468ba93"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/openspec-propose/SKILL.md": {
+    "mtime": 1776251196.6671262,
+    "ast_hash": "3148e0c377bfb264cebc72dc5bf2fd95",
+    "semantic_hash": "3148e0c377bfb264cebc72dc5bf2fd95"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/theory-orchestration/SKILL.md": {
+    "mtime": 1776251196.6671584,
+    "ast_hash": "ade9bd9a18c8ce958585270f6f884ff1",
+    "semantic_hash": "ade9bd9a18c8ce958585270f6f884ff1"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/theory-melody/SKILL.md": {
+    "mtime": 1776251196.6671262,
+    "ast_hash": "b834dab75ee5b22518bc79e6088001f4",
+    "semantic_hash": "b834dab75ee5b22518bc79e6088001f4"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/theme-factory/SKILL.md": {
+    "mtime": 1779530080.759247,
+    "ast_hash": "258bd4d04c12fafce1f41d9bfe9b79a7",
+    "semantic_hash": "258bd4d04c12fafce1f41d9bfe9b79a7"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/theme-factory/LICENSE.txt": {
+    "mtime": 1779530080.759235,
+    "ast_hash": "175792518e4ac015ab6696d16c4f607e",
+    "semantic_hash": "175792518e4ac015ab6696d16c4f607e"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/theme-factory/themes/modern-minimalist.md": {
+    "mtime": 1779530080.7598403,
+    "ast_hash": "73b67cfa216fb776976ed268c36f394e",
+    "semantic_hash": "73b67cfa216fb776976ed268c36f394e"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/theme-factory/themes/botanical-garden.md": {
+    "mtime": 1779530080.7598403,
+    "ast_hash": "cbcf4b3c4440efbd2515c5edbb125cbd",
+    "semantic_hash": "cbcf4b3c4440efbd2515c5edbb125cbd"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/theme-factory/themes/forest-canopy.md": {
+    "mtime": 1779530080.7598403,
+    "ast_hash": "a97be058e329c04c4b61de0f3072ccbd",
+    "semantic_hash": "a97be058e329c04c4b61de0f3072ccbd"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/theme-factory/themes/midnight-galaxy.md": {
+    "mtime": 1779530080.7598403,
+    "ast_hash": "f2c28f1a3a8e9f132cb2625fbb674317",
+    "semantic_hash": "f2c28f1a3a8e9f132cb2625fbb674317"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/theme-factory/themes/ocean-depths.md": {
+    "mtime": 1779530080.7598403,
+    "ast_hash": "702f14f8a16eb7943f4f8fa18632bea7",
+    "semantic_hash": "702f14f8a16eb7943f4f8fa18632bea7"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/theme-factory/themes/arctic-frost.md": {
+    "mtime": 1779530080.759824,
+    "ast_hash": "b965587321a87fec6fcfb74479a0792d",
+    "semantic_hash": "b965587321a87fec6fcfb74479a0792d"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/theme-factory/themes/desert-rose.md": {
+    "mtime": 1779530080.7598403,
+    "ast_hash": "0bb0468ce18d9d8bdc13210e5e011199",
+    "semantic_hash": "0bb0468ce18d9d8bdc13210e5e011199"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/theme-factory/themes/golden-hour.md": {
+    "mtime": 1779530080.7598403,
+    "ast_hash": "5b29778bec2c4fe98afff9f852d7bebc",
+    "semantic_hash": "5b29778bec2c4fe98afff9f852d7bebc"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/theme-factory/themes/sunset-boulevard.md": {
+    "mtime": 1779530080.7598403,
+    "ast_hash": "7a533182584962e7bb5e7577874d0768",
+    "semantic_hash": "7a533182584962e7bb5e7577874d0768"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/theme-factory/themes/tech-innovation.md": {
+    "mtime": 1779530080.7598403,
+    "ast_hash": "fcc062f7c91159298558ab7e2c23f102",
+    "semantic_hash": "fcc062f7c91159298558ab7e2c23f102"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/openspec-archive-change/SKILL.md": {
+    "mtime": 1776251196.6671262,
+    "ast_hash": "8debef1d1f6d9ac2cbe1126493d02c6f",
+    "semantic_hash": "8debef1d1f6d9ac2cbe1126493d02c6f"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/openspec-explore/SKILL.md": {
+    "mtime": 1776251196.6671262,
+    "ast_hash": "15a31009cb6ff1ed750527f0b9641d26",
+    "semantic_hash": "15a31009cb6ff1ed750527f0b9641d26"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/openspec-apply-change/SKILL.md": {
+    "mtime": 1776251196.6671262,
+    "ast_hash": "ce2a0a9a06d2faca1811abfbb536e6cb",
+    "semantic_hash": "ce2a0a9a06d2faca1811abfbb536e6cb"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/theory-harmony/SKILL.md": {
+    "mtime": 1776251196.6671262,
+    "ast_hash": "5f99c7f8e964ce8e81e6b440e02c2323",
+    "semantic_hash": "5f99c7f8e964ce8e81e6b440e02c2323"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/theory-structure/SKILL.md": {
+    "mtime": 1776251196.6671584,
+    "ast_hash": "aa4f87fd967d4abca512b928186ede21",
+    "semantic_hash": "aa4f87fd967d4abca512b928186ede21"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/tailwind-css-patterns/SKILL.md": {
+    "mtime": 1779530080.758944,
+    "ast_hash": "09406f483ba9ae79648dd15cadf292a8",
+    "semantic_hash": "09406f483ba9ae79648dd15cadf292a8"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/tailwind-css-patterns/references/animations.md": {
+    "mtime": 1779530080.7590203,
+    "ast_hash": "a4f08599c1e9e91809f47146e60f359d",
+    "semantic_hash": "a4f08599c1e9e91809f47146e60f359d"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/tailwind-css-patterns/references/configuration.md": {
+    "mtime": 1779530080.7590868,
+    "ast_hash": "82dbfabe7e77b7649b86016873db8c70",
+    "semantic_hash": "82dbfabe7e77b7649b86016873db8c70"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/tailwind-css-patterns/references/reference.md": {
+    "mtime": 1779530080.7591848,
+    "ast_hash": "d6e81208ea059e182d342eb9d6cb73c4",
+    "semantic_hash": "d6e81208ea059e182d342eb9d6cb73c4"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/tailwind-css-patterns/references/accessibility.md": {
+    "mtime": 1779530080.7589858,
+    "ast_hash": "f77ad96a3107458e458f1d0bbc92b7e6",
+    "semantic_hash": "f77ad96a3107458e458f1d0bbc92b7e6"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/tailwind-css-patterns/references/responsive-design.md": {
+    "mtime": 1779530080.7592134,
+    "ast_hash": "59130e24f48113dd9fffa99e5ff97abf",
+    "semantic_hash": "59130e24f48113dd9fffa99e5ff97abf"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/tailwind-css-patterns/references/component-patterns.md": {
+    "mtime": 1779530080.7590625,
+    "ast_hash": "1d9d98de37a2802c8201d6c7f500fd06",
+    "semantic_hash": "1d9d98de37a2802c8201d6c7f500fd06"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/tailwind-css-patterns/references/layout-patterns.md": {
+    "mtime": 1779530080.759111,
+    "ast_hash": "5634cb326b3be4266190286e091cd7ff",
+    "semantic_hash": "5634cb326b3be4266190286e091cd7ff"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/tailwind-css-patterns/references/performance.md": {
+    "mtime": 1779530080.7591338,
+    "ast_hash": "171bdd2789b6fa8e20589085facc651f",
+    "semantic_hash": "171bdd2789b6fa8e20589085facc651f"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/theory-rhythm/SKILL.md": {
+    "mtime": 1776251196.6671584,
+    "ast_hash": "6e5ef08706db057800218281d7ca7009",
+    "semantic_hash": "6e5ef08706db057800218281d7ca7009"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/vercel-react-best-practices/SKILL.md": {
+    "mtime": 1779530080.760355,
+    "ast_hash": "e3176dc5b0ccad1795514b93d2c3c5cc",
+    "semantic_hash": "e3176dc5b0ccad1795514b93d2c3c5cc"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/vercel-react-best-practices/README.md": {
+    "mtime": 1779530080.7603183,
+    "ast_hash": "abb5236c535db0bf7ce6f38c8998bc47",
+    "semantic_hash": "abb5236c535db0bf7ce6f38c8998bc47"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/vercel-react-best-practices/AGENTS.md": {
+    "mtime": 1779530080.7602878,
+    "ast_hash": "71d9ab5409ea67b7789907d651e9b451",
+    "semantic_hash": "71d9ab5409ea67b7789907d651e9b451"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/vercel-react-best-practices/rules/bundle-conditional.md": {
+    "mtime": 1779530080.7605991,
+    "ast_hash": "585be2b6fc418c766e5b91cc2141d334",
+    "semantic_hash": "585be2b6fc418c766e5b91cc2141d334"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/vercel-react-best-practices/rules/bundle-preload.md": {
+    "mtime": 1779530080.7605991,
+    "ast_hash": "924ec7e7502ca042070326d38e88f8cd",
+    "semantic_hash": "924ec7e7502ca042070326d38e88f8cd"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/vercel-react-best-practices/rules/rendering-animate-svg-wrapper.md": {
+    "mtime": 1779530080.7610064,
+    "ast_hash": "7301cbe48bf0e1c44934847861384d03",
+    "semantic_hash": "7301cbe48bf0e1c44934847861384d03"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/vercel-react-best-practices/rules/client-swr-dedup.md": {
+    "mtime": 1779530080.7607281,
+    "ast_hash": "e565fcba7836d339ca4707aad6fdaa4a",
+    "semantic_hash": "e565fcba7836d339ca4707aad6fdaa4a"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/vercel-react-best-practices/rules/js-index-maps.md": {
+    "mtime": 1779530080.7608783,
+    "ast_hash": "db5bcfde02e1ce9f41d6ed1f5aafc8c5",
+    "semantic_hash": "db5bcfde02e1ce9f41d6ed1f5aafc8c5"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/vercel-react-best-practices/rules/bundle-dynamic-imports.md": {
+    "mtime": 1779530080.7605991,
+    "ast_hash": "72d89583306887810f67e9f7860f06af",
+    "semantic_hash": "72d89583306887810f67e9f7860f06af"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/vercel-react-best-practices/rules/server-after-nonblocking.md": {
+    "mtime": 1779530080.7614415,
+    "ast_hash": "c88a79384f87826bf1b20aa3637093a5",
+    "semantic_hash": "c88a79384f87826bf1b20aa3637093a5"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/vercel-react-best-practices/rules/async-api-routes.md": {
+    "mtime": 1779530080.7604947,
+    "ast_hash": "344fa543b37e303660404e1ef3a4638b",
+    "semantic_hash": "344fa543b37e303660404e1ef3a4638b"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/vercel-react-best-practices/rules/js-tosorted-immutable.md": {
+    "mtime": 1779530080.7609742,
+    "ast_hash": "fd0804905877b6b7b1858e5df1b5f3c4",
+    "semantic_hash": "fd0804905877b6b7b1858e5df1b5f3c4"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/vercel-react-best-practices/rules/js-early-exit.md": {
+    "mtime": 1779530080.7608304,
+    "ast_hash": "d300cb3e57255029e446bdfa49dc4074",
+    "semantic_hash": "d300cb3e57255029e446bdfa49dc4074"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/vercel-react-best-practices/rules/js-length-check-first.md": {
+    "mtime": 1779530080.760896,
+    "ast_hash": "2ba208759dd91578f1085c28e6a92ce9",
+    "semantic_hash": "2ba208759dd91578f1085c28e6a92ce9"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/vercel-react-best-practices/rules/server-cache-react.md": {
+    "mtime": 1779530080.7615006,
+    "ast_hash": "bc168ee66c4378854c7aa23cb9ca1369",
+    "semantic_hash": "bc168ee66c4378854c7aa23cb9ca1369"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/vercel-react-best-practices/rules/server-parallel-fetching.md": {
+    "mtime": 1779530080.761585,
+    "ast_hash": "1a36cf0b49a1a498fc1150afbf7a42c2",
+    "semantic_hash": "1a36cf0b49a1a498fc1150afbf7a42c2"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/vercel-react-best-practices/rules/rerender-transitions.md": {
+    "mtime": 1779530080.7613876,
+    "ast_hash": "3f275bbfb966fcb39c554ad959fdf016",
+    "semantic_hash": "3f275bbfb966fcb39c554ad959fdf016"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/vercel-react-best-practices/rules/client-event-listeners.md": {
+    "mtime": 1779530080.7606733,
+    "ast_hash": "71062add972f9735348b7ae77e778eb8",
+    "semantic_hash": "71062add972f9735348b7ae77e778eb8"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/vercel-react-best-practices/rules/rendering-resource-hints.md": {
+    "mtime": 1779530080.76111,
+    "ast_hash": "a612b2d1d86d1b8205b92ff7dfd81eb8",
+    "semantic_hash": "a612b2d1d86d1b8205b92ff7dfd81eb8"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/vercel-react-best-practices/rules/bundle-defer-third-party.md": {
+    "mtime": 1779530080.7605991,
+    "ast_hash": "6d4d1d4fac411f724071428dd0bc93ba",
+    "semantic_hash": "6d4d1d4fac411f724071428dd0bc93ba"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/vercel-react-best-practices/rules/js-set-map-lookups.md": {
+    "mtime": 1779530080.7609541,
+    "ast_hash": "59a278e21ecd322bff566ba4ad7f5a30",
+    "semantic_hash": "59a278e21ecd322bff566ba4ad7f5a30"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/vercel-react-best-practices/rules/advanced-event-handler-refs.md": {
+    "mtime": 1779530080.7604117,
+    "ast_hash": "f2a0d125f3773bfda91e187fa5bed48a",
+    "semantic_hash": "f2a0d125f3773bfda91e187fa5bed48a"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/vercel-react-best-practices/rules/rendering-hoist-jsx.md": {
+    "mtime": 1779530080.7610536,
+    "ast_hash": "00519c11155c5c2a6f493d7980211a71",
+    "semantic_hash": "00519c11155c5c2a6f493d7980211a71"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/vercel-react-best-practices/rules/rerender-simple-expression-in-memo.md": {
+    "mtime": 1779530080.7613385,
+    "ast_hash": "42c37552160cff86a0fcbd93a27aa74e",
+    "semantic_hash": "42c37552160cff86a0fcbd93a27aa74e"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/vercel-react-best-practices/rules/async-cheap-condition-before-await.md": {
+    "mtime": 1779530080.7605112,
+    "ast_hash": "96352f626f328e15a6213d485e29e36f",
+    "semantic_hash": "96352f626f328e15a6213d485e29e36f"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/vercel-react-best-practices/rules/rendering-conditional-render.md": {
+    "mtime": 1779530080.7610211,
+    "ast_hash": "7aa6112d7544d55147e183b84add9c31",
+    "semantic_hash": "7aa6112d7544d55147e183b84add9c31"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/vercel-react-best-practices/rules/server-auth-actions.md": {
+    "mtime": 1779530080.7614625,
+    "ast_hash": "d8691820d666e5dd9094ccc6996398e3",
+    "semantic_hash": "d8691820d666e5dd9094ccc6996398e3"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/vercel-react-best-practices/rules/rendering-usetransition-loading.md": {
+    "mtime": 1779530080.7611637,
+    "ast_hash": "3cea04ec76a76183cebc6571ac6365a2",
+    "semantic_hash": "3cea04ec76a76183cebc6571ac6365a2"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/vercel-react-best-practices/rules/js-batch-dom-css.md": {
+    "mtime": 1779530080.7607496,
+    "ast_hash": "869dbc06a931ccfb899b739316c348af",
+    "semantic_hash": "869dbc06a931ccfb899b739316c348af"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/vercel-react-best-practices/rules/js-cache-storage.md": {
+    "mtime": 1779530080.7607996,
+    "ast_hash": "828f260566ff92df56089321fa41c116",
+    "semantic_hash": "828f260566ff92df56089321fa41c116"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/vercel-react-best-practices/rules/rendering-svg-precision.md": {
+    "mtime": 1779530080.7611277,
+    "ast_hash": "1b880754ee449c52ccc725481f8b2e90",
+    "semantic_hash": "1b880754ee449c52ccc725481f8b2e90"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/vercel-react-best-practices/rules/_sections.md": {
+    "mtime": 1779530080.7603724,
+    "ast_hash": "b8c110b45145ded6919562772afe067c",
+    "semantic_hash": "b8c110b45145ded6919562772afe067c"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/vercel-react-best-practices/rules/rendering-content-visibility.md": {
+    "mtime": 1779530080.761036,
+    "ast_hash": "a4ec0125d3a9d79ac2ab5f7a7b5b4d7d",
+    "semantic_hash": "a4ec0125d3a9d79ac2ab5f7a7b5b4d7d"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/vercel-react-best-practices/rules/rendering-hydration-no-flicker.md": {
+    "mtime": 1779530080.7610738,
+    "ast_hash": "a33ebc96d26525f94c460342d913e47a",
+    "semantic_hash": "a33ebc96d26525f94c460342d913e47a"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/vercel-react-best-practices/rules/server-dedup-props.md": {
+    "mtime": 1779530080.7615213,
+    "ast_hash": "86bf6f2d562ca98bca778a5b9d2f0251",
+    "semantic_hash": "86bf6f2d562ca98bca778a5b9d2f0251"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/vercel-react-best-practices/rules/rerender-lazy-state-init.md": {
+    "mtime": 1779530080.76127,
+    "ast_hash": "6f9fc3d826cea2ca484912256149b077",
+    "semantic_hash": "6f9fc3d826cea2ca484912256149b077"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/vercel-react-best-practices/rules/_template.md": {
+    "mtime": 1779530080.7604117,
+    "ast_hash": "a0d76a2f87f3f80e9a8f3a2a1054aaaf",
+    "semantic_hash": "a0d76a2f87f3f80e9a8f3a2a1054aaaf"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/vercel-react-best-practices/rules/async-dependencies.md": {
+    "mtime": 1779530080.7605283,
+    "ast_hash": "9c5622d97b20b9e0cb79455b4322061a",
+    "semantic_hash": "9c5622d97b20b9e0cb79455b4322061a"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/vercel-react-best-practices/rules/rerender-derived-state.md": {
+    "mtime": 1779530080.7612288,
+    "ast_hash": "fadd31941e355786cb0cc7bba3c672fd",
+    "semantic_hash": "fadd31941e355786cb0cc7bba3c672fd"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/vercel-react-best-practices/rules/server-cache-lru.md": {
+    "mtime": 1779530080.76148,
+    "ast_hash": "723195ea460bfbc4d43b4eb0c47b246b",
+    "semantic_hash": "723195ea460bfbc4d43b4eb0c47b246b"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/vercel-react-best-practices/rules/rerender-memo-with-default-value.md": {
+    "mtime": 1779530080.7612867,
+    "ast_hash": "9bfa45660e0a4d4f180e1d12d9ed44ea",
+    "semantic_hash": "9bfa45660e0a4d4f180e1d12d9ed44ea"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/vercel-react-best-practices/rules/rerender-move-effect-to-event.md": {
+    "mtime": 1779530080.7613192,
+    "ast_hash": "599463fe624afd8822ba2bfa7c0138d5",
+    "semantic_hash": "599463fe624afd8822ba2bfa7c0138d5"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/vercel-react-best-practices/rules/js-combine-iterations.md": {
+    "mtime": 1779530080.7607996,
+    "ast_hash": "4f241532133637fee75304d40f016713",
+    "semantic_hash": "4f241532133637fee75304d40f016713"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/vercel-react-best-practices/rules/server-serialization.md": {
+    "mtime": 1779530080.7616012,
+    "ast_hash": "e6d34426614852685f43609dd9e3b250",
+    "semantic_hash": "e6d34426614852685f43609dd9e3b250"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/vercel-react-best-practices/rules/js-hoist-regexp.md": {
+    "mtime": 1779530080.7608638,
+    "ast_hash": "ced4609a5916db47bbaccfcc3f2dcdbb",
+    "semantic_hash": "ced4609a5916db47bbaccfcc3f2dcdbb"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/vercel-react-best-practices/rules/advanced-init-once.md": {
+    "mtime": 1779530080.7604656,
+    "ast_hash": "0100519098b834e69a3515657a39bdc9",
+    "semantic_hash": "0100519098b834e69a3515657a39bdc9"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/vercel-react-best-practices/rules/async-parallel.md": {
+    "mtime": 1779530080.7605283,
+    "ast_hash": "a0e06a8e9985cdff4ece0312d8ee35db",
+    "semantic_hash": "a0e06a8e9985cdff4ece0312d8ee35db"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/vercel-react-best-practices/rules/rerender-memo.md": {
+    "mtime": 1779530080.7613027,
+    "ast_hash": "f0decabf1e4cf032c36f0977c81167b7",
+    "semantic_hash": "f0decabf1e4cf032c36f0977c81167b7"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/vercel-react-best-practices/rules/rendering-script-defer-async.md": {
+    "mtime": 1779530080.7611277,
+    "ast_hash": "d62596aed565dd3ad7bddd38bc8f7798",
+    "semantic_hash": "d62596aed565dd3ad7bddd38bc8f7798"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/vercel-react-best-practices/rules/js-request-idle-callback.md": {
+    "mtime": 1779530080.7609403,
+    "ast_hash": "91d7e7fca676efb7cecb4ccff1eaec01",
+    "semantic_hash": "91d7e7fca676efb7cecb4ccff1eaec01"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/vercel-react-best-practices/rules/server-no-shared-module-state.md": {
+    "mtime": 1779530080.7615683,
+    "ast_hash": "7733faf82c146008e8f1c65660bac4bb",
+    "semantic_hash": "7733faf82c146008e8f1c65660bac4bb"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/vercel-react-best-practices/rules/rerender-split-combined-hooks.md": {
+    "mtime": 1779530080.7613728,
+    "ast_hash": "b7485878ff82ce8468078a31fc1b7f19",
+    "semantic_hash": "b7485878ff82ce8468078a31fc1b7f19"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/vercel-react-best-practices/rules/client-localstorage-schema.md": {
+    "mtime": 1779530080.7606962,
+    "ast_hash": "982a459b07cbec2f8386e526b924c339",
+    "semantic_hash": "982a459b07cbec2f8386e526b924c339"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/vercel-react-best-practices/rules/rerender-dependencies.md": {
+    "mtime": 1779530080.761198,
+    "ast_hash": "ad0e42cd0616237f62f8a5abbc2138bc",
+    "semantic_hash": "ad0e42cd0616237f62f8a5abbc2138bc"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/vercel-react-best-practices/rules/rerender-functional-setstate.md": {
+    "mtime": 1779530080.7612517,
+    "ast_hash": "188c0b949d23c11885914c573f4a770a",
+    "semantic_hash": "188c0b949d23c11885914c573f4a770a"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/vercel-react-best-practices/rules/js-cache-property-access.md": {
+    "mtime": 1779530080.7607684,
+    "ast_hash": "5b4ae3cd853b92222a8fd8c8d8202426",
+    "semantic_hash": "5b4ae3cd853b92222a8fd8c8d8202426"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/vercel-react-best-practices/rules/js-min-max-loop.md": {
+    "mtime": 1779530080.7609193,
+    "ast_hash": "82f654d27529dd80be7ae33d45dcdf8c",
+    "semantic_hash": "82f654d27529dd80be7ae33d45dcdf8c"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/vercel-react-best-practices/rules/rerender-use-deferred-value.md": {
+    "mtime": 1779530080.7614057,
+    "ast_hash": "913dc783397142c25ec997b5dc11245b",
+    "semantic_hash": "913dc783397142c25ec997b5dc11245b"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/vercel-react-best-practices/rules/bundle-barrel-imports.md": {
+    "mtime": 1779530080.7605991,
+    "ast_hash": "fcba301df7f11c6847dca5962ac78828",
+    "semantic_hash": "fcba301df7f11c6847dca5962ac78828"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/vercel-react-best-practices/rules/advanced-effect-event-deps.md": {
+    "mtime": 1779530080.7604117,
+    "ast_hash": "3a0e314bb9576bab61f68d5de5afaf3e",
+    "semantic_hash": "3a0e314bb9576bab61f68d5de5afaf3e"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/vercel-react-best-practices/rules/advanced-use-latest.md": {
+    "mtime": 1779530080.7604656,
+    "ast_hash": "60309961293388c9b9e9fd4e0db344e3",
+    "semantic_hash": "60309961293388c9b9e9fd4e0db344e3"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/vercel-react-best-practices/rules/async-defer-await.md": {
+    "mtime": 1779530080.7605283,
+    "ast_hash": "235a6b5760c2e4843d778167e462cb0e",
+    "semantic_hash": "235a6b5760c2e4843d778167e462cb0e"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/vercel-react-best-practices/rules/server-parallel-nested-fetching.md": {
+    "mtime": 1779530080.7616012,
+    "ast_hash": "eaa7835a15d41842406acc34002f0d6c",
+    "semantic_hash": "eaa7835a15d41842406acc34002f0d6c"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/vercel-react-best-practices/rules/rendering-hydration-suppress-warning.md": {
+    "mtime": 1779530080.7610893,
+    "ast_hash": "23bc895f5697c19a59712bf19474ec12",
+    "semantic_hash": "23bc895f5697c19a59712bf19474ec12"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/vercel-react-best-practices/rules/rerender-derived-state-no-effect.md": {
+    "mtime": 1779530080.7612143,
+    "ast_hash": "c83ba3c8ea58015fd30072790a4959c4",
+    "semantic_hash": "c83ba3c8ea58015fd30072790a4959c4"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/vercel-react-best-practices/rules/rerender-use-ref-transient-values.md": {
+    "mtime": 1779530080.761423,
+    "ast_hash": "24d2e82617e2da4207afaf049e1314f3",
+    "semantic_hash": "24d2e82617e2da4207afaf049e1314f3"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/vercel-react-best-practices/rules/server-hoist-static-io.md": {
+    "mtime": 1779530080.7615473,
+    "ast_hash": "05789c4ba35f68cc0ed6deba3078f7ab",
+    "semantic_hash": "05789c4ba35f68cc0ed6deba3078f7ab"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/vercel-react-best-practices/rules/client-passive-event-listeners.md": {
+    "mtime": 1779530080.7606962,
+    "ast_hash": "3853533fd5f49fa2fc98296f9c34d84f",
+    "semantic_hash": "3853533fd5f49fa2fc98296f9c34d84f"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/vercel-react-best-practices/rules/async-suspense-boundaries.md": {
+    "mtime": 1779530080.7605765,
+    "ast_hash": "dbb2fc80721ca1ce32426f43219d314f",
+    "semantic_hash": "dbb2fc80721ca1ce32426f43219d314f"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/vercel-react-best-practices/rules/rerender-no-inline-components.md": {
+    "mtime": 1779530080.7613385,
+    "ast_hash": "713855e0060cfe2ce549d08ea77e1af6",
+    "semantic_hash": "713855e0060cfe2ce549d08ea77e1af6"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/vercel-react-best-practices/rules/js-flatmap-filter.md": {
+    "mtime": 1779530080.7608469,
+    "ast_hash": "161d9d8b444e5ec9cb58bffb0e1b76cd",
+    "semantic_hash": "161d9d8b444e5ec9cb58bffb0e1b76cd"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/vercel-react-best-practices/rules/rendering-activity.md": {
+    "mtime": 1779530080.7609894,
+    "ast_hash": "b66bde1377564aa196ba15fc94215cd3",
+    "semantic_hash": "b66bde1377564aa196ba15fc94215cd3"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/vercel-react-best-practices/rules/rerender-defer-reads.md": {
+    "mtime": 1779530080.7611785,
+    "ast_hash": "2b754062eb7b203632859f6515ed3561",
+    "semantic_hash": "2b754062eb7b203632859f6515ed3561"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/vercel-react-best-practices/rules/js-cache-function-results.md": {
+    "mtime": 1779530080.7607684,
+    "ast_hash": "5d641ce87ef753d59e3205244e2851a1",
+    "semantic_hash": "5d641ce87ef753d59e3205244e2851a1"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/clef-compose/SKILL.md": {
+    "mtime": 1779530080.7577817,
+    "ast_hash": "7370d7055ccb54a19904184067478454",
+    "semantic_hash": "7370d7055ccb54a19904184067478454"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/clef-compose/references/feedback-handling.md": {
+    "mtime": 1776251196.6630065,
+    "ast_hash": "ae3a65c4e1442962ba6b4f9076e3e049",
+    "semantic_hash": "ae3a65c4e1442962ba6b4f9076e3e049"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/clef-compose/references/iteration-protocol.md": {
+    "mtime": 1776251196.6632228,
+    "ast_hash": "246445de6c3dd7a3b087f02928376998",
+    "semantic_hash": "246445de6c3dd7a3b087f02928376998"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/clef-compose/references/toolchain.md": {
+    "mtime": 1779530080.7578285,
+    "ast_hash": "c72a8136c4b34e7c1edb7a519e71ccbf",
+    "semantic_hash": "c72a8136c4b34e7c1edb7a519e71ccbf"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/theory-abc/SKILL.md": {
+    "mtime": 1776251196.6671262,
+    "ast_hash": "8cc023eefbe77bc10737eec3563c6d71",
+    "semantic_hash": "8cc023eefbe77bc10737eec3563c6d71"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/clef-iterate/SKILL.md": {
+    "mtime": 1776251196.6661928,
+    "ast_hash": "704b8ee52e2efb2ebf0df7db7e12e02a",
+    "semantic_hash": "704b8ee52e2efb2ebf0df7db7e12e02a"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/clef-iterate/references/add-layers.md": {
+    "mtime": 1776251196.667045,
+    "ast_hash": "38743822f17fb14d2d7bfca409302ba2",
+    "semantic_hash": "38743822f17fb14d2d7bfca409302ba2"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/clef-iterate/references/re-expr.md": {
+    "mtime": 1776251196.6671262,
+    "ast_hash": "94c163ffcd51d6a5dfae6ace241b6e9c",
+    "semantic_hash": "94c163ffcd51d6a5dfae6ace241b6e9c"
   },
   "/home/kai-remote/github/clef-dev/addons/clef/README.md": {
     "mtime": 1776251196.6691582,
-    "hash": "2979fb4b7f092b05e45615d00b07a8f8"
+    "ast_hash": "2979fb4b7f092b05e45615d00b07a8f8",
+    "semantic_hash": "2979fb4b7f092b05e45615d00b07a8f8"
+  },
+  "/home/kai-remote/github/clef-dev/addons/clef/analysis/violin_short_notes_comparison.md": {
+    "mtime": 1779530080.88747,
+    "ast_hash": "e62fb80b8aae0b3cb962777dc2f371f1",
+    "semantic_hash": "e62fb80b8aae0b3cb962777dc2f371f1"
   },
   "/home/kai-remote/github/clef-dev/addons/clef/docs/clef_json_spec.md": {
     "mtime": 1776251196.6702633,
-    "hash": "dba2ac66babd609ca85782382f5a1bd6"
+    "ast_hash": "dba2ac66babd609ca85782382f5a1bd6",
+    "semantic_hash": "dba2ac66babd609ca85782382f5a1bd6"
   },
   "/home/kai-remote/github/clef-dev/addons/clef/docs/user_guide.md": {
     "mtime": 1776251196.6706376,
-    "hash": "85a42696f6e051608f67f29fc15c8879"
+    "ast_hash": "85a42696f6e051608f67f29fc15c8879",
+    "semantic_hash": "85a42696f6e051608f67f29fc15c8879"
   },
   "/home/kai-remote/github/clef-dev/addons/clef/docs/theory.md": {
     "mtime": 1776251196.6706376,
-    "hash": "8c1e4c701c13e39f30add33338287650"
+    "ast_hash": "8c1e4c701c13e39f30add33338287650",
+    "semantic_hash": "8c1e4c701c13e39f30add33338287650"
   },
   "/home/kai-remote/github/clef-dev/addons/clef/docs/user_docs/llm_midi_composer_guide_cn.md": {
     "mtime": 1776251196.6706376,
-    "hash": "3445d4af4ef8363c0223c437e4ce0983"
+    "ast_hash": "3445d4af4ef8363c0223c437e4ce0983",
+    "semantic_hash": "3445d4af4ef8363c0223c437e4ce0983"
   },
   "/home/kai-remote/github/clef-dev/addons/clef/sound_front/GeneralUser-GS/documentation/CHANGELOG.html": {
     "mtime": 1776251197.052161,
-    "hash": "655c8ccc41a45b4c83f40adb7eeab333"
+    "ast_hash": "655c8ccc41a45b4c83f40adb7eeab333",
+    "semantic_hash": "655c8ccc41a45b4c83f40adb7eeab333"
   },
   "/home/kai-remote/github/clef-dev/addons/clef/sound_front/GeneralUser-GS/documentation/README.html": {
     "mtime": 1776251197.0535448,
-    "hash": "99138c86aecd53367813352aa988ccaa"
+    "ast_hash": "99138c86aecd53367813352aa988ccaa",
+    "semantic_hash": "99138c86aecd53367813352aa988ccaa"
   },
   "/home/kai-remote/github/clef-dev/addons/clef/sound_front/GeneralUser-GS/documentation/LICENSE.txt": {
     "mtime": 1776251197.0535448,
-    "hash": "f339df226039d9e1484b075f04f312f1"
+    "ast_hash": "f339df226039d9e1484b075f04f312f1",
+    "semantic_hash": "f339df226039d9e1484b075f04f312f1"
   },
   "/home/kai-remote/github/clef-dev/addons/clef/knowledge/README.md": {
     "mtime": 1776251196.6744382,
-    "hash": "f535edc189a0eaf99efc65749954f207"
+    "ast_hash": "f535edc189a0eaf99efc65749954f207",
+    "semantic_hash": "f535edc189a0eaf99efc65749954f207"
+  },
+  "/home/kai-remote/github/clef-dev/.superpowers/brainstorm/1038-1775740301/content/final-design.html": {
+    "mtime": 1779530080.7618341,
+    "ast_hash": "ada8aba3036f29cbd3599dac1a53afbf",
+    "semantic_hash": "ada8aba3036f29cbd3599dac1a53afbf"
+  },
+  "/home/kai-remote/github/clef-dev/.superpowers/brainstorm/1038-1775740301/content/substep-styles.html": {
+    "mtime": 1779530080.7618906,
+    "ast_hash": "1d9de4563a5ab611a4762ddb3ce9cc70",
+    "semantic_hash": "1d9de4563a5ab611a4762ddb3ce9cc70"
+  },
+  "/home/kai-remote/github/clef-dev/.superpowers/brainstorm/1038-1775740301/content/current-problems.html": {
+    "mtime": 1779530080.7617798,
+    "ast_hash": "dafd4798c8c1ff29ed0d64b619e92da2",
+    "semantic_hash": "dafd4798c8c1ff29ed0d64b619e92da2"
+  },
+  "/home/kai-remote/github/clef-dev/.superpowers/brainstorm/1038-1775740301/content/waiting.html": {
+    "mtime": 1779530080.7618906,
+    "ast_hash": "44b3ae034f564b8ed722d684a274336d",
+    "semantic_hash": "44b3ae034f564b8ed722d684a274336d"
+  },
+  "/home/kai-remote/github/clef-dev/.superpowers/brainstorm/1727-1775534054/content/velocity-lane-layout.html": {
+    "mtime": 1776251196.6686718,
+    "ast_hash": "b5b4b3c958d71b594f793db35195244e",
+    "semantic_hash": "b5b4b3c958d71b594f793db35195244e"
+  },
+  "/home/kai-remote/github/clef-dev/.superpowers/brainstorm/1727-1775534054/content/velocity-lane-final-design.html": {
+    "mtime": 1776251196.6685796,
+    "ast_hash": "07d4862807af260f76ebc08998daacfc",
+    "semantic_hash": "07d4862807af260f76ebc08998daacfc"
+  },
+  "/home/kai-remote/github/clef-dev/.claude/skills/theme-factory/theme-showcase.pdf": {
+    "mtime": 1779530080.7597945,
+    "ast_hash": "ec8fbdc541a62160430606c2ff0a0577",
+    "semantic_hash": "ec8fbdc541a62160430606c2ff0a0577"
   },
   "/home/kai-remote/github/clef-dev/addons/clef/sound_front/GeneralUser-GS/documentation/percussion map.pdf": {
     "mtime": 1776251197.059161,
-    "hash": "1d2d9b8ae5906b369b3c17c1df5947a3"
+    "ast_hash": "1d2d9b8ae5906b369b3c17c1df5947a3",
+    "semantic_hash": "1d2d9b8ae5906b369b3c17c1df5947a3"
   },
   "/home/kai-remote/github/clef-dev/addons/clef/sound_front/GeneralUser-GS/documentation/README.pdf": {
     "mtime": 1776251197.059161,
-    "hash": "36667ba59b84d0ea074933389488ef55"
+    "ast_hash": "36667ba59b84d0ea074933389488ef55",
+    "semantic_hash": "36667ba59b84d0ea074933389488ef55"
   },
   "/home/kai-remote/github/clef-dev/icon.svg": {
     "mtime": 1776251197.0698903,
-    "hash": "a16f2eed1b4496c4abf03d329708ba09"
+    "ast_hash": "a16f2eed1b4496c4abf03d329708ba09",
+    "semantic_hash": "a16f2eed1b4496c4abf03d329708ba09"
   },
   "/home/kai-remote/github/clef-dev/addons/clef/icons/clef_icon.png": {
     "mtime": 1776251196.674293,
-    "hash": "646b99b558bce886dafdbb4459cdb9b4"
+    "ast_hash": "646b99b558bce886dafdbb4459cdb9b4",
+    "semantic_hash": "646b99b558bce886dafdbb4459cdb9b4"
+  },
+  "/home/kai-remote/github/clef-dev/.tmp_lego/lego_v2_drums_output.mp3": {
+    "mtime": 1779530080.859172,
+    "ast_hash": "2c088c9a0dd8d14c0c334ca7a1a751cc",
+    "semantic_hash": "2c088c9a0dd8d14c0c334ca7a1a751cc"
+  },
+  "/home/kai-remote/github/clef-dev/.tmp_lego/step1_backing_output.mp3": {
+    "mtime": 1779530080.8610928,
+    "ast_hash": "2a1b0baf1e4b648d4a5fb7baf2a10f8b",
+    "semantic_hash": "2a1b0baf1e4b648d4a5fb7baf2a10f8b"
+  },
+  "/home/kai-remote/github/clef-dev/.tmp_lego/step2_lego_drums_output.mp3": {
+    "mtime": 1779530080.8647034,
+    "ast_hash": "8c859ae90f97e5ea59fd1b68de164c1c",
+    "semantic_hash": "8c859ae90f97e5ea59fd1b68de164c1c"
+  },
+  "/home/kai-remote/github/clef-dev/.tmp_lego/extract_drums_output.mp3": {
+    "mtime": 1779530080.8573408,
+    "ast_hash": "7c6e1f88676c71066b8b2c59ef8ce796",
+    "semantic_hash": "7c6e1f88676c71066b8b2c59ef8ce796"
+  },
+  "/home/kai-remote/github/clef-dev/.tmp_lego/step2_lego_bass_output.mp3": {
+    "mtime": 1779530080.86304,
+    "ast_hash": "a35865a4b5d95c73d40a774fefcfbd46",
+    "semantic_hash": "a35865a4b5d95c73d40a774fefcfbd46"
+  },
+  "/home/kai-remote/github/clef-dev/.tmp_lego/extract_bass_output.mp3": {
+    "mtime": 1779530080.855618,
+    "ast_hash": "98360433d608946dbbdc269f07845b23",
+    "semantic_hash": "98360433d608946dbbdc269f07845b23"
   },
   "/home/kai-remote/github/clef-dev/addons/clef/output/DungeonExploration_r1.mp3": {
     "mtime": 1776251196.7431588,
-    "hash": "1c86e8bf757509a36f2cec725f6923fe"
+    "ast_hash": "1c86e8bf757509a36f2cec725f6923fe",
+    "semantic_hash": "1c86e8bf757509a36f2cec725f6923fe"
   },
   "/home/kai-remote/github/clef-dev/addons/clef/output/DungeonExploration_sample.mp3": {
     "mtime": 1776251196.745159,
-    "hash": "f6e20383b4f7a7a4ab37d959443224d5"
+    "ast_hash": "f6e20383b4f7a7a4ab37d959443224d5",
+    "semantic_hash": "f6e20383b4f7a7a4ab37d959443224d5"
   },
   "/home/kai-remote/github/clef-dev/addons/clef/output/DungeonExploration_final.mp3": {
     "mtime": 1776251196.6831584,
-    "hash": "376d2cfd9a940531960f111fe4e4f209"
+    "ast_hash": "376d2cfd9a940531960f111fe4e4f209",
+    "semantic_hash": "376d2cfd9a940531960f111fe4e4f209"
   },
   "/home/kai-remote/github/clef-dev/addons/clef/output/DungeonExploration_final.wav": {
     "mtime": 1776251196.7381587,
-    "hash": "eecfae599199042609cd65e3bf4c1683"
+    "ast_hash": "eecfae599199042609cd65e3bf4c1683",
+    "semantic_hash": "eecfae599199042609cd65e3bf4c1683"
   },
   "/home/kai-remote/github/clef-dev/addons/clef/sound_front/GeneralUser-GS/support/MIDI timing test.ogg": {
     "mtime": 1776251197.0661612,
-    "hash": "3bdea84a8880f8bffff2f2ba93395b9a"
+    "ast_hash": "3bdea84a8880f8bffff2f2ba93395b9a",
+    "semantic_hash": "3bdea84a8880f8bffff2f2ba93395b9a"
   },
   "/home/kai-remote/github/clef-dev/addons/clef/sound_front/GeneralUser-GS/demo MIDIs/audio/Breakout.ogg": {
     "mtime": 1776251196.9501603,
-    "hash": "b28c60925fe8f62dda898e6cc592b0d4"
+    "ast_hash": "b28c60925fe8f62dda898e6cc592b0d4",
+    "semantic_hash": "b28c60925fe8f62dda898e6cc592b0d4"
   },
   "/home/kai-remote/github/clef-dev/addons/clef/sound_front/GeneralUser-GS/demo MIDIs/audio/Bond.ogg": {
     "mtime": 1776251196.92416,
-    "hash": "17be0c6d9ab44fffe92e6b8b7424a12e"
+    "ast_hash": "17be0c6d9ab44fffe92e6b8b7424a12e",
+    "semantic_hash": "17be0c6d9ab44fffe92e6b8b7424a12e"
   },
   "/home/kai-remote/github/clef-dev/addons/clef/sound_front/GeneralUser-GS/demo MIDIs/audio/Earth Day - by Richard Audd (fixed).ogg": {
     "mtime": 1776251196.9741604,
-    "hash": "9943d6f14bf2cdd4ad2e12b3e51136f5"
+    "ast_hash": "9943d6f14bf2cdd4ad2e12b3e51136f5",
+    "semantic_hash": "9943d6f14bf2cdd4ad2e12b3e51136f5"
   },
   "/home/kai-remote/github/clef-dev/addons/clef/sound_front/GeneralUser-GS/demo MIDIs/audio/Jump!.ogg": {
     "mtime": 1776251197.0011606,
-    "hash": "e3730fe5a381323b710bb18a942c8875"
+    "ast_hash": "e3730fe5a381323b710bb18a942c8875",
+    "semantic_hash": "e3730fe5a381323b710bb18a942c8875"
   },
   "/home/kai-remote/github/clef-dev/addons/clef/sound_front/GeneralUser-GS/demo MIDIs/audio/J-cycle.ogg": {
     "mtime": 1776251196.9841604,
-    "hash": "6a17dfd323f58b26fce05a5381ceb15c"
+    "ast_hash": "6a17dfd323f58b26fce05a5381ceb15c",
+    "semantic_hash": "6a17dfd323f58b26fce05a5381ceb15c"
   },
   "/home/kai-remote/github/clef-dev/addons/clef/sound_front/GeneralUser-GS/demo MIDIs/audio/The HYBRID Collage (v2.0) - by S. Christian Collins.ogg": {
     "mtime": 1776251197.0341609,
-    "hash": "cdb11594910864dec211d036d596f30c"
+    "ast_hash": "cdb11594910864dec211d036d596f30c",
+    "semantic_hash": "cdb11594910864dec211d036d596f30c"
   },
   "/home/kai-remote/github/clef-dev/addons/clef/sound_front/GeneralUser-GS/demo MIDIs/audio/Umi no Mieru Machi.ogg": {
     "mtime": 1776251197.052161,
-    "hash": "05bbd63382417994f153b7afb3b70864"
+    "ast_hash": "05bbd63382417994f153b7afb3b70864",
+    "semantic_hash": "05bbd63382417994f153b7afb3b70864"
   },
   "/home/kai-remote/github/clef-dev/addons/clef/sound_front/GeneralUser-GS/demo MIDIs/audio/Santa Claus is Comin' to Town.ogg": {
     "mtime": 1776251197.0201607,
-    "hash": "a2d1b442a305fd5f1ff72f4c7203a27b"
+    "ast_hash": "a2d1b442a305fd5f1ff72f4c7203a27b",
+    "semantic_hash": "a2d1b442a305fd5f1ff72f4c7203a27b"
   },
   "/home/kai-remote/github/clef-dev/addons/clef/sound_front/GeneralUser-GS/demo MIDIs/audio/Dance.ogg": {
     "mtime": 1776251196.9611604,
-    "hash": "7caccd34e47c9b81d21047a235e7ced1"
+    "ast_hash": "7caccd34e47c9b81d21047a235e7ced1",
+    "semantic_hash": "7caccd34e47c9b81d21047a235e7ced1"
+  },
+  "/home/kai-remote/github/clef-dev/.tmp_acestep/t2m_8bit_fm_synth_output.mp3": {
+    "mtime": 1779530080.824442,
+    "ast_hash": "fde774f1464b3348c74b0c27b3407ce4",
+    "semantic_hash": "fde774f1464b3348c74b0c27b3407ce4"
+  },
+  "/home/kai-remote/github/clef-dev/.tmp_acestep/t2m_spacebattle_serious_output.mp3": {
+    "mtime": 1779530080.8449047,
+    "ast_hash": "e000bb3c5833b2e37814e875b160ea25",
+    "semantic_hash": "e000bb3c5833b2e37814e875b160ea25"
+  },
+  "/home/kai-remote/github/clef-dev/.tmp_acestep/cover_clef_candidate2_output.mp3": {
+    "mtime": 1779530080.795803,
+    "ast_hash": "8773aa9bc72c5b5d5a9b12ae08aa3df4",
+    "semantic_hash": "8773aa9bc72c5b5d5a9b12ae08aa3df4"
+  },
+  "/home/kai-remote/github/clef-dev/.tmp_acestep/t2m_chiptune_battle_output.mp3": {
+    "mtime": 1779530080.8362823,
+    "ast_hash": "d62715350862b4833cb7d7f31fbfb4ab",
+    "semantic_hash": "d62715350862b4833cb7d7f31fbfb4ab"
+  },
+  "/home/kai-remote/github/clef-dev/.tmp_acestep/cover_strength09_chiptune_output.mp3": {
+    "mtime": 1779530080.8045893,
+    "ast_hash": "fe710974cb28cd6fe24b7c960799357a",
+    "semantic_hash": "fe710974cb28cd6fe24b7c960799357a"
+  },
+  "/home/kai-remote/github/clef-dev/.tmp_acestep/cover_text2music_ref_output.mp3": {
+    "mtime": 1779530080.8135123,
+    "ast_hash": "05f67b27c8eb1185c42c1eb043ad7fe8",
+    "semantic_hash": "05f67b27c8eb1185c42c1eb043ad7fe8"
+  },
+  "/home/kai-remote/github/clef-dev/.tmp_acestep/cover_upload_mp3_output.mp3": {
+    "mtime": 1779530080.8194523,
+    "ast_hash": "c8db1588b42c5cdd398f77183ec9b324",
+    "semantic_hash": "c8db1588b42c5cdd398f77183ec9b324"
+  },
+  "/home/kai-remote/github/clef-dev/.tmp_acestep/cover_upload_ctx_audio_output.mp3": {
+    "mtime": 1779530080.8157418,
+    "ast_hash": "94dfb29ad91f5187c03cd75e674b27c6",
+    "semantic_hash": "94dfb29ad91f5187c03cd75e674b27c6"
+  },
+  "/home/kai-remote/github/clef-dev/.tmp_acestep/test3_45s_steps40_output.mp3": {
+    "mtime": 1779530080.8538775,
+    "ast_hash": "89380cef416b79017d6b505f30c3fee4",
+    "semantic_hash": "89380cef416b79017d6b505f30c3fee4"
+  },
+  "/home/kai-remote/github/clef-dev/.tmp_acestep/t2m_8bit_nes_output.mp3": {
+    "mtime": 1779530080.8302538,
+    "ast_hash": "f10f8760bbc5e47b183d8e5f536f5e3b",
+    "semantic_hash": "f10f8760bbc5e47b183d8e5f536f5e3b"
+  },
+  "/home/kai-remote/github/clef-dev/.tmp_acestep/test2_45s_steps20_output.mp3": {
+    "mtime": 1779530080.850075,
+    "ast_hash": "901cf137cb120902e88ceb913e26c737",
+    "semantic_hash": "901cf137cb120902e88ceb913e26c737"
+  },
+  "/home/kai-remote/github/clef-dev/.tmp_acestep/cover_strength10_noprompt_output.mp3": {
+    "mtime": 1779530080.810251,
+    "ast_hash": "022db041b0821dd7cde4a62e1eb6a5c4",
+    "semantic_hash": "022db041b0821dd7cde4a62e1eb6a5c4"
+  },
+  "/home/kai-remote/github/clef-dev/.tmp_acestep/t2m_spacebattle_dark_output.mp3": {
+    "mtime": 1779530080.8390813,
+    "ast_hash": "ba4bc1509ac0f5cfe29503ca1bcce136",
+    "semantic_hash": "ba4bc1509ac0f5cfe29503ca1bcce136"
+  },
+  "/home/kai-remote/github/clef-dev/.tmp_acestep/cover_strength10_chiptune_output.mp3": {
+    "mtime": 1779530080.8077123,
+    "ast_hash": "43dd79410ab46bae5c57a5a81c11915c",
+    "semantic_hash": "43dd79410ab46bae5c57a5a81c11915c"
+  },
+  "/home/kai-remote/github/clef-dev/.tmp_acestep/t2m_8bit_gameboy_output.mp3": {
+    "mtime": 1779530080.8273208,
+    "ast_hash": "b87459f60306d7f69ae9dfd420a37f93",
+    "semantic_hash": "b87459f60306d7f69ae9dfd420a37f93"
+  },
+  "/home/kai-remote/github/clef-dev/.tmp_acestep/cover_clef_candidate3_output.mp3": {
+    "mtime": 1779530080.798992,
+    "ast_hash": "7c4ec3d83a500cfc93aa0b2ccd4032ae",
+    "semantic_hash": "7c4ec3d83a500cfc93aa0b2ccd4032ae"
+  },
+  "/home/kai-remote/github/clef-dev/.tmp_acestep/acestep_text2music_output.mp3": {
+    "mtime": 1779530080.7925773,
+    "ast_hash": "848d7aae25ead17e90b1fa189d247397",
+    "semantic_hash": "848d7aae25ead17e90b1fa189d247397"
+  },
+  "/home/kai-remote/github/clef-dev/.tmp_acestep/cover_upload_src_audio_output.mp3": {
+    "mtime": 1779530080.8215766,
+    "ast_hash": "ee7e5d1db873ab79be514704450329c7",
+    "semantic_hash": "ee7e5d1db873ab79be514704450329c7"
+  },
+  "/home/kai-remote/github/clef-dev/.tmp_acestep/test1_22s_steps8_output.mp3": {
+    "mtime": 1779530080.8466358,
+    "ast_hash": "41463bf065111e955318408ce3ed3083",
+    "semantic_hash": "41463bf065111e955318408ce3ed3083"
+  },
+  "/home/kai-remote/github/clef-dev/.tmp_acestep/cover_spacebattle_noprompt_output.mp3": {
+    "mtime": 1779530080.8014011,
+    "ast_hash": "dd6ac1713b1f7ad5f079c6ad4f594384",
+    "semantic_hash": "dd6ac1713b1f7ad5f079c6ad4f594384"
+  },
+  "/home/kai-remote/github/clef-dev/.tmp_acestep/SpaceBattle_8bit.wav": {
+    "mtime": 1779530080.7885497,
+    "ast_hash": "8b7ee3823db41be74447d8674e86bb6b",
+    "semantic_hash": "8b7ee3823db41be74447d8674e86bb6b"
+  },
+  "/home/kai-remote/github/clef-dev/.tmp_acestep/t2m_spacebattle_epic_output.mp3": {
+    "mtime": 1779530080.8422005,
+    "ast_hash": "44ce8d1ca5291ea7ecb9fee7e8311fca",
+    "semantic_hash": "44ce8d1ca5291ea7ecb9fee7e8311fca"
+  },
+  "/home/kai-remote/github/clef-dev/.tmp_acestep/t2m_8bit_retro_vgm_output.mp3": {
+    "mtime": 1779530080.8331552,
+    "ast_hash": "7462423601a6842fb0018e0c71dafd1c",
+    "semantic_hash": "7462423601a6842fb0018e0c71dafd1c"
+  },
+  "/home/kai-remote/github/clef-dev/.tmp_minimax/minimax_text_output.mp3": {
+    "mtime": 1779530080.8871274,
+    "ast_hash": "ea396f5211cf91cc8bc24fd38f6de7b0",
+    "semantic_hash": "ea396f5211cf91cc8bc24fd38f6de7b0"
+  },
+  "/home/kai-remote/github/clef-dev/.tmp_lego_v2/step1_backing_output.mp3": {
+    "mtime": 1779530080.866588,
+    "ast_hash": "6c83a8cc5b1b00a244b9a8b4ced796df",
+    "semantic_hash": "6c83a8cc5b1b00a244b9a8b4ced796df"
+  },
+  "/home/kai-remote/github/clef-dev/.tmp_lego_v2/step2_lego_drums_output.mp3": {
+    "mtime": 1779530080.8700504,
+    "ast_hash": "0c74e099225ea93dfee0bd6c5609eb97",
+    "semantic_hash": "0c74e099225ea93dfee0bd6c5609eb97"
+  },
+  "/home/kai-remote/github/clef-dev/.tmp_lego_v2/step2_lego_bass_output.mp3": {
+    "mtime": 1779530080.868401,
+    "ast_hash": "76cf4e25ecb22963e93c78912f813808",
+    "semantic_hash": "76cf4e25ecb22963e93c78912f813808"
+  },
+  "/home/kai-remote/github/clef-dev/AGENTS.md": {
+    "mtime": 1779530085.3701985,
+    "ast_hash": "9362f28f640df910f9fb4689fbfda537",
+    "semantic_hash": "9362f28f640df910f9fb4689fbfda537"
   }
 }

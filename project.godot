@@ -28,7 +28,7 @@ project/assembly_name="Clef_Dev"
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/clef/plugin.cfg")
+enabled=PackedStringArray("res://addons/clef/plugin.cfg", "res://addons/midi/plugin.cfg")
 
 [physics]
 

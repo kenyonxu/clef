@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0d0d1a; color: #ccc; font-family: -apple-system, system-ui, sans-serif; padding: 20px; }
+
+  .panel-title { font-size: 14px; font-weight: 700; color: #fff; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
+  .badge { font-size: 10px; padding: 2px 8px; border-radius: 999px; font-weight: 600; }
+  .badge-running { background: rgba(96,165,250,0.2); color: #60a5fa; border: 1px solid rgba(96,165,250,0.4); }
+  .badge-done { background: rgba(74,222,128,0.15); color: #4ade80; }
+  .badge-pending { background: rgba(255,255,255,0.05); color: #555; }
+  .badge-awaiting { background: rgba(251,191,36,0.15); color: #fbbf24; border: 1px solid rgba(251,191,36,0.3); }
+
+  .step-card {
+    background: #13132a;
+    border: 1px solid #252540;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-bottom: 6px;
+    transition: all 0.3s ease;
+  }
+  .step-card.is-done { opacity: 0.6; }
+  .step-card.is-pending { opacity: 0.4; }
+
+  .step-card.is-running {
+    border-color: rgba(96,165,250,0.5);
+    background: rgba(96,165,250,0.06);
+    box-shadow: 0 0 20px rgba(96,165,250,0.1), 0 0 40px rgba(96,165,250,0.05);
+    animation: cardPulse 2s ease-in-out infinite;
+  }
+  @keyframes cardPulse {
+    0%, 100% { border-color: rgba(96,165,250,0.4); box-shadow: 0 0 15px rgba(96,165,250,0.08); }
+    50% { border-color: rgba(96,165,250,0.7); box-shadow: 0 0 25px rgba(96,165,250,0.15); }
+  }
+
+  .step-card.is-awaiting {
+    border-color: rgba(251,191,36,0.4);
+    background: rgba(251,191,36,0.04);
+  }
+
+  .step-header { display: flex; justify-content: space-between; align-items: center; }
+  .step-label { font-size: 13px; font-weight: 600; color: #fff; }
+  .step-label-pending { color: #555; }
+  .step-label-done { color: #888; }
+  .step-id { font-size: 10px; color: #555; font-family: monospace; margin-right: 8px; }
+
+  .agents-row { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+  .agent-tag { font-size: 10px; padding: 1px 6px; border-radius: 4px; font-family: monospace; }
+  .agent-tag-active { background: rgba(96,165,250,0.15); color: #60a5fa; border: 1px solid rgba(96,165,250,0.3); }
+  .agent-tag-done { background: rgba(74,222,128,0.1); color: #4ade80; }
+  .agent-tag-pending { background: rgba(255,255,255,0.03); color: #444; }
+  .agent-model { color: #444; font-size: 9px; }
+
+  .substeps { margin-top: 8px; padding-left: 12px; border-left: 2px solid #252540; }
+  .substep { font-size: 11px; padding: 2px 0; display: flex; align-items: center; gap: 6px; line-height: 1.6; }
+  .substep-done { color: #4ade80; }
+  .substep-running { color: #60a5fa; }
+  .substep-pending { color: #444; }
+  .substep-icon { font-size: 10px; width: 14px; text-align: center; }
+  .substep-agent { font-family: monospace; font-size: 9px; color: #555; }
+  .substep-running .substep-agent { color: #3b82f6; }
+
+  .spinner { display: inline-block; width: 10px; height: 10px; border: 1.5px solid rgba(96,165,250,0.3); border-top-color: #60a5fa; border-radius: 50%; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .confirm-badge { display: inline-flex; align-items: center; gap: 3px; font-size: 9px; color: #fbbf24; background: rgba(251,191,36,0.1); padding: 1px 6px; border-radius: 3px; margin-left: 6px; }
+
+  .section-label { font-size: 10px; color: #555; margin: 16px 0 8px; text-transform: uppercase; letter-spacing: 1px; }
+</style>
+</head>
+<body>
+
+<div class="section-label">Workflow — 已完成</div>
+
+<!-- Step: parse (done) -->
+<div class="step-card is-done">
+  <div class="step-header">
+    <div style="display:flex;align-items:center;">
+      <span class="step-id">parse</span>
+      <span class="step-label step-label-done">需求解析 + 规划</span>
+    </div>
+    <span class="badge badge-done">done</span>
+  </div>
+  <div class="substeps">
+    <div class="substep substep-done"><span class="substep-icon">✓</span> 解析用户需求</div>
+    <div class="substep substep-done"><span class="substep-icon">✓</span> 生成 plan.json</div>
+    <div class="substep substep-done"><span class="substep-icon">✓</span> 验证规划参数</div>
+  </div>
+</div>
+
+<!-- Step: sample (done) -->
+<div class="step-card is-done">
+  <div class="step-header">
+    <div style="display:flex;align-items:center;">
+      <span class="step-id">sample</span>
+      <span class="step-label step-label-done">方向小样</span>
+      <span class="confirm-badge">✓ 已确认</span>
+    </div>
+    <span class="badge badge-done">done</span>
+  </div>
+  <div class="agents-row">
+    <span class="agent-tag agent-tag-done">clef-composer</span>
+    <span class="agent-tag agent-tag-done">clef-harmonist</span>
+    <span class="agent-tag agent-tag-done">clef-rhythmist</span>
+    <span class="agent-tag agent-tag-done">clef-reviewer</span>
+  </div>
+  <div class="substeps">
+    <div class="substep substep-done"><span class="substep-icon">✓</span> 生成和声 <span class="substep-agent">clef-harmonist</span></div>
+    <div class="substep substep-done"><span class="substep-icon">✓</span> 生成旋律 <span class="substep-agent">clef-composer</span></div>
+    <div class="substep substep-done"><span class="substep-icon">✓</span> 生成节奏 <span class="substep-agent">clef-rhythmist</span></div>
+    <div class="substep substep-done"><span class="substep-icon">✓</span> 合并声部</div>
+    <div class="substep substep-done"><span class="substep-icon">✓</span> 技术验证</div>
+    <div class="substep substep-done"><span class="substep-icon">✓</span> 旋律审查 <span class="substep-agent">clef-reviewer</span> <span style="color:#4ade80;font-size:9px;">pass</span></div>
+    <div class="substep substep-done"><span class="substep-icon">✓</span> 转换 MIDI</div>
+    <div class="substep substep-done"><span class="substep-icon">✓</span> 完整审查 <span class="substep-agent">clef-reviewer</span></div>
+  </div>
+</div>
+
+<div class="section-label">当前阶段</div>
+
+<!-- Step: create (running — highlighted!) -->
+<div class="step-card is-running">
+  <div class="step-header">
+    <div style="display:flex;align-items:center;">
+      <span class="step-id">create</span>
+      <span class="step-label">完整创作</span>
+    </div>
+    <span class="badge badge-running"><span class="spinner"></span> running</span>
+  </div>
+  <div class="agents-row">
+    <span class="agent-tag agent-tag-done">clef-harmonist</span>
+    <span class="agent-tag agent-tag-done">clef-composer</span>
+    <span class="agent-tag agent-tag-active">clef-rhythmist</span>
+  </div>
+  <div class="substeps" style="border-left-color: rgba(96,165,250,0.3);">
+    <div class="substep substep-done"><span class="substep-icon">✓</span> 生成和声 <span class="substep-agent">clef-harmonist</span></div>
+    <div class="substep substep-done"><span class="substep-icon">✓</span> 生成旋律 <span class="substep-agent">clef-composer</span></div>
+    <div class="substep substep-running"><span class="substep-icon"><span class="spinner"></span></span> 生成节奏 <span class="substep-agent">clef-rhythmist</span></div>
+    <div class="substep substep-pending"><span class="substep-icon">○</span> 合并声部</div>
+    <div class="substep substep-pending"><span class="substep-icon">○</span> 技术验证</div>
+    <div class="substep substep-pending"><span class="substep-icon">○</span> 转换 MIDI</div>
+  </div>
+</div>
+
+<div class="section-label">待执行</div>
+
+<!-- Step: iterate (pending) -->
+<div class="step-card is-pending">
+  <div class="step-header">
+    <div style="display:flex;align-items:center;">
+      <span class="step-id">iterate</span>
+      <span class="step-label step-label-pending">质量迭代</span>
+    </div>
+    <span class="badge badge-pending">pending</span>
+  </div>
+  <div class="agents-row">
+    <span class="agent-tag agent-tag-pending">clef-reviewer</span>
+    <span class="agent-tag agent-tag-pending">clef-revision</span>
+    <span class="agent-tag agent-tag-pending">clef-leader</span>
+  </div>
+</div>
+
+<!-- Step: review (pending) -->
+<div class="step-card is-pending">
+  <div class="step-header">
+    <div style="display:flex;align-items:center;">
+      <span class="step-id">review</span>
+      <span class="step-label step-label-pending">试听审核</span>
+      <span class="confirm-badge" style="opacity:0.4;">需确认</span>
+    </div>
+    <span class="badge badge-pending">pending</span>
+  </div>
+  <div class="agents-row">
+    <span class="agent-tag agent-tag-pending">clef-reviewer</span>
+  </div>
+</div>
+
+<!-- Step: express (pending) -->
+<div class="step-card is-pending">
+  <div class="step-header">
+    <div style="display:flex;align-items:center;">
+      <span class="step-id">express</span>
+      <span class="step-label step-label-pending">表现力注入</span>
+    </div>
+    <span class="badge badge-pending">pending</span>
+  </div>
+  <div class="agents-row">
+    <span class="agent-tag agent-tag-pending">clef-orchestrator</span>
+  </div>
+</div>
+
+<div style="margin-top: 20px; padding: 10px; background: #13132a; border-radius: 6px; border: 1px solid #252540;">
+  <div style="font-size: 10px; color: #555; font-family: monospace;">
+    设计要点：<br/>
+    ✓ running 步骤有蓝色发光边框 + 脉冲动画<br/>
+    ✓ agents 行显示所有参与 agent（含 reviewer/leader）<br/>
+    ✓ 子步骤用缩进列表 ✓/spinner/○ 显示<br/>
+    ✓ 每个子步骤标注执行的 agent 名称<br/>
+    ✓ 已完成步骤降低透明度，待执行步骤更淡<br/>
+    ✓ confirm 步骤有黄色确认标记<br/>
+    ✓ agents 行中已完成的显示绿色，运行中蓝色
+  </div>
+</div>
+
+</body>
+</html>

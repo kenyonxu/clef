@@ -1,0 +1,201 @@
+{
+  "overall_score": 7.2,
+  "dimensions": {
+    "melody": {
+      "score": 7,
+      "issues": [
+        {
+          "bar": "全曲",
+          "severity": "FAIL",
+          "description": "M6 音区舒适度: Violin SF2 sweet_spot [44-67] (E2-G#4) 覆盖率为 0%，旋律 D5-D6 (72-86) 完全超出最佳音域。高音区采样密度下降，音色质量受损",
+          "suggestion": "将旋律整体下移一个八度至 D4-D5 区间（MIDI 62-74），落入 sweet_spot。需同步调整和声音区避免重叠，或将 Violin register 修改为 D5-D6 使 sweet_spot 与实际演奏区间匹配"
+        },
+        {
+          "bar": "13-14",
+          "severity": "WARN",
+          "description": "M5 高潮位置: B段高潮 m13-14 最高音 d'' 与 m12 相同，未实现音高递进。!f! 力度仅持续2小节后立即回到 !mf!，高潮感不足",
+          "suggestion": "m13 可推升至 e''(E6) 或保持 d'' 但延长 !f! 至 m14 结束，配合渐弱过渡回 !mf!"
+        },
+        {
+          "bar": "全曲",
+          "severity": "WARN",
+          "description": "M7 音高丰富度: Top3 音高(G5/A5/B5)占比约74%，远超45%阈值。旋律被 G-A-B 三音过度主导，音高材料集中",
+          "suggestion": "增加 F#5 和 E5 的使用频率，或在 A段加入 D4-E4 低音区音符，丰富音高分布"
+        }
+      ]
+    },
+    "harmony": {
+      "score": 8,
+      "issues": [
+        {
+          "bar": "11",
+          "severity": "WARN",
+          "description": "m11 和声标记为 Am，但 V:2 声部实际写为 [cea]2 [cea]2 [ceg]2 [ceg]2，后半小节 E-G 属于 C 和弦音而非 Am 构成音。和弦标记与实际音符不一致",
+          "suggestion": "将 m11 后半改为 [cea]2 [cea]2 保持 Am 一致，或将和弦标记改为 Am→C 过渡"
+        },
+        {
+          "bar": "13-14",
+          "severity": "WARN",
+          "description": "B段 energy=5 的 m13-14 和声为 G-D，功能色彩偏保守。可考虑引入更多色彩和弦增加张力对比",
+          "suggestion": "m13-14 可将 G-D 改为 Em-B7 或 Am-E7，增加和声张力后再解决到 m15-16 的 C-G"
+        }
+      ]
+    },
+    "rhythm": {
+      "score": 7,
+      "issues": [
+        {
+          "bar": "9-14",
+          "severity": "WARN",
+          "description": "B段旋律节奏动机变化不够，m9-m14 持续相似的短-长-长-长模式。B段 energy=5 但旋律节奏驱动力偏弱",
+          "suggestion": "m13-14 配合 !f! 力度可使用更紧凑的节奏型（如连续八分音符或附点节奏），制造更明显的高潮推进"
+        },
+        {
+          "bar": "9-16",
+          "severity": "WARN",
+          "description": "V:5 竖琴在 B 段每小节均使用相同的'八分音符x6 + 休止x2'节奏型，8小节无变化，容易产生机械感",
+          "suggestion": "可在 m13-14 高潮处改为更密集的分解（如十六分音符波浪），m15-16 过渡回 A 段时逐渐放疏"
+        }
+      ]
+    },
+    "structure": {
+      "score": 9,
+      "issues": [
+        {
+          "bar": "8-9",
+          "severity": "WARN",
+          "description": "A→B 段过渡：m8 和弦 G 全音符到 m9 突然切换 C 八分分解，配器+节奏+和声三重变化同时发生，过渡略突然",
+          "suggestion": "m8 后两拍可加入 D 音（V级）作为和声悬留，或 m9 前两拍保持 G 和弦再过渡到 C"
+        }
+      ]
+    },
+    "style": {
+      "score": 8,
+      "issues": [
+        {
+          "bar": "全曲",
+          "severity": "WARN",
+          "description": "凯尔特风格特征到位：d'-g' 纯五度动机、Dsus4-D 挂留解决、五声音阶倾向。竖琴铺底增强了 B 段的城镇苏醒氛围",
+          "suggestion": "无需修改，风格把握准确"
+        }
+      ]
+    },
+    "orchestration": {
+      "score": 6,
+      "issues": [
+        {
+          "bar": "9-16",
+          "severity": "WARN",
+          "description": "V:5 竖琴 (C5-B5, MIDI 72-83) 与 V:1 旋律 (D5-D6, MIDI 74-86) 频段严重重叠，11/12 半音重叠。竖琴的分解和弦在旋律下方仅低 2 半音，会掩蔽旋律中低频，削弱旋律清晰度",
+          "suggestion": "将竖琴音区下移至 G4-B4 (MIDI 67-71) 或 C4-G4 (MIDI 60-67)，与旋律保持至少 5 半音间距。同时降低竖琴力度至 !mp!"
+        },
+        {
+          "bar": "9-16",
+          "severity": "WARN",
+          "description": "V:5 竖琴使用 !mf! 力度与 V:1 旋律 B 段 !mf!/!f! 力度相当，铺底声部与旋律声部缺乏主次层次。作为背景织体层，竖琴音量偏高",
+          "suggestion": "竖琴改为 !mp! 或 !p!，确保旋律突出在中前层"
+        },
+        {
+          "bar": "全曲",
+          "severity": "WARN",
+          "description": "空间层次缺失: 所有声部未设置 CC10 声像和 CC91 混响参数，默认居中+相同混响。竖琴作为背景铺底层应偏侧放置并增加混响以拉远距离，与居中的旋律形成空间分离",
+          "suggestion": "Orchestrator 注入时：竖琴 CC10=78(偏右) + CC91=80(混响铺底)；和声 CC10=44(偏左)；旋律/低音保持 CC10=64(居中)"
+        }
+      ]
+    },
+    "execution": {
+      "score": 7,
+      "issues": [
+        {
+          "bar": "全曲",
+          "severity": "FAIL",
+          "description": "音高丰富度: 旋律 Top3 音高占比约74%，远超45%阈值。旋律被 G-A-B 三音过度主导",
+          "suggestion": "增加 F#5 和 E5 使用频率，目标将 Top3 占比降至 45% 以下"
+        }
+      ]
+    }
+  },
+  "harp_review": {
+    "score": 7,
+    "verdict": "pass",
+    "checks": [
+      {
+        "id": "orchestration_balance",
+        "name": "配器平衡",
+        "score": 5,
+        "issues": [
+          {
+            "bar": "9-16",
+            "severity": "WARN",
+            "description": "竖琴频段 C5-B5 (72-83) 与旋律 D5-D6 (74-86) 严重重叠（11/12 半音），作为铺底声部未能让出旋律空间",
+            "suggestion": "下移至 G4-B4 (67-71) 或 C4-G4 (60-67)，与旋律保持 5+ 半音间距"
+          },
+          {
+            "bar": "9-16",
+            "severity": "WARN",
+            "description": "竖琴力度 !mf! 与旋律持平，铺底声部音量偏高，存在抢旋律风险",
+            "suggestion": "改为 !mp! 或 !p!"
+          }
+        ]
+      },
+      {
+        "id": "harmony_consistency",
+        "name": "和声一致性",
+        "score": 10,
+        "issues": []
+      },
+      {
+        "id": "range_compliance",
+        "name": "音域合规",
+        "score": 10,
+        "issues": []
+      },
+      {
+        "id": "voice_balance",
+        "name": "声部平衡",
+        "score": 6,
+        "issues": [
+          {
+            "bar": "9-16",
+            "severity": "WARN",
+            "description": "竖琴力度偏高 (!mf!) 且频段与旋律重叠，作为背景铺底声部应更轻更远",
+            "suggestion": "力度降至 !mp! 并下移音区一个八度；后续由 Orchestrator 注入 CC10 偏侧 + CC91 混响"
+          }
+        ]
+      },
+      {
+        "id": "rhythm_alignment",
+        "name": "节奏对齐",
+        "score": 10,
+        "issues": []
+      },
+      {
+        "id": "section_contrast",
+        "name": "段落对比",
+        "score": 9,
+        "issues": [
+          {
+            "bar": "1-16",
+            "severity": "WARN",
+            "description": "A 段无竖琴 vs B 段有竖琴的织体变化有效增强了'城镇渐活'的层次递进感，设计合理",
+            "suggestion": "无需修改"
+          }
+        ]
+      },
+      {
+        "id": "overall_effect",
+        "name": "整体效果",
+        "score": 8,
+        "issues": [
+          {
+            "bar": "9-16",
+            "severity": "WARN",
+            "description": "竖琴分解和弦有效增强了 B 段的流动感和空间氛围，波浪式分解模式（三-五-三-五-根-三）音色温暖，符合 JRPG 城镇风格。m16 渐出处理 (z4) 支持了循环过渡",
+            "suggestion": "下移音区后将更有效地发挥铺底功能，不会干扰旋律"
+          }
+        ]
+      }
+    ]
+  },
+  "summary": "添加 V:5 竖琴层后的完整乐谱评审 (7.2/10)：竖琴声部成功补充了之前缺失的配器层，A 段无竖琴 vs B 段有竖琴的段落对比设计有效。竖琴和声与 V:2 完全一致（10/10），音域在 C3-B6 范围内合规（10/10），节奏对齐正确（10/16 小节）。主要改进点：(1) 竖琴频段 C5-B5 与旋律 D5-D6 严重重叠（11/12 半音），需下移一个八度至 C4-G4 避免掩蔽旋律；(2) 竖琴力度 !mf! 偏高，铺底层应使用 !mp!；(3) 缺少 CC10/CC91 空间参数，需 Orchestrator 注入。此前存在的问题仍存在：旋律 sweet_spot 覆盖率 0%、Top3 音高占比 74%。竖琴的加入将配器得分从 5 提升至 6，整体得分从 6.8 提升至 7.2。verdict: pass（竖琴专项审核通过，建议优化音区和力度后由 Orchestrator 注入空间参数）。"
+}

@@ -184,12 +184,12 @@ func _gui_input(event: InputEvent) -> void:
 func _audition_patch(preset_index: int) -> void:
 	if _audition_bank == null:
 		return
-	var inst_info: ClefInstrumentInfo = _audition_bank.get_instrument(preset_index, 60, 100, 0)
-	if inst_info == null:
+	var inst_infos: Array[ClefInstrumentInfo] = _audition_bank.get_instruments(preset_index, 60, 100, 0)
+	if inst_infos.is_empty():
 		return
 	var voice := ClefVoice.new()
 	_audition_player.add_child(voice)
-	voice.start_note(inst_info, 0, 60, 100)
+	voice.start_note(inst_infos[0], 0, 60, 100, 1.0, inst_infos.size())
 	voice.bus = "Master"
 	# 1.5 秒后自动停止并清理
 	_cleanup_timer = _cleanup_timer if _cleanup_timer != null else Timer.new()

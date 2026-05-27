@@ -164,23 +164,23 @@ func _build_layout() -> void:
 	load_row.add_child(mode_spacer)
 	var mode_group := ButtonGroup.new()
 	var btn_play := Button.new()
-	btn_play.text = l10n.t("▶ Playing mode")
+	btn_play.text = l10n.t("▶ Playback mode")
 	btn_play.toggle_mode = true
 	btn_play.button_group = mode_group
 	btn_play.button_pressed = true
 	btn_play.pressed.connect(func():
-		_piano_roll.set_mode(PianoRoll.Mode.PLAYING)
+		_piano_roll.set_mode(PianoRoll.Mode.PLAYBACK)
 		_editor_player.stop()
 		_progress_timer.stop()
 		_transport_bar.update_progress(0.0, _editor_player.get_duration())
 	)
 	load_row.add_child(btn_play)
 	var btn_edit := Button.new()
-	btn_edit.text = l10n.t("✏ Editing mode")
+	btn_edit.text = l10n.t("✏ Edit mode")
 	btn_edit.toggle_mode = true
 	btn_edit.button_group = mode_group
 	btn_edit.pressed.connect(func():
-		_piano_roll.set_mode(PianoRoll.Mode.EDITING)
+		_piano_roll.set_mode(PianoRoll.Mode.EDIT)
 		_editor_player.stop()
 		_progress_timer.stop()
 		_transport_bar.update_progress(0.0, _editor_player.get_duration())
@@ -195,7 +195,7 @@ func _build_layout() -> void:
 	)
 	load_row.add_child(btn_feedback)
 	_mode_buttons = [btn_play, btn_edit, btn_feedback]
-	_update_mode_button_highlight(PianoRoll.Mode.PLAYING)
+	_update_mode_button_highlight(PianoRoll.Mode.PLAYBACK)
 
 	center_vbox.add_child(load_row)
 
@@ -274,6 +274,7 @@ func _build_layout() -> void:
 
 	# ── Velocity Lane ──
 	_velocity_lane = VelocityLane.new()
+	_velocity_lane.custom_minimum_size = Vector2i(0, 80)
 	_velocity_lane.size_flags_stretch_ratio = 1
 	_velocity_lane.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_velocity_lane.size_flags_horizontal = Control.SIZE_EXPAND_FILL

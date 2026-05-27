@@ -12,6 +12,22 @@ import tempfile
 
 import mido
 
+# Default CC values the Godot player uses when no events exist in the source MIDI.
+# When the source MIDI lacks these baselines, expression plan values are scaled
+# so that their peak maps to the corresponding default, preserving relative dynamics.
+_CC_DEFAULTS: dict[int, int] = {
+    7: 100,   # CC7:  channel volume   (player default 100/127)
+    11: 127,  # CC11: expression       (player default 127/127 = 1.0)
+}
+
+
+def _has_cc_baseline(abs_events: list[tuple[int, mido.Message]], control: int) -> bool:
+    """Check whether a track already contains events for a given CC number."""
+    return any(
+        msg.type == 'control_change' and msg.control == control
+        for _, msg in abs_events
+    )
+
 
 def _find_track_for_channel(midi: mido.MidiFile, channel: int) -> int | None:
 	"""Find the track index that contains messages for the given channel.
@@ -294,8 +310,55 @@ def inject(base_midi_path: str, plan_path: str, output_path: str) -> None:
 		# Convert existing track to absolute time
 		abs_events = _track_to_absolute(midi.tracks[track_idx])
 
+		# If the track has no existing CC events for a given control,
+		# the MIDI player uses its own default.  For CC7, scale the
+		# plan values so the peak maps to the default (preserves dynamics).
+		# For CC11 (Expression), skip injection entirely when no baseline
+		# exists -- CC11 is for real-time performance nuance, not score-level
+		# dynamics.  Letting CC7 carry dynamics alone avoids the CC7*CC11
+		# compound volume drop that occurs when neither existed in the source.
+		plan_events = list(track_plan.get('events', []))
+		for ctrl, default in _CC_DEFAULTS.items():
+			if _has_cc_baseline(abs_events, ctrl):
+				continue
+			cc_values = [
+				e['value'] for e in plan_events
+				if e.get('type') == 'cc' and e.get('control') == ctrl
+			]
+			if not cc_values:
+				continue
+			# CC11: skip injection, keep player default
+			if ctrl == 11:
+				plan_events = [
+					e for e in plan_events
+					if not (e.get('type') == 'cc' and e.get('control') == 11)
+				]
+				print(
+					f"Note: channel {channel} has no CC11 baseline "
+					f"skipped {len(cc_values)} CC11 events (using player default)",
+					file=sys.stderr,
+				)
+				continue
+			# CC7 (and others): scale peak to default
+			peak = max(cc_values)
+			if peak <= 0 or peak >= default:
+				continue
+			factor = default / peak
+			plan_events = [
+				{**e, 'value': max(0, min(127, int(e['value'] * factor)))}
+				if e.get('type') == 'cc' and e.get('control') == ctrl
+				else e
+				for e in plan_events
+			]
+			print(
+				f"Note: channel {channel} has no CC{ctrl} baseline "
+				f"scaled {len(cc_values)} CC{ctrl} values "
+				f"(peak {peak} -> {default})",
+				file=sys.stderr,
+			)
+
 		# Create new events from the plan
-		for event in track_plan.get('events', []):
+		for event in plan_events:
 			new_event = _create_plan_event(event, channel, ticks_per_beat)
 			abs_events.append(new_event)
 
