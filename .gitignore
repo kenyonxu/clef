@@ -47,9 +47,10 @@ docs/secrets/
 .claude/*
 !.claude/agents/clef-*
 !.claude/skills/
+.claude/skills/*
 !.claude/skills/clef-compose/
 !.claude/skills/clef-iterate/
-!.claude/skills/theory-*
+!.claude/skills/theory-*/
 !.claude/settings.json
 !.claude/hooks/*.py
 # Re-ignore user-specific and local files
