@@ -19,8 +19,23 @@ Desktop.ini
 
 # IDE
 .vs/
+.vscode/
 *.swp
 *.swo
+
+# Temp files
+.tmp*
+
+# Agent/understanding artifacts
+.understanding/
+.understand-anything/
+__understanding__/
+
+# Dev-only tools/docs
+openspec/
+
+# Server (removed from release, tombstoned)
+server/
 
 # Secrets
 docs/secrets/
