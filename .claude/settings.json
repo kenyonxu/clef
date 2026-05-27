@@ -20,7 +20,8 @@
       "Bash(git commit *)",
       "Bash(pip install *)",
       "Read(**)",
-      "mcp__zai-mcp-server__analyze_image"
+      "mcp__zai-mcp-server__analyze_image",
+      "Bash(git push *)"
     ]
   },
   "hooks": {
