@@ -20,7 +20,7 @@ buses/default_bus_layout="uid://f6g3gfor8k6"
 
 [clef]
 
-default_soundfont="E:/GitHub/clef-dev/addons/clef/sound_front/GeneralUser-GS/GeneralUser-GS.sf2"
+default_soundfont="E:/GitHub/clef-dev/addons/clef/sound_front/GeneralUser-GS.sf2"
 
 [dotnet]
 

@@ -1,0 +1,14 @@
+[remap]
+
+importer="clef"
+type="MidiResource"
+uid="uid://drw3eyhkbs832"
+path="res://.godot/imported/field_exploration.mid-9aa115cc787f5e9fa836484d65e64119.tres"
+
+[deps]
+
+source_file="res://addons/clef/midi_samples/field_exploration.mid"
+dest_files=["res://.godot/imported/field_exploration.mid-9aa115cc787f5e9fa836484d65e64119.tres"]
+
+[params]
+

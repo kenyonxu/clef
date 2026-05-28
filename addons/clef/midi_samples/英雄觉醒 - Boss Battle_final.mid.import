@@ -1,0 +1,14 @@
+[remap]
+
+importer="clef"
+type="MidiResource"
+uid="uid://ce74rguojjh1i"
+path="res://.godot/imported/英雄觉醒 - Boss Battle_final.mid-f67191f0197d6557b67b8a4d8cf8f917.tres"
+
+[deps]
+
+source_file="res://addons/clef/midi_samples/英雄觉醒 - Boss Battle_final.mid"
+dest_files=["res://.godot/imported/英雄觉醒 - Boss Battle_final.mid-f67191f0197d6557b67b8a4d8cf8f917.tres"]
+
+[params]
+

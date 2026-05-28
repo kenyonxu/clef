@@ -1,0 +1,14 @@
+[remap]
+
+importer="clef"
+type="MidiResource"
+uid="uid://bwoykw4okemt3"
+path="res://.godot/imported/morning_town_roldel_sample.mid-4215010220c72bcf91e801577ab6b8fc.tres"
+
+[deps]
+
+source_file="res://addons/clef/midi_samples/morning_town_roldel_sample.mid"
+dest_files=["res://.godot/imported/morning_town_roldel_sample.mid-4215010220c72bcf91e801577ab6b8fc.tres"]
+
+[params]
+

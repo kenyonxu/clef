@@ -1,0 +1,14 @@
+[remap]
+
+importer="clef"
+type="MidiResource"
+uid="uid://untvj7w6ettj"
+path="res://.godot/imported/main_theme_epic_jrpg.mid-b8203ad93534ffa6a00cd0beb47f7045.tres"
+
+[deps]
+
+source_file="res://addons/clef/midi_samples/main_theme_epic_jrpg.mid"
+dest_files=["res://.godot/imported/main_theme_epic_jrpg.mid-b8203ad93534ffa6a00cd0beb47f7045.tres"]
+
+[params]
+

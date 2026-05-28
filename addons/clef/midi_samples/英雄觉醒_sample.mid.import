@@ -1,0 +1,14 @@
+[remap]
+
+importer="clef"
+type="MidiResource"
+uid="uid://bjnpkg8gog2rf"
+path="res://.godot/imported/英雄觉醒_sample.mid-117176599c9cdc1c2728c320665a33b7.tres"
+
+[deps]
+
+source_file="res://addons/clef/midi_samples/英雄觉醒_sample.mid"
+dest_files=["res://.godot/imported/英雄觉醒_sample.mid-117176599c9cdc1c2728c320665a33b7.tres"]
+
+[params]
+

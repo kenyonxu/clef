@@ -1,0 +1,14 @@
+[remap]
+
+importer="clef"
+type="MidiResource"
+uid="uid://cv2oinc3bfoee"
+path="res://.godot/imported/晨光中的洛尔达_final.mid-02fe0d0e21ac3c7191c40f6691bdf56f.tres"
+
+[deps]
+
+source_file="res://addons/clef/midi_samples/晨光中的洛尔达_final.mid"
+dest_files=["res://.godot/imported/晨光中的洛尔达_final.mid-02fe0d0e21ac3c7191c40f6691bdf56f.tres"]
+
+[params]
+

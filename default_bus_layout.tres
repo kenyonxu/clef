@@ -115,7 +115,7 @@ wet = 0.0
 wet = 0.0
 
 [sub_resource type="AudioEffectPanner" id="AudioEffectPanner_2g6t7"]
-pan = -0.2913386
+pan = 0.007874016
 
 [sub_resource type="AudioEffectReverb" id="AudioEffectReverb_hnxjo"]
 predelay_msec = 15.0
@@ -128,7 +128,7 @@ wet = 0.0
 wet = 0.0
 
 [sub_resource type="AudioEffectPanner" id="AudioEffectPanner_y2dp7"]
-pan = -0.05511811
+pan = -0.24409449
 
 [sub_resource type="AudioEffectReverb" id="AudioEffectReverb_nf0co"]
 predelay_msec = 15.0
@@ -141,7 +141,7 @@ wet = 0.0
 wet = 0.0
 
 [sub_resource type="AudioEffectPanner" id="AudioEffectPanner_dapn3"]
-pan = -0.21259843
+pan = 0.007874016
 
 [sub_resource type="AudioEffectReverb" id="AudioEffectReverb_7h8fu"]
 predelay_msec = 15.0
