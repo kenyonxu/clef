@@ -2,6 +2,8 @@
 
 Clef 是一个 Godot 4.6+ 的 MIDI 播放引擎插件，使用 SF2 SoundFont 合成音频，支持实时 CC / Pitch Bend / Modulation，并提供 LLM 辅助编曲工具链。
 
+📖 **文档**：[中文](docs/README_CN.md) · [English](docs/README_EN.md) · [用户指南](docs/user_guide_cn.md) · [User Guide](docs/user_guide_en.md) · [LLM 作曲指南](docs/user_docs/llm_midi_composer_guide_en.md)
+
 ## 特性
 
 - **SF2 合成** — 基于 AudioStreamPlayer 池架构，使用 SoundFont 2 文件合成音频
