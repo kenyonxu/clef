@@ -94,13 +94,15 @@ static func _parse(stream: StreamPeerBuffer) -> ReadResult:
 
 	# 3. 根据格式处理
 	# DEBUG: 每轨道事件类型摘要
-	print("[Clef Reader] Format=%d, Tracks=%d, Timebase=%d" % [format, ntracks, timebase])
+	if ProjectSettings.get_setting("clef/debug_verbose", false):
+		print("[Clef Reader] Format=%d, Tracks=%d, Timebase=%d" % [format, ntracks, timebase])
 	for track_idx in range(track_raw_events.size()):
 		var type_counts: Dictionary = {}
 		for ev in track_raw_events[track_idx]:
 			var t: String = ev.get("type", "?")
 			type_counts[t] = type_counts.get(t, 0) + 1
-		print("[Clef Reader]   Track %d: %s" % [track_idx, type_counts])
+		if ProjectSettings.get_setting("clef/debug_verbose", false):
+			print("[Clef Reader]   Track %d: %s" % [track_idx, type_counts])
 
 	if format == 0:
 		return _build_format_0(timebase, track_raw_events)
@@ -265,7 +267,8 @@ static func _parse_event(stream: StreamPeerBuffer, status_byte: int) -> Dictiona
 				var value: int = stream.get_u8()
 				# DEBUG: Bank Select 和 Program Change 诊断
 				if controller == 0 or controller == 32:
-					print("[Clef Reader] CC%d (Bank %s) ch=%d value=%d" % [controller, "MSB" if controller == 0 else "LSB", channel, value])
+					if ProjectSettings.get_setting("clef/debug_verbose", false):
+						print("[Clef Reader] CC%d (Bank %s) ch=%d value=%d" % [controller, "MSB" if controller == 0 else "LSB", channel, value])
 				return {
 					"type": "control_change",
 					"channel": channel,
@@ -350,7 +353,8 @@ static func _parse_program_change(stream: StreamPeerBuffer, channel: int) -> Dic
 	var program: int = stream.get_u8()
 
 	# DEBUG: Program Change 诊断
-	print("[Clef Reader] Program Change ch=%d program=%d (%s)" % [channel, program, _gm_instrument_name(program)])
+	if ProjectSettings.get_setting("clef/debug_verbose", false):
+		print("[Clef Reader] Program Change ch=%d program=%d (%s)" % [channel, program, _gm_instrument_name(program)])
 
 	return {
 		"type": "program_change",

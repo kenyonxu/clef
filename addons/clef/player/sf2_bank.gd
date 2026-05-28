@@ -237,7 +237,8 @@ func _build_sample_for_zone(
 	# 诊断
 	var sample_frames: int = info.sample_data.size() / 2
 	var sample_duration_ms: float = float(sample_frames) / 44100.0 * 1000.0
-	print("[SF2] preset=%d key=%d ch=%d inst=%d | modes=%d root=%d | hdr=[%d,%d] actual=[%d,%d] loop=[%d,%d] | data=%d bytes %d frames %.1fms | has_loop=%s" % [
+	if ProjectSettings.get_setting("clef/debug_verbose", false):
+		print("[SF2] preset=%d key=%d ch=%d inst=%d | modes=%d root=%d | hdr=[%d,%d] actual=[%d,%d] loop=[%d,%d] | data=%d bytes %d frames %.1fms | has_loop=%s" % [
 		preset_index, key, channel, instrument_index, sample_modes, info.root_key,
 		sample_header.start, sample_header.end,
 		actual_start, actual_end,

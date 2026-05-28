@@ -150,7 +150,8 @@ func start_note(inst_info: ClefInstrumentInfo, p_channel: int, p_key: int,
 		if wav != null:
 			var bpf: int = 4 if wav.stereo else 2
 			wav_dur = float(wav.data.size()) / (float(wav.mix_rate) * float(bpf))
-		print("[VOICE] ch=%d key=%d root=%d | from=%.3fs wav=%.3fs play_dur=%.3fs | pitch=%.3f+%.3f adsr=[a=%.3f d=%.3f s=%.1f r=%.3f]" % [
+		if ProjectSettings.get_setting("clef/debug_verbose", false):
+			print("[VOICE] ch=%d key=%d root=%d | from=%.3fs wav=%.3fs play_dur=%.3fs | pitch=%.3f+%.3f adsr=[a=%.3f d=%.3f s=%.1f r=%.3f]" % [
 			p_channel, p_key, inst_info.root_key,
 			maxf(0.0, from_position), wav_dur, _stream_play_duration,
 			_base_pitch, _key_offset,
@@ -159,7 +160,8 @@ func start_note(inst_info: ClefInstrumentInfo, p_channel: int, p_key: int,
 	# DIAG: verify loop mode before playback
 	var _diag_wav: AudioStreamWAV = stream as AudioStreamWAV
 	if _diag_wav != null:
-		print("[VOICE-PLAY] ch=%d key=%d loop_mode=%d loop_begin=%d loop_end=%d data=%d" % [p_channel, p_key, _diag_wav.loop_mode, _diag_wav.loop_begin, _diag_wav.loop_end, _diag_wav.data.size()])
+		if ProjectSettings.get_setting("clef/debug_verbose", false):
+			print("[VOICE-PLAY] ch=%d key=%d loop_mode=%d loop_begin=%d loop_end=%d data=%d" % [p_channel, p_key, _diag_wav.loop_mode, _diag_wav.loop_begin, _diag_wav.loop_end, _diag_wav.data.size()])
 	play(maxf(0.0, from_position))
 
 
@@ -244,7 +246,8 @@ func is_releasing() -> bool:
 func _trigger_release() -> void:
 	# 捕获当前 ADSR 电平（而非固定用 sustain_db），确保无论 voice 处于
 	# ATTACK/DECAY/SUSTAIN 哪个阶段，release 起始音量都与当前实际输出一致
-	print("[RELEASE] ch=%d key=%d timer=%.3fs" % [channel, key, _using_timer])
+	if ProjectSettings.get_setting("clef/debug_verbose", false):
+		print("[RELEASE] ch=%d key=%d timer=%.3fs" % [channel, key, _using_timer])
 	var current_adsr_db: float = volume_db - _velocity_db - _inst_volume_db
 	_release_start_db = current_adsr_db
 	state = State.RELEASE

@@ -123,7 +123,7 @@ var position: float = player.get_playback_position()
 - 不同通道以颜色区分，力度映射为亮度
 - 播放时白色竖线跟随播放位置移动
 - 点击卷帘任意位置可跳转播放
-- 可操作编辑（规划中）— 选中、移动、删除音符，标注问题，生成 Agent 反馈，详见 [设计文档](../../docs/plans/2026-04-02-piano-roll-interactive-design.md)
+- 完整编辑功能：选中、移动、删除音符，框选批量操作，复制粘贴，撤销重做，力度编辑
 
 **迷你混音台：**
 - 16 通道独立音量滑块 + 静音按钮
@@ -171,9 +171,8 @@ var position: float = player.get_playback_position()
 
 ## LLM 辅助编曲
 
-Clef 定义了 **Clef JSON v1.1** 格式，可将 MIDI 数据序列化为人类可读的 JSON。配合 LLM（ChatGPT / Claude 等）可实现 AI 辅助作曲。
+Clef 定义了 **Clef JSON v2.0** 格式，可将 MIDI 数据序列化为人类可读的 JSON。配合 LLM 可实现 AI 辅助作曲。
 
-- 系统提示词：[celf_composer_llm_system_prompt_cn.md](docs/user_docs/celf_composer_llm_system_prompt_cn.md)
 - 格式规范：[clef_json_spec.md](docs/clef_json_spec.md)
 - 基础模板：[templates/default.json](templates/default.json)
 - 完整示例：[templates/example_full.json](templates/example_full.json)
@@ -182,6 +181,8 @@ LLM 支持三种工作模式：
 1. **创作** — 根据自然语言描述生成 Clef JSON
 2. **分析** — 解读提供的 Clef JSON 的风格、配器、结构
 3. **参考编曲** — 参考已有 JSON 结合新需求创作
+
+> Clef 还提供了基于 Claude Code 的 7-Agent 全自动作曲系统，详见 [项目主页](../../README.md)。
 
 ## 支持的 MIDI 事件
 

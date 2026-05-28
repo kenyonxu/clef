@@ -112,7 +112,8 @@ func _build_instrument_info(sample: Sf2SampleInfo, channel: int) -> ClefInstrume
 		asw.loop_mode = AudioStreamWAV.LOOP_DISABLED
 
 	# DIAG: AudioStreamWAV loop config
-	print("[BANK] has_loop=%s loop_mode=%d loop_begin=%d loop_end=%d data=%d stereo=%s" % ["YES" if sample.has_loop else "NO", asw.loop_mode, asw.loop_begin, asw.loop_end, asw.data.size(), "YES" if is_stereo else "NO"])
+	if ProjectSettings.get_setting("clef/debug_verbose", false):
+		print("[BANK] has_loop=%s loop_mode=%d loop_begin=%d loop_end=%d data=%d stereo=%s" % ["YES" if sample.has_loop else "NO", asw.loop_mode, asw.loop_begin, asw.loop_end, asw.data.size(), "YES" if is_stereo else "NO"])
 	info.stream = asw
 	info.root_key = sample.root_key
 

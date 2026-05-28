@@ -102,6 +102,16 @@ func _register_project_settings() -> void:
 		"hint_string": "*.sf2",
 	})
 
+	# Verbose debug logging (SF2 loading, voice allocation, MIDI parse details)
+	var debug_verbose: String = "clef/debug_verbose"
+	if not ProjectSettings.has_setting(debug_verbose):
+		ProjectSettings.set_setting(debug_verbose, false)
+	ProjectSettings.set_initial_value(debug_verbose, false)
+	ProjectSettings.add_property_info({
+		"name": debug_verbose,
+		"type": TYPE_BOOL,
+	})
+
 
 # ─── Menu Actions ──────────────────────────────────────────
 

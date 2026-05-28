@@ -43,6 +43,15 @@ docs/secrets/
 # Clef work files (intermediate)
 .clef-work/
 
+# Clef output: only track root .mid files, ignore everything else
+addons/clef/output/*
+!addons/clef/output/*.mid
+!addons/clef/output/*.mid.import
+
+# SF2 bundles: keep profile JSONs only, ignore large binary bundles
+addons/clef/sound_front/*
+!addons/clef/sound_front/*.json
+
 # Claude Code (exclude everything except clef-compose content)
 .claude/*
 !.claude/agents/clef-*
@@ -51,6 +60,7 @@ docs/secrets/
 !.claude/skills/clef-compose/
 !.claude/skills/clef-iterate/
 !.claude/skills/theory-*/
+!.claude/skills/theory-reference.md
 !.claude/settings.json
 !.claude/hooks/*.py
 # Re-ignore user-specific and local files
