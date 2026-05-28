@@ -173,14 +173,8 @@ var position: float = player.get_playback_position()
 
 Clef 定义了 **Clef JSON v2.0** 格式，可将 MIDI 数据序列化为人类可读的 JSON。配合 LLM 可实现 AI 辅助作曲。
 
-- 格式规范：[clef_json_spec.md](docs/clef_json_spec.md)
-- 基础模板：[templates/default.json](templates/default.json)
-- 完整示例：[templates/example_full.json](templates/example_full.json)
-
-LLM 支持三种工作模式：
-1. **创作** — 根据自然语言描述生成 Clef JSON
-2. **分析** — 解读提供的 Clef JSON 的风格、配器、结构
-3. **参考编曲** — 参考已有 JSON 结合新需求创作
+- [用户手册 (中文)](docs/user_guide_cn.md) / [User Manual (English)](docs/user_guide_en.md)
+- [LLM 作曲指南 (中文)](docs/user_docs/llm_midi_composer_guide_cn.md) / [LLM Composition Guide (English)](docs/user_docs/llm_midi_composer_guide_en.md)
 
 > Clef 还提供了基于 Claude Code 的 7-Agent 全自动作曲系统，详见 [项目主页](../../README.md)。
 
