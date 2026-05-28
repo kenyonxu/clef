@@ -694,12 +694,28 @@ func _load_soundfont_profile() -> void:
 	var sf2_dir: String = sf2_path.get_base_dir()
 	var sf2_name: String = sf2_path.get_file().get_basename()
 	var profile_path: String = sf2_dir.path_join(sf2_name + "_profile.json")
+
+	# Fallback 1: plugin-bundled profile in knowledge/
+	if not FileAccess.file_exists(profile_path):
+		var knowledge_name := "sf2_" + sf2_name.to_lower().replace(" ", "_") + ".json"
+		var knowledge_path := "res://addons/clef/knowledge/" + knowledge_name
+		if FileAccess.file_exists(knowledge_path):
+			profile_path = knowledge_path
+
+	# Fallback 2: plugin-bundled profile in sound_front/
+	if not FileAccess.file_exists(profile_path):
+		var bundled_path := "res://addons/clef/sound_front/" + sf2_name + "_profile.json"
+		if FileAccess.file_exists(bundled_path):
+			profile_path = bundled_path
+
+	# Fallback 3: generate via Python profiler
 	if not FileAccess.file_exists(profile_path):
 		var profiler := ProjectSettings.globalize_path("res://.claude/skills/clef-compose/scripts/sf2_profiler.py")
 		var global_sf2 := ProjectSettings.globalize_path(sf2_path)
 		var global_profile := ProjectSettings.globalize_path(profile_path)
 		var output := []
 		OS.execute("python", [profiler, global_sf2, "-o", global_profile], output)
+
 	if FileAccess.file_exists(profile_path):
 		_soundfont_browser.load_profile(profile_path)
 		_soundfont_browser.setup_audition(sf2_path)
