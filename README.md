@@ -2,6 +2,8 @@
 
 [在 Godot Asset Store 下载](https://store.godotengine.org/...) · 免费开源 (MIT)
 
+📖 **文档**：[中文](addons/clef/docs/README_CN.md) · [English](addons/clef/docs/README_EN.md) · [用户指南](addons/clef/docs/user_guide_cn.md) · [User Guide](addons/clef/docs/user_guide_en.md) · [LLM 作曲指南](addons/clef/docs/user_docs/llm_midi_composer_guide_en.md)
+
 Clef 是一个 **Godot 4.6+ 开源 MIDI 音乐插件**，由两大核心模块组成：
 
 - **MIDI 播放引擎** — 基于 SF2 SoundFont 的实时音频合成，支持钢琴卷帘编辑器、CC/弯音/调制，以及 JSON ↔ MIDI 双向转换
