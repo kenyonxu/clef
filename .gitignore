@@ -61,11 +61,15 @@ addons/clef/sound_front/*
 !.claude/skills/clef-iterate/
 !.claude/skills/theory-*/
 !.claude/skills/theory-reference.md
+!.claude/requirements.txt
+!.claude/setup.bat
+!.claude/setup.sh
 !.claude/settings.json
 !.claude/hooks/*.py
 # Re-ignore user-specific and local files
 .claude/settings.local.json
 .claude/worktrees/
+.claude/.venv/
 
 # Python dependencies (vendored)
 music21/
