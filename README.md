@@ -1,5 +1,8 @@
 # Clef
 
+[![爱发电](https://img.shields.io/badge/赞助-爱发电-ff69b4?style=flat-square)](https://afdian.com/a/kai2045)
+[![PayPal](https://img.shields.io/badge/Donate-PayPal-00457C?style=flat-square&logo=paypal)](https://www.paypal.com/paypalme/kai2045)
+
 [在 Godot Asset Store 下载](https://store.godotengine.org/...) · 免费开源 (MIT)
 
 📖 **文档**：[中文](addons/clef/docs/README_CN.md) · [English](addons/clef/docs/README_EN.md) · [用户指南](addons/clef/docs/user_guide_cn.md) · [User Guide](addons/clef/docs/user_guide_en.md) · [LLM 作曲指南](addons/clef/docs/user_docs/llm_midi_composer_guide_en.md)
