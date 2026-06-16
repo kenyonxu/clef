@@ -222,7 +222,104 @@ def cmd_archive(args):
 
 
 def cmd_midi_to_audio(args):
-    """用 FluidSynth 将 MIDI 转为音频文件（WAV/OGG）。"""
+    """用 FluidSynth 将 MIDI 转为音频文件（WAV/OGG/MP3）。"""
+    input_path = args.input
+    if not input_path:
+        print("Error: --input is required (MIDI file, or directory with --batch)", file=sys.stderr)
+        return 1
+
+    input_path = Path(input_path)
+    sf2_path = Path(args.sf2)
+
+    if not sf2_path.exists():
+        print(f"Error: SoundFont not found: {sf2_path}", file=sys.stderr)
+        return 1
+
+    # 确定输出目录
+    if args.output_dir:
+        output_dir = Path(args.output_dir)
+        output_dir.mkdir(parents=True, exist_ok=True)
+    elif input_path.is_file():
+        output_dir = input_path.parent
+    else:
+        output_dir = input_path
+
+    # 收集 MIDI 文件列表
+    if args.batch:
+        if not input_path.is_dir():
+            print(f"Error: --batch requires a directory, got: {input_path}", file=sys.stderr)
+            return 1
+        midi_files = sorted(input_path.glob("*.mid")) + sorted(input_path.glob("*.midi"))
+        if not midi_files:
+            print(f"No .mid/.midi files found in: {input_path}", file=sys.stderr)
+            return 1
+    else:
+        if not input_path.exists():
+            print(f"Error: MIDI file not found: {input_path}", file=sys.stderr)
+            return 1
+        midi_files = [input_path]
+
+    # 检查 FluidSynth
+    if not shutil.which("fluidsynth"):
+        print("Error: FluidSynth not found. Install: choco install fluidsynth", file=sys.stderr)
+        return 1
+
+    # 非 WAV 格式需要 ffmpeg
+    if args.format != "wav":
+        if not shutil.which("ffmpeg"):
+            print("Error: ffmpeg not found, required for OGG/MP3 conversion.", file=sys.stderr)
+            return 1
+
+    success = 0
+    for midi_file in midi_files:
+        wav_path = output_dir / f"{midi_file.stem}.wav"
+        final_path = output_dir / f"{midi_file.stem}.{args.format}"
+        rel_name = midi_file.name
+
+        print(f"Rendering: {rel_name} -> {final_path.name}")
+
+        cmd = [
+            "fluidsynth", "-ni",
+            "-F", str(wav_path),
+            "-r", str(args.sample_rate),
+            "-g", str(args.gain),
+            str(sf2_path),
+            str(midi_file),
+        ]
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        if result.returncode != 0:
+            print(f"  FAILED: {result.stderr.strip()}", file=sys.stderr)
+            continue
+
+        if args.format == "wav":
+            print(f"  -> {wav_path}")
+        else:
+            codec_args = _ffmpeg_codec_args(args.format)
+            ffmpeg_cmd = [
+                "ffmpeg", "-y", "-i", str(wav_path),
+                *codec_args,
+                str(final_path),
+            ]
+            ff_result = subprocess.run(ffmpeg_cmd, capture_output=True, text=True)
+            if ff_result.returncode != 0:
+                print(f"  FAILED (ffmpeg): {ff_result.stderr.strip()}", file=sys.stderr)
+                continue
+            wav_path.unlink()  # 清理中间 WAV
+            print(f"  -> {final_path}")
+        success += 1
+
+    print(f"Done: {success}/{len(midi_files)} converted.")
+    return 0 if success == len(midi_files) else 1
+
+
+def _ffmpeg_codec_args(fmt: str):
+    """返回 ffmpeg 编码参数。"""
+    if fmt == "mp3":
+        return ["-b:a", "320k"]
+    elif fmt == "ogg":
+        return ["-c:a", "libvorbis", "-b:a", "256k"]
+    else:
+        return []
 
 
 def cmd_fix_measure_duration(args):
